@@ -2,6 +2,7 @@ import { Menu, UtensilsCrossed, ChefHat, ShoppingBag, LogOut, X } from "lucide-r
 import { useState, useRef, useEffect } from "react"
 import { useLocation, Link, useNavigate } from "react-router-dom"
 import { useKDS } from "../features/kds/context/KDSContext"
+import { useAuth } from "../features/auth/context/AuthContext"
 
 export interface Employee {
     name: string
@@ -15,9 +16,10 @@ export default function Header() {
     const [employee] = useState<Employee>({ name: "วิชัย ใจดี", role: "ผู้จัดการ" })
     const [isMenuOpen, setIsMenuOpen] = useState(false)
     const menuRef = useRef<HTMLDivElement>(null)
-
+    const { user } = useAuth();
     const isKDS = location.pathname.includes("/kds")
     const isPOS = location.pathname.includes("/mainpos")
+    const isMenu = location.pathname.includes("/menu")
     const pendingOrdersCount = orders.filter((o) => o.status === "รอทำ").length
 
     // ปิดเมนูเมื่อคลิกข้างนอก
@@ -116,6 +118,19 @@ export default function Header() {
                                         {pendingOrdersCount} รอทำ
                                     </span>
                                 )}
+                            </Link>
+
+                            <Link 
+                            //TODO ทำไว้ทดสอบเดี๋ยวลบออก
+                                to={`/${user?.tenantSlug}/menu/admin`}
+                                className={`flex items-center justify-between px-4 py-2.5 text-sm transition-all hover:bg-[#FAF7F2] ${
+                                    isMenu ? "font-semibold text-[#8C6D58] bg-[#FAF7F2]/80" : "text-[#2D241E]"
+                                }`}
+                            >
+                                <div className="flex items-center gap-3">
+                                    <ChefHat className="w-4 h-4 text-[#8C6D58]" />
+                                    <span>หน้าเมนู (test)</span>
+                                </div>
                             </Link>
 
                             <div className="border-t border-stone-100 my-1" />

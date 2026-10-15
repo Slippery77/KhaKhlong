@@ -54,8 +54,9 @@ export class AuthService {
                     user: {
                         sub: users.users_id,
                         username: users.username,
-                        tenantID: users.tenant_id,
+                        tenantID: users.tenant_id, // TODO ไว้เดี๋ยวลบถ้าไม่มีตัวไหนใช้
                         role: role.role_name,
+                        tenantSlug:dto.tenantSlug
                     },
                 };
             }

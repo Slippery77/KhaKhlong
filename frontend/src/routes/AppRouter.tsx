@@ -16,7 +16,9 @@ export function AppRouter() {
             <Route path='/:tenantSlug/mainpos' element={<MainPOS />} />
             <Route path='/kds' element={<KDSPage />} />
             <Route path='/:tenantSlug/kds' element={<KDSPage />} />
-            <Route path='/menuEdit' element={<MenuEdit />} />
+            <Route path='/:tenantSlug/menu/admin' element={<MenuEdit />} />
+            <Route path='/menu/admin' element={<MenuEdit />} />
+
         </Routes>
     );
 }
