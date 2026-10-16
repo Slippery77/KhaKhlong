@@ -28,7 +28,7 @@ export default function SettingNavBar(){
                 </li>        
                 <li>
                     <NavLink 
-                        to={`/${tenantSlug}/menu/admin`}
+                        to={`/${tenantSlug}/setting/menu`}
                         className={({isActive})=> isActive ? 'font-semibold text-[#FFFFFF] border-2 rounded-xl bg-[#B79479] p-2' : 'text-stone-500'}
                 >
                 เมนูอาหาร

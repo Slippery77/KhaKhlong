@@ -1,4 +1,4 @@
-import { type CartMenu } from "../pages/MainPOS"
+import { type CartMenu } from "../types/pos.types"
 import { UtensilsCrossed, SendHorizontal, Trash2, Minus, Plus } from "lucide-react"
 
 interface PropsOrderSidebar {
