@@ -109,7 +109,7 @@ export function MenuEdit() {
     }
 
   return (
-    <div className="flex h-dvh flex-col">
+    <div className="flex h-dvh flex-col font-kanit">
       <Header />
       <SettingNavBar/>
       <div className="flex min-h-0 flex-1">

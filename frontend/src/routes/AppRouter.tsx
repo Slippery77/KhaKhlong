@@ -8,6 +8,7 @@ import SettingPage from '../features/auth/pages/Setting_page';
 import SiftworkPage from '../features/auth/pages/Siftwork_page';
 import StockPage from '../features/auth/pages/Stock_page';
 import SaleReportPage from '../features/auth/pages/Sale_report_page';
+import EditModiferPage from '../features/editModifer/pages/edit_modifer_pages';
 
 export function AppRouter() {
     return (
@@ -21,6 +22,7 @@ export function AppRouter() {
             <Route path='/kds' element={<KDSPage />} />
             <Route path='/:tenantSlug/kds' element={<KDSPage />} />
             <Route path='/:tenantSlug/setting/menu' element={<MenuEdit />} />
+            <Route path='/:tenantSlug/setting/modifier' element={<EditModiferPage />} />
             <Route path='/setting' element={<SettingPage />} />
             <Route path='/siftwork' element={<SiftworkPage />} />
             <Route path='/stock' element={<StockPage />} />
