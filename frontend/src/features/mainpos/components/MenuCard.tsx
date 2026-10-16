@@ -1,4 +1,10 @@
-import { type Menu } from "../pages/MainPOS"
+import { type Menu } from "../types/pos.types"
+
+// TODO (เมนูจริงจาก API)
+//   - import type Menu จาก '../types/pos.types' แทน '../pages/MainPOS'
+//   - ถ้า menu.isAvailable = false: แสดงสีเทา (opacity-50), ป้าย "หมดวันนี้", cursor-not-allowed
+//     และไม่เรียก onClickMenuCard (หรือให้ MainPOS กันไว้ใน handleMenuClick)
+//   - key ที่ MainPOS ใช้ (key={m.id}) จะเป็น UUID string ใช้ได้เหมือนเดิม
 
 interface MenuCardProps {
     menu: Menu

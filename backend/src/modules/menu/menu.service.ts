@@ -147,7 +147,7 @@ export class MenuService {
             }
         }catch(err:any){
             if (err.code ==='23505'){
-                throw new ConflictException(`มีกลุ่มตัวเลือกชื่อ ${dto.name} อยู่แล้ว`);
+                throw new ConflictException(`มีกลุ่มตัวเลือกชื่อ "${dto.name}" อยู่แล้ว`);
             }
             throw err;
         }
@@ -195,7 +195,7 @@ export class MenuService {
             }
         }catch(err:any){
             if(err.code === '23505'){
-                throw new ConflictException(`มีชื่อ ${dto.name} แล้ว`);
+                throw new ConflictException(`มีตัวเลือกชื่อ "${dto.name}" ในกลุ่มนี้แล้ว`);
             }
             if (err.code === '23503') {
                 throw new BadRequestException('ไม่พบกลุ่มตัวเลือกนี้');
@@ -213,7 +213,7 @@ export class MenuService {
         try{
             result = await this.menuRepository.updateItemModifier(modifier_id,dto,fields);
         }catch (err: any) {
-            if (err.code === '23505') throw new ConflictException(`มีตัวเลือกชื่อ "${dto.name}" อยู่แล้ว`);
+            if (err.code === '23505') throw new ConflictException(`มีตัวเลือกชื่อ "${dto.name}" ในกลุ่มนี้อยู่แล้ว`);
             throw err;
         }
         if (!result) throw new NotFoundException('ไม่พบตัวเลือกนี้');
