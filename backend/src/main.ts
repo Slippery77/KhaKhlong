@@ -24,8 +24,9 @@ async function bootstrap() {
   app.useGlobalPipes(new ValidationPipe({
     whitelist: true,              // ตัด field ที่ไม่มีใน DTO ทิ้ง
     forbidNonWhitelisted: true,   // ส่ง field แปลกปลอมมา = 400 ไม่ใช่เงียบ ๆ ตัดทิ้ง
-    transform: true,              // แปลง string เป็น number/Date ตาม type ของ DTO
-    transformOptions: { enableImplicitConversion: true },
+    transform: true,              // แปลง body เป็น instance ของ DTO class
+    // ไม่เปิด enableImplicitConversion: มันแปลง "false" / "fault" เป็น true ด้วย Boolean() ก่อน validate
+    // ถ้าต้องแปลง type จริง (เช่น query string เป็น number) ให้ใส่ @Type(() => Number) ที่ field นั้นแทน
   }));
   app.setGlobalPrefix('api');
   app.enableCors({

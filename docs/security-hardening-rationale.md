@@ -1,6 +1,6 @@
 # PWA-POS Backend — ของที่เพิ่มเข้าไป และเพิ่มทำไม
 
-อัปเดต: 2026-10-04
+อัปเดต: 2026-10-09 (ข้อ 5 — เอา `enableImplicitConversion` ออก)
 
 เอกสารนี้ตอบคำถามเดียว: **ของแต่ละอย่างที่อยู่ใน `main.ts` และ `app.module.ts` ใส่ไว้ทำไม**
 
@@ -20,7 +20,7 @@
 | 2 | `@MaxLength(72)` บน password | สูง |
 | 3 | ข้อความ error ของ login ต้องเหมือนกัน | สูง |
 | 4 | `validationSchema` ใน ConfigModule | สูง |
-| 5 | `ValidationPipe` (whitelist, forbidNonWhitelisted, transform) | สูง |
+| 5 | `ValidationPipe` (whitelist, forbidNonWhitelisted, transform) — **ไม่เปิด** `enableImplicitConversion` | สูง |
 | 6 | Guard เป็น global + `@Public()` | สูง |
 | 7 | ต่อ DB ด้วย `pos_app` ไม่ใช่ `postgres` | สูง |
 | 8 | `helmet()` | กลาง |
@@ -81,6 +81,12 @@ providers: [
 
 **บทเรียน: ทุกกลไกความปลอดภัยที่เพิ่มเข้าไป ต้องมีการทดสอบที่ทำให้มันปฏิเสธให้เห็น ไม่ใช่แค่ทดสอบว่ากรณีปกติผ่าน**
 
+### ⚠ ตอนรัน Postman collection แล้วเจอ 429
+
+login 5 ครั้ง/นาที collection หนึ่ง login 3 ครั้ง (owner A, employee A, owner B) ถ้ารัน 2 collection ติดกันภายใน 1 นาที จะได้ 429 ที่ login ตัวท้าย แล้ว request ที่ใช้ token ตัวนั้นทั้งหมดจะได้ 401 ตาม
+
+**ห้ามเพิ่ม limit เพื่อให้ test ผ่าน** — รอ 1 นาที หรือตั้ง Delay ใน Runner ถ้าจำเป็นจริงให้อ่าน limit จาก env แล้วตั้งค่าสูงเฉพาะ `.env` ของเครื่อง dev
+
 ### ลำดับ guard
 
 ปัจจุบันมี 3 guard: `ThrottlerGuard`, `JwtAuthGuard`, `PermissionsGuard`
@@ -100,7 +106,7 @@ NestJS รัน `APP_GUARD` ตามลำดับที่ module ถูก 
 
 ### สถานะ
 
-ติดตั้งแล้ว รอยืนยันว่าทดสอบ 429 เห็นแล้ว
+ติดตั้งแล้ว เห็น 429 จริงตอนรัน Postman 2 collection ติดกัน (2026-10-09)
 
 ### ของจริงในอุตสาหกรรม
 
@@ -283,7 +289,7 @@ app.useGlobalPipes(new ValidationPipe({
     whitelist: true,
     forbidNonWhitelisted: true,
     transform: true,
-    transformOptions: { enableImplicitConversion: true },
+    // ไม่เปิด enableImplicitConversion — ดูหัวข้อ "⚠ ทำไมเอา enableImplicitConversion ออก"
 }));
 ```
 
@@ -291,8 +297,7 @@ app.useGlobalPipes(new ValidationPipe({
 |---|---|
 | `whitelist` | ตัด field ที่ไม่มีใน DTO ออกจาก body |
 | `forbidNonWhitelisted` | ส่ง field แปลกปลอมมา ตอบ 400 แทนที่จะตัดทิ้งเงียบ ๆ |
-| `transform` | แปลง plain object เป็น instance ของ DTO class เพื่อให้ decorator ทำงาน |
-| `enableImplicitConversion` | แปลง `"5"` จาก query string เป็น `5` ตาม type ของ DTO |
+| `transform` | แปลง plain object เป็น instance ของ DTO class เพื่อให้ decorator ทำงาน **ไม่ได้แปลงชนิดของ field** |
 
 ### ถ้าไม่มีจะเกิดอะไร
 
@@ -310,13 +315,50 @@ DTO กลายเป็นสัญญาที่บังคับใช้�
 
 `forbidNonWhitelisted` เคยช่วยจับ bug ในโปรเจกต์นี้แล้ว — ตอนที่ DTO ยังไม่มี `display_name` แล้วส่งมาจาก Postman ได้ `property display_name should not exist` ซึ่งชี้ปัญหาตรงจุดกว่า error 23502 จาก PostgreSQL
 
+### ⚠ ทำไมเอา `enableImplicitConversion` ออก (2026-10-09)
+
+**เดิมใส่ไว้เพราะ** ค่าที่มาจาก URL เป็น string เสมอ `?page=2` เข้ามาเป็น `"2"` option นี้แปลงให้เป็น `2` ตาม type ของ DTO อัตโนมัติ ไม่ต้องใส่ `@Type(() => Number)` ทีละ field
+
+**ปัญหาที่เจอ** — Postman ส่ง `{ "is_available": "false" }` (string) ไปที่ `PATCH /menu/items/:id/availability` แล้วได้ **200** และเมนูถูกตั้งเป็น**ขายได้** ทั้งที่ตั้งใจให้หมด
+
+สาเหตุมี 3 ชั้น
+
+1. **แปลงทุก input ไม่ใช่แค่ query** — ตั้งไว้ระดับ global จึงทำงานกับ `@Body()` ด้วย ทั้งที่ JSON body มีชนิดถูกต้องอยู่แล้ว
+2. **แปลงด้วย constructor ของ JavaScript ตรง ๆ** — `Boolean("false")` ได้ `true` เพราะ string ที่ไม่ว่างทุกตัวเป็น truthy (`"false"`, `"0"`, `"no"` ได้ `true` หมด) และ `Number("60")` ได้ `60` ทำให้ `price: "60"` ผ่านแบบเงียบ ๆ
+3. **แปลงก่อน validate** — `@IsBoolean()` ไม่เคยเห็น `"false"` ตัวจริง เห็นแค่ `true` ที่ถูกแปลงแล้ว validation จึงไม่มีโอกาสกัน
+
+```
+"false"  →  Boolean("false") = true  →  @IsBoolean() ผ่าน  →  200, เมนูกลับมาขาย
+```
+
+**ผลกระทบถ้าไม่แก้** — ทุก field `boolean` ในระบบกลับด้านได้เมื่อ client ส่ง string มา (`is_available`, `is_required` และของโมดูลอื่นในอนาคต) และทุก field `number` รับ string โดยไม่เตือน
+
+**ทำไมไม่มีใครเห็นมาก่อน** — frontend และ Postman ส่ง `false` แบบ boolean ปกติ และ test ของข้อนี้ทดสอบแค่ field แปลก (`is_admin`) ไม่เคยทดสอบ **ชนิดผิด**
+
+**ทางที่เลือก**
+
+| ทาง | แก้ body | กัน field ในอนาคต | ถ้าลืม |
+|---|---|---|---|
+| คงไว้ แล้วใส่ `@Transform` ทีละ field | เฉพาะที่ใส่ | ต้องจำใส่ทุกตัว | **พังเงียบ** — 200 แต่ค่ากลับด้าน |
+| **เอาออก** (เลือก) | ทั้งระบบ | ปลอดภัยเอง | **พังเสียงดัง** — 400 เห็นตั้งแต่ทดสอบ |
+
+ไม่ลบ DTO แล้วใช้ `@Body('is_available')` แทน เพราะจะเสีย validation ทั้งหมด (`{}` และ `null` กลายเป็น 500, field แปลกผ่านเงียบ)
+
+**หลังเอาออก — การแปลงชนิดต้องระบุเองที่ field** ดู `backend-coding-standard.md` ข้อ 8.1
+
 ### ทดสอบยังไง
 
-เพิ่ม `"is_admin": true` เข้า body ของ register ต้องได้ **400** `property is_admin should not exist`
+1. เพิ่ม `"is_admin": true` เข้า body ของ register ต้องได้ **400** `property is_admin should not exist`
+2. ส่ง `{ "is_available": "false" }` ไปที่ `PATCH /api/menu/items/:id/availability` ต้องได้ **400** `is_available must be a boolean value` ถ้าได้ 200 แปลว่า `enableImplicitConversion` กลับมาแล้ว
+3. ส่ง `{ "price": "60" }` ไปที่ `PATCH /api/menu/items/:id` ต้องได้ **400**
 
 ### สถานะ
 
-เสร็จ ทดสอบแล้ว
+เสร็จ ทดสอบแล้วทั้ง 3 ข้อ (ข้อ 2 ยืนยัน 2026-10-09)
+
+### ของจริงในอุตสาหกรรม
+
+`Boolean("false") === true` เป็นพฤติกรรมตามมาตรฐาน ECMAScript ไม่ใช่ bug ของ library ระบบที่ต้องแปลง query string เป็น boolean จึงเขียนตัวแปลงที่อ่านความหมายเอง (`"true"` / `"false"`) แทนการใช้ `Boolean()`
 
 ---
 
@@ -578,7 +620,7 @@ origin: (config.get<string>('CORS_ORIGIN') ?? 'http://localhost:5173').split(','
 
 ### สถานะ
 
-ติดตั้งแล้ว ต้องแก้วงเล็บ
+เสร็จ วงเล็บถูกแล้ว (ยืนยันจาก `main.ts` 2026-10-09)
 
 ---
 
@@ -683,7 +725,7 @@ NestJS ติดตั้ง body parser ของตัวเองตอน `N
 
 ### สถานะ
 
-ต้องลบบรรทัด
+เสร็จ — `main.ts` ไม่มีบรรทัดนี้แล้ว (ยืนยัน 2026-10-09)
 
 ---
 
@@ -691,17 +733,17 @@ NestJS ติดตั้ง body parser ของตัวเองตอน `N
 
 | ข้อ | เรื่อง | สถานะ |
 |---|---|---|
-| 5 | `ValidationPipe` | เสร็จ ทดสอบแล้ว |
+| 5 | `ValidationPipe` | เสร็จ ทดสอบแล้ว · เอา `enableImplicitConversion` ออก 2026-10-09 |
 | 6 | Guard global + `@Public()` | เสร็จ ทดสอบแล้ว |
 | 7 | `pos_app` | เสร็จ ทดสอบแล้ว 2 ร้าน |
 | 8 | `helmet()` | เสร็จ |
 | 10 | `setGlobalPrefix('api')` | เสร็จ ต้องอัปเดต Postman |
+| 11 | CORS | เสร็จ |
 | 12 | `enableShutdownHooks()` | เสร็จ |
 | 13 | `compression()` | เสร็จ |
+| 14 | Body limit | เสร็จ |
 | 9 | `trust proxy` | เสร็จ ยืนยันตอน deploy |
-| 1 | Rate limiting | ต้องลงทะเบียน `ThrottlerGuard` + `@Throttle` บน register + ทดสอบ 429 |
-| 11 | CORS | ต้องแก้วงเล็บ |
-| 14 | Body limit | ต้องลบบรรทัดที่ไม่มีผล |
+| 1 | Rate limiting | ทำงาน เห็น 429 แล้ว — ยังต้องเช็ค `@Throttle` บน register |
 | 2 | `@MaxLength(72)` | ต้องตรวจ DTO |
 | 3 | ข้อความ login | ต้องรวมเป็นข้อความเดียว |
 | 4 | `validationSchema` | ต้องทำ |
@@ -712,18 +754,21 @@ NestJS ติดตั้ง body parser ของตัวเองตอน `N
 
 **กลไกความปลอดภัยที่ "มีโค้ดแต่ไม่ทำงาน" อันตรายกว่าไม่มีเลย** เพราะทำให้เชื่อว่าปลอดภัยแล้วจึงไม่ตรวจอีก
 
-ในโปรเจกต์นี้เกิดขึ้น 2 ครั้ง
+ในโปรเจกต์นี้เกิดขึ้น 3 ครั้ง
 
 1. RLS ครบทุก policy แต่ต่อ DB ด้วย `postgres` จึงข้ามหมด
 2. `ThrottlerModule` ติดตั้งและ `@Throttle` แปะแล้ว แต่ไม่ได้ลงทะเบียน guard จึงไม่มีผล
+3. `@IsBoolean()` แปะครบทุก field แต่ `enableImplicitConversion` แปลง `"false"` เป็น `true` ก่อนถึง validator จึงไม่มีผลกับ string
 
-ทั้งสองครั้ง **ไม่มี error ไม่มีคำเตือน และการทดสอบกรณีปกติผ่านหมด**
+ทั้งสามครั้ง **ไม่มี error ไม่มีคำเตือน และการทดสอบกรณีปกติผ่านหมด**
 
 กฎที่ตามมา: **ทุกกลไกความปลอดภัยที่เพิ่มเข้าไป ต้องมีการทดสอบที่ทำให้มันปฏิเสธให้เห็น**
 
 - RLS: ต้องเห็นว่าร้าน A อ่านข้อมูลร้าน B ไม่ได้
 - Rate limit: ต้องเห็น 429
 - Guard: ต้องเห็น 401 และ 403
-- Validation: ต้องเห็น 400
+- Validation: ต้องเห็น 400 — **ทั้งค่าผิด และชนิดผิด** (`"false"` แทน `false`, `"60"` แทน `60`)
 
 ทดสอบว่า "ใช้งานได้ปกติ" ไม่พิสูจน์อะไรเลยเกี่ยวกับความปลอดภัย
+
+**กฎข้อที่สอง: config ระดับ global ต้องคิดว่ามีผลกับ input ทุกแบบ** ไม่ใช่แค่กรณีที่ตั้งใจจะใช้ — `enableImplicitConversion` ใส่เพื่อ query string แต่ไปมีผลกับ body ทั้งระบบ

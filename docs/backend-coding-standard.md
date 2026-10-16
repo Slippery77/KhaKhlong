@@ -1,6 +1,6 @@
 # PWA-POS Backend — มาตรฐานการเขียนโค้ด
 
-อัปเดต: 2026-10-06
+อัปเดต: 2026-10-09 (เพิ่มข้อ 8.1 ชนิดข้อมูล · ข้อ 10 ข้อ 16 · checklist)
 
 เอกสารนี้ตอบคำถาม "เขียนยังไง"
 
@@ -1054,9 +1054,68 @@ export class CreateMenuItemDto {
 
 **ทุก field ต้องมี `@ApiProperty`** ไม่ใช่เรื่องความสวยของเอกสาร — DTO ที่ไม่มี `@ApiProperty` เลยจะทำให้หน้า Swagger **ไม่โชว์ช่องกรอก body** แล้วทดสอบไม่เจอว่า controller ลืม `@Body()`
 
+**`example` ต้องเป็นชนิดเดียวกับ field** — `example: false` ไม่ใช่ `example: 'false'` ถ้าเป็น string ปุ่ม Try it out ใน Swagger จะส่ง string ไปแล้วได้ 400 คนทำ frontend จะเข้าใจผิดว่า field นี้รับ string
+
 **ทำไมต้องใส่ validation ให้ตรง** ถ้า DTO ไม่ดัก PostgreSQL จะดักแทน แล้วได้ **500** พร้อมข้อความภาษาอังกฤษของ PostgreSQL แทน **400** พร้อมข้อความที่บอกว่า field ไหนผิด
 
 `!` หลังชื่อ field บอก TypeScript ว่าค่าจะมีแน่ (`definite assignment`) เพราะ `ValidationPipe` รับประกันให้แล้ว
+
+
+### 8.1 ชนิดข้อมูล — ระบบไม่แปลงให้อัตโนมัติ
+
+`ValidationPipe` **ไม่เปิด** `enableImplicitConversion` (เหตุผลใน `security-hardening-rationale.md` ข้อ 5) ผลคือค่าที่เข้ามาเป็นชนิดไหน ก็ถูก validate ด้วยชนิดนั้นตรง ๆ
+
+| ค่ามาจาก | ชนิดที่เข้ามา | ต้องทำอะไร |
+|---|---|---|
+| JSON body | ถูกต้องอยู่แล้ว (`false`, `60`, `"abc"`) | **ไม่ต้องทำอะไร** — ส่ง `"60"` มาที่ `price` จะได้ 400 ซึ่งถูกแล้ว |
+| path param uuid | string | `ParseUUIDPipe` เหมือนเดิม |
+| path param ตัวเลข | string | `ParseIntPipe` |
+| query ตัวเลข `?page=2` | `"2"` | `@Type(() => Number)` ที่ field |
+| query วันที่ `?from=2026-10-01` | string | `@IsISO8601()` แล้ว**เก็บเป็น string** ส่งให้ PostgreSQL แปลง |
+| query boolean `?include_inactive=true` | `"true"` | `@ToBoolean()` (ด้านล่าง) — **ห้ามใช้ `@Type(() => Boolean)`** |
+
+**⚠ `@Type(() => Boolean)` ใช้กับ query ไม่ได้** มันเรียก `Boolean("false")` ซึ่งได้ `true` — เป็นบั๊กเดียวกับที่ทำให้ต้องเอา `enableImplicitConversion` ออก ต้องใช้ตัวแปลงที่อ่านความหมายของข้อความ
+
+```ts
+// src/common/transformers/to-boolean.ts
+import { Transform } from 'class-transformer';
+
+export const ToBoolean = () =>
+    Transform(({ value }) => {
+        if (value === 'true') return true;
+        if (value === 'false') return false;
+        return value;   // ค่าอื่นส่งต่อให้ @IsBoolean() ปฏิเสธเป็น 400
+    });
+```
+
+```ts
+// query DTO
+export class SalesReportQueryDTO {
+    @IsISO8601()
+    from!: string;
+
+    @IsISO8601()
+    to!: string;
+
+    @IsOptional() @Type(() => Number) @IsInt() @Min(1)
+    page?: number;
+}
+
+export class AdminMenuQueryDTO {
+    @IsOptional() @ToBoolean() @IsBoolean()
+    include_inactive?: boolean;
+}
+```
+
+`@Type(() => Number)` กับ `"abc"` ได้ `NaN` แล้ว `@IsInt()` ปฏิเสธเป็น 400 — ถูกต้อง
+
+**ใช้ `@ToBoolean()` และ `@Type()` กับ query เท่านั้น ห้ามใส่ใน body DTO** body ต้องส่งชนิดจริงมา ถ้าใส่ตัวแปลงใน body จะกลับไปยอมรับ `"false"` อีก
+
+**PIN ต้องเป็น `string` เสมอ** — `@IsString() @Matches(/^\d{4,6}$/)` ถ้าประกาศเป็น `number` PIN `0123` จะกลายเป็น `123` และ PIN ที่ขึ้นต้นด้วย 0 ใช้ไม่ได้ทั้งหมด
+
+**บอกทีม frontend** ทุกค่าที่เป็นตัวเลขหรือ boolean ต้องส่งเป็นชนิดจริง ค่าจาก `<input>` เป็น string เสมอ ต้อง `Number(value)` ก่อนส่ง ไม่งั้นได้ 400
+
+**ทดสอบชนิดผิดทุก endpoint ที่มี boolean หรือ number** ส่ง `"false"` แทน `false` และ `"60"` แทน `60` ต้องได้ 400 — ทดสอบแค่ค่าผิด (`-1`, `"many"`) ไม่พอ
 
 ---
 
@@ -1227,7 +1286,7 @@ endpoint `GET /api/audit-logs` ต้องใช้ permission `audit_log:view`
 
 ---
 
-## 10. ห้ามทำ 15 ข้อ
+## 10. ห้ามทำ 16 ข้อ
 
 1. **ห้าม inject `PG_POOL` เข้า repository** ใช้ `DbContextService` เท่านั้น
 2. **ห้ามรับ `tenant_id` จาก request body** และ DTO ห้ามมี field นี้
@@ -1244,6 +1303,7 @@ endpoint `GET /api/audit-logs` ต้องใช้ permission `audit_log:view`
 13. **ห้าม throw HTTP exception ใน repository**
 14. **ห้ามคำนวณ VAT หรือ service charge ใน NestJS** DB ทำแล้วด้วย trigger คำนวณซ้ำจะได้ตัวเลขไม่ตรงแล้ว trigger ปฏิเสธ
 15. **ห้ามเขียน audit log เองสำหรับ 13 ประเภทที่ trigger ทำให้แล้ว** จะได้ 2 แถวต่อการกระทำเดียว
+16. **ห้ามเปิด `enableImplicitConversion` และห้ามใช้ `@Type(() => Boolean)` กับ query** มันแปลง `"false"` เป็น `true` ใช้ `@ToBoolean()` แทน (ข้อ 8.1)
 
 ---
 
@@ -1265,6 +1325,8 @@ endpoint `GET /api/audit-logs` ต้องใช้ permission `audit_log:view`
 - [ ] DTO มี `@MaxLength` ตรงกับ `VARCHAR(n)` ใน schema
 - [ ] ทุก field ใน DTO มี `@ApiProperty` หรือ `@ApiPropertyOptional`
 - [ ] ราคาใช้ `@IsNumber({ maxDecimalPlaces: 2 })` ไม่ใช่ `@IsInt()`
+- [ ] query param ตัวเลขมี `@Type(() => Number)` · boolean ใช้ `@ToBoolean()` (ข้อ 8.1)
+- [ ] `example` ใน `@ApiProperty` เป็นชนิดเดียวกับ field
 - [ ] `POST` ที่สร้างของ ไม่มี `@HttpCode` (ให้เป็น 201)
 - [ ] ทุก try/catch มี `throw err` ปิดท้าย
 - [ ] `try` ครอบแค่ `await` ที่ยิง DB ไม่ครอบ `throw` ของเราเอง (ข้อ 4.7)
@@ -1275,6 +1337,7 @@ endpoint `GET /api/audit-logs` ต้องใช้ permission `audit_log:view`
 - [ ] ลบ import ที่ไม่ใช้
 - [ ] ทดสอบด้วย **2 ร้าน** ไม่ใช่ร้านเดียว
 - [ ] ทดสอบ route ที่มี permission ด้วย token ของ **employee** ต้องได้ 403
+- [ ] ทดสอบส่งชนิดผิด (`"false"`, `"60"`) ต้องได้ 400
 - [ ] `.env` เป็น `DB_USER=pos_app`
 
 ---

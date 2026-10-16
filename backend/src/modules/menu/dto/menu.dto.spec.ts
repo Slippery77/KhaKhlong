@@ -1,7 +1,7 @@
-import { MenuDto } from './menu.dto';
+import { MenuItemDTO } from './menu.dto';
 
-describe('MenuDto', () => {
+describe('MenuItemDTO', () => {
   it('should be defined', () => {
-    expect(new MenuDto()).toBeDefined();
+    expect(new MenuItemDTO()).toBeDefined();
   });
 });

@@ -1,7 +1,7 @@
 /* eslint-disable react-refresh/only-export-components */
 import { createContext, useContext, useState, useEffect, type ReactNode } from "react"
 import type { KDSOrder, KDSStatus } from "../types/kds.types"
-import type { CartMenu } from "../types/pos.types"
+import type { CartMenu } from "../../mainpos/types/pos.types"
 
 interface KDSContextType {
     orders: KDSOrder[]

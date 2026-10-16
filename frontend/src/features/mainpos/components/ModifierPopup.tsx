@@ -1,6 +1,17 @@
 import { useState } from "react"
-import type { Menu, ModifierGroup, ModifierOption } from "../pages/MainPOS"
+import type { Menu, ModifierGroup, ModifierOption } from "../types/pos.types"
 import { X, Minus, Plus, Check } from "lucide-react"
+
+// TODO (ตัวเลือกจริงจาก API) ตอนนี้ popup ผูกกับ mockup "ระดับความเผ็ด" อยู่
+//   1) selectedSpiciness เริ่มต้นเป็น "เผ็ดปกติ" (hardcode) → ร้านอื่นไม่มีตัวเลือกนี้
+//      และใช้ state ตัวเดียวกับทุกกลุ่ม radio → ถ้าเมนูมี 2 กลุ่ม single (เช่น ความเผ็ด + ขนาด) จะทับกัน
+//      แก้: เก็บเป็น Record<groupId, ModifierOption> เช่น const [singleChoice, setSingleChoice] = useState<Record<string, ModifierOption>>({})
+//   2) group.type === "radio" / "checkbox" → ถ้า map จาก selection_type ใน hook แล้วใช้ต่อได้
+//   3) is_required: ปุ่ม "เพิ่มในออเดอร์" ต้อง disabled จนกว่ากลุ่มที่บังคับจะถูกเลือกครบ
+//   4) ราคา radio อาจไม่ใช่ 0 (เช่น ไซซ์ใหญ่ +10) → บวก price ของตัวที่เลือกใน singleChoice เข้าไปด้วย
+//   5) onConfirm ส่ง selectedSpiciness: string → เปลี่ยนเป็นส่งตัวเลือกทั้งหมดที่เลือก
+//      ⚠ กระทบ CartMenu, OrderSidebar และ KDS (KDSCard / KDSContext ใช้ selectedSpiciness)
+//      ถ้ายังไม่อยากแก้ KDS: รวมชื่อตัวเลือก single ทั้งหมดเป็น string เดียวส่งไปแทนก่อน เช่น "เผ็ดน้อย, ไซซ์ใหญ่"
 
 interface ModifierPopupProps {
     menu: Menu

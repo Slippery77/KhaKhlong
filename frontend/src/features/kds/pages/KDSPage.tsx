@@ -1,5 +1,5 @@
 import { useState } from "react"
-import Header from "../components/Header"
+import Header from "../../../components/Header"
 import KDSCard from "../components/KDSCard"
 import { useKDS } from "../context/KDSContext"
 import type { KDSStatus } from "../types/kds.types"

@@ -1,5 +1,5 @@
 import { useState } from "react"
-import Header from "../components/Header"
+import Header from "../../../components/Header"
 import { Package, Plus, Pencil, Trash2, AlertTriangle, Search ,Minus} from "lucide-react"
 
 interface Ingredients {

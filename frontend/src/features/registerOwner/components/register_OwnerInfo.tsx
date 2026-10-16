@@ -12,16 +12,22 @@ export type RegisterOwnerFormProps = {
     onNext?: (data: RegisterOwnerInfo) => void;
 };
 
-export function Register_OwnerForm({ onNext }: RegisterOwnerFormProps) {
+export function Register_OwnerForm({ initialValues, onNext }: RegisterOwnerFormProps = {}) {
     const [fromState, setFromState] = useState<RegisterOwnerInfo>({
         username: "",
         email: "",
         password: "",
         confirm_password: "",
+        ...initialValues,
     });
+
+    const handleChange = (field: keyof RegisterOwnerInfo, value: string) => {
+        setFromState((prev) => ({ ...prev, [field]: value }));
+    };
 
     const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
+        // TODO: validate ข้อมูลก่อนไปขั้นตอนถัดไป
         onNext?.(fromState);
     };
 
@@ -33,7 +39,7 @@ export function Register_OwnerForm({ onNext }: RegisterOwnerFormProps) {
                     <input 
                         type="text"
                         value={fromState.username}
-                        onChange={(e) => setFromState({ ...fromState, username: e.target.value })}
+                        onChange={(e) => handleChange("username", e.target.value)}
                         className="border border-gray-300 rounded-2xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     />
                 </div>

@@ -1,5 +1,6 @@
 export type KDSStatus = "รอทำ" | "กำลังทำ" | "พร้อมเสิร์ฟ"
 
+// TODO เมื่อ POS ใช้เมนูจริง: id ของ addon จาก API เป็น UUID → เปลี่ยน id: number เป็น string
 export interface KDSOrderItemAddon {
     id: number
     name: string

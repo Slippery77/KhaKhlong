@@ -10,7 +10,8 @@ Wallet,
 Settings} from "lucide-react"
 import { useState, useRef, useEffect } from "react"
 import { useLocation, Link, useNavigate } from "react-router-dom"
-import { useKDS } from "../context/KDSContext"
+import { useKDS } from "../features/kds/context/KDSContext"
+import { useAuth } from "../features/auth/context/AuthContext"
 
 export interface Employee {
     name: string
@@ -24,7 +25,7 @@ export default function Header() {
     const [employee] = useState<Employee>({ name: "วิชัย ใจดี", role: "ผู้จัดการ" })
     const [isMenuOpen, setIsMenuOpen] = useState(false)
     const menuRef = useRef<HTMLDivElement>(null)
-
+    const { user } = useAuth();
     const isKDS = location.pathname.includes("/kds")
     const isPOS = location.pathname.includes("/mainpos")
     const isSetting = location.pathname.includes("/setting")
@@ -54,7 +55,7 @@ export default function Header() {
             <div className="flex items-center gap-3">
                 <Link to="/mainpos" className="flex items-center gap-2 group cursor-pointer">
                     <div className="w-8 h-8 rounded-lg bg-[#EFE8DC] group-hover:bg-[#E5DCCF] transition-colors flex items-center justify-center text-[#8C6D58]">
-                        <UtensilsCrossed className="w-4 h-4 stroke-[2]" />
+                        <UtensilsCrossed className="w-4 h-4 stroke-2" />
                     </div>
                     <span className="font-semibold text-[#2D241E] text-base group-hover:text-stone-900 transition-colors">
                         ครัวบ้าน
@@ -170,7 +171,7 @@ export default function Header() {
                             </Link>
 
                             <Link
-                                to="/setting"
+                                to={`/${user?.tenantSlug}/setting/menu`}
                                 onClick={() => setIsMenuOpen(false)}
                                 className={`flex items-center gap-3 px-4 py-2.5 text-sm transition-all hover:bg-[#FAF7F2] ${
                                     isSetting ? "font-semibold text-[#8C6D58] bg-[#FAF7F2]/80" : "text-[#2D241E]"

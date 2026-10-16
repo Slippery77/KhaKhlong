@@ -1,5 +1,4 @@
-/* eslint-disable react-refresh/only-export-components */
-import Header from "../components/Header"
+import Header from "../../../components/Header"
 import { useState } from "react"
 import MenuCard from "../components/MenuCard"
 import MenuSidebar from "../components/MenuSidebar"
@@ -7,115 +6,36 @@ import OrderSidebar from "../components/OrderSidebar"
 import ModifierPopup from "../components/ModifierPopup"
 import SearchBar from "../components/SearchBar"
 import { ArrowLeft, Search, ChevronDown, ChefHat, CheckCircle2, X } from "lucide-react"
-import { useKDS } from "../context/KDSContext"
+import { useKDS } from "../../kds/context/KDSContext"
 import { useNavigate } from "react-router-dom"
-
-export interface ModifierOption {
-    id: number
-    name: string
-    price: number
-}
-export type ModifierOpiton = ModifierOption // รองรับกรณีสะกดชื่อเดิม
-
-export interface ModifierGroup {
-    id: number
-    title: string
-    Choice: ModifierOption[]
-    type: "radio" | "checkbox" | string
-    price?: number
-}
-
-export interface Menu {
-    id: number
-    name: string
-    price: number
-    type: string
-    modifiers?: ModifierGroup[]
-}
-
-export interface CartMenu {
-    cartItemId: string
-    id: number
-    name: string
-    price: number // ราคาต่อหน่วยที่รวมตัวเลือกเพิ่มเติมแล้ว
-    basePrice: number
-    type: string
-    quantity: number
-    selectedSpiciness?: string
-    selectedAddons?: ModifierOption[]
-    note?: string
-}
-
-
-// ตัวอย่าง Modifier สำหรับข้าวผัดกุ้ง (ตามรูป mockup)
-export const KHAO_PAD_MODIFIERS: ModifierGroup[] = [
-    {
-        id: 1,
-        title: "ระดับความเผ็ด",
-        type: "radio",
-        Choice: [
-            { id: 101, name: "ไม่เผ็ด", price: 0 },
-            { id: 102, name: "เผ็ดปกติ", price: 0 },
-            { id: 103, name: "เผ็ดมาก", price: 0 },
-        ],
-    },
-    {
-        id: 2,
-        title: "เพิ่มเติม",
-        type: "checkbox",
-        Choice: [
-            { id: 201, name: "เพิ่มไข่ดาว", price: 10 },
-            { id: 202, name: "เพิ่มข้าว", price: 10 },
-            { id: 203, name: "เพิ่มเนื้อ", price: 10 },
-        ],
-    },
-]
+import { useFullMenu } from "../hooks/useFullMenu"
+import type { Menu, CartMenu, ModifierOption } from "../types/pos.types"
 
 export default function MainPOS() {
     const { sendOrderToKitchen } = useKDS()
     const navigate = useNavigate()
 
-    const [menu] = useState<Menu[]>([
-        // อาหารจานหลัก (ข้าวผัดกุ้งมี modifiers)
-        { id: 1, name: "ข้าวผัดกุ้ง", price: 90, type: "อาหารจานหลัก", modifiers: KHAO_PAD_MODIFIERS },
-        { id: 2, name: "กระเพราหมูสับ", price: 75, type: "อาหารจานหลัก" },
-        { id: 3, name: "ต้มยำกุ้ง", price: 120, type: "อาหารจานหลัก" },
-        { id: 4, name: "แกงเขียวหวานไก่", price: 85, type: "อาหารจานหลัก" },
-        { id: 5, name: "ผัดซีอิ๊วหมู", price: 75, type: "อาหารจานหลัก" },
-        { id: 6, name: "ยำวุ้นเส้น", price: 80, type: "อาหารจานหลัก" },
-        { id: 7, name: "ข้าวมันไก่", price: 70, type: "อาหารจานหลัก" },
-        { id: 8, name: "ข้าวหมูแดง", price: 70, type: "อาหารจานหลัก" },
-        { id: 9, name: "ส้มตำปูปลาร้า", price: 100, type: "อาหารจานหลัก" },
+    // เมนูจริงจาก GET /menu/full (ดู hooks/useFullMenu.ts)
+    const { categories, isLoading, error, reload } = useFullMenu()
 
-        // ของทานเล่น
-        { id: 10, name: "ปอเปี๊ยะทอด", price: 60, type: "ของทานเล่น" },
-        { id: 11, name: "ทอดมันปลา", price: 75, type: "ของทานเล่น" },
-        { id: 12, name: "ไก่ทอดสมุนไพร", price: 75, type: "ของทานเล่น" },
-        { id: 13, name: "หมูปิ้ง", price: 20, type: "ของทานเล่น" },
-        { id: 14, name: "ไส้กรอกอีสาน", price: 55, type: "ของทานเล่น" },
-        { id: 15, name: "ข้าวเกรียบ", price: 35, type: "ของทานเล่น" },
-
-        // เครื่องดื่ม
-        { id: 16, name: "น้ำเปล่า", price: 15, type: "เครื่องดื่ม" },
-        { id: 17, name: "โค้ก/เป๊ปซี่", price: 25, type: "เครื่องดื่ม" },
-        { id: 18, name: "ชาเย็น", price: 35, type: "เครื่องดื่ม" },
-        { id: 19, name: "กาแฟเย็น", price: 40, type: "เครื่องดื่ม" },
-        { id: 20, name: "น้ำมะนาว", price: 35, type: "เครื่องดื่ม" },
-        { id: 21, name: "น้ำส้มคั้น", price: 45, type: "เครื่องดื่ม" },
-        { id: 22, name: "น้ำแตงโม", price: 40, type: "เครื่องดื่ม" },
-        { id: 23, name: "ชานม", price: 45, type: "เครื่องดื่ม" },
-
-        // ของหวาน
-        { id: 24, name: "ข้าวเหนียวมะม่วง", price: 70, type: "ของหวาน" },
-        { id: 25, name: "บัวลอย", price: 45, type: "ของหวาน" },
-        { id: 26, name: "วุ้นมะพร้าว", price: 40, type: "ของหวาน" },
-        { id: 27, name: "ไอศกรีมกะทิ", price: 50, type: "ของหวาน" },
-        { id: 28, name: "ทับทิมกรอบ", price: 45, type: "ของหวาน" },
-    ])
+    // แปลง items ของทุกหมวดเป็น Menu[] ที่ component ในหน้านี้ใช้
+    // รวมทุกหมวดไว้ใน array เดียว เพื่อให้ช่องค้นหาหาข้ามหมวดได้
+    // TODO modifiers: ยังไม่ได้ต่อ modifier_groups จาก API → ตอนนี้ทุกเมนูกดแล้วเข้าตะกร้าเลย ไม่เปิด ModifierPopup
+    //   ทำต่อ: ให้ useFullMenu คืน modifier_groups ด้วย แล้ว map item.modifier_group_ids → ModifierGroup[] ใส่ใน modifiers
+    const menu: Menu[] = categories.flatMap((c) =>
+        c.items.map((item) => ({
+            id: item.menu_item_id,
+            name: item.name,
+            price: item.price,
+            categoryId: item.category_id,
+            isAvailable: item.is_available,
+        }))
+    )
 
     const [isOrdered, setOrder] = useState<boolean>(false)
     const [cartMenu, setcartMenu] = useState<CartMenu[]>([])
-    const [seletedCategory, setSelectCategory] = useState<string>("อาหารจานหลัก")
+    // เก็บ category_id ของหมวดที่กด (null = ยังไม่ได้กด)
+    const [seletedCategory, setSelectCategory] = useState<string | null>(null)
     const [currentTable, setCurrentTable] = useState<string>("โต๊ะ 1")
     const [showTableSelect, setShowTableSelect] = useState<boolean>(false)
     const [currentText, setcurrentText] = useState<string>("")
@@ -137,18 +57,24 @@ export default function MainPOS() {
     // State สำหรับเปิด Modifier Popup/Panel
     const [selectedMenuForModifier, setSelectedMenuForModifier] = useState<Menu | null>(null)
 
+    // ยังไม่ได้กดหมวด → ใช้หมวดแรกจาก API (ไม่ต้อง setState ใน useEffect ตอนโหลดเสร็จ)
+    const activeCategoryId = seletedCategory ?? categories[0]?.category_id
+
     const filteredMenu = menu.filter((m) => {
         const matchSearch = m.name.toLocaleLowerCase().includes(currentText.trim().toLocaleLowerCase())
 
         if (currentText.trim() !== "") return matchSearch
 
-        return m.type === seletedCategory
+        return m.categoryId === activeCategoryId
     })
 
     const isMenuExist = filteredMenu.length > 0
 
     // เมื่อคลิก MenuCard: ถ้ามี modifier ให้เปิด ModifierPopup ถ้าไม่มีให้เพิ่มเข้าตะกร้าเลย
     function handleMenuClick(clickedMenu: Menu) {
+        // เมนูหมดวันนี้ กดไม่ได้ (TODO MenuCard: แสดงสีเทา + ป้าย "หมดวันนี้")
+        if (!clickedMenu.isAvailable) return
+
         if (clickedMenu.modifiers && clickedMenu.modifiers.length > 0) {
             setSelectedMenuForModifier(clickedMenu)
             return
@@ -200,7 +126,6 @@ export default function MainPOS() {
             name: data.menu.name,
             price: data.totalUnitPrice, // ราคาต่อหน่วยที่บวก addons แล้ว
             basePrice: data.menu.price,
-            type: data.menu.type,
             quantity: data.quantity,
             selectedSpiciness: data.selectedSpiciness,
             selectedAddons: data.selectedAddons,
@@ -259,8 +184,8 @@ export default function MainPOS() {
         )
     }
 
-    function handleSelectCategory(category: string) {
-        setSelectCategory(category)
+    function handleSelectCategory(categoryId: string) {
+        setSelectCategory(categoryId)
         setcurrentText("")
     }
 
@@ -293,7 +218,11 @@ export default function MainPOS() {
             <div className="flex flex-1 overflow-hidden relative">
                 {/* Category Sidebar */}
                 <aside className="w-50 h-full border-r border-stone-200 flex flex-col items-center py-4 gap-3 bg-[#FAF7F2]">
-                    <MenuSidebar seletedCategory={seletedCategory} onSelectCategory={handleSelectCategory} />
+                    <MenuSidebar
+                        categories={categories}
+                        seletedCategory={activeCategoryId}
+                        onSelectCategory={handleSelectCategory}
+                    />
                 </aside>
 
                 {/* Main Menu Grid */}
@@ -360,7 +289,20 @@ export default function MainPOS() {
                     </div>
 
                     <div className="grid grid-cols-4 gap-4 overflow-y-auto p-6 flex-1 content-start">
-                        {isMenuExist ? (
+                        {isLoading ? (
+                            <p className="col-span-4 py-20 text-center text-sm text-stone-400 font-kanit">กำลังโหลดเมนู...</p>
+                        ) : error ? (
+                            <div className="col-span-4 flex flex-col items-center gap-3 py-20 text-center font-kanit">
+                                <p className="text-sm text-red-600">{error}</p>
+                                <button
+                                    type="button"
+                                    onClick={reload}
+                                    className="rounded-xl border border-[#d9c6b0] px-4 py-2 text-sm text-[#2D241E] transition hover:bg-[#FAF7F2] active:scale-95"
+                                >
+                                    ลองใหม่
+                                </button>
+                            </div>
+                        ) : isMenuExist ? (
                             filteredMenu.map((m) => (
                                 <MenuCard key={m.id} menu={m} onClickMenuCard={handleMenuClick} />
                             ))

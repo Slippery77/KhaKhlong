@@ -38,7 +38,7 @@ export default function LoginForm() {
     const result =  await login(formState);
 
     if(result){
-      navigate(`/${formState.tenantSlug}/homepage`); // ถ้า login สำเร็จให้ไปหน้า homepage
+      navigate(`/${formState.tenantSlug}/mainpos`); // ถ้า login สำเร็จให้ไปหน้า homepage
     }
   };
 

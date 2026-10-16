@@ -11,7 +11,7 @@ export class ModifierGroupDTO{
 
     @ApiProperty({ description: 'เลือกได้ตัวเดียวหรือหลายตัว', enum: ['single', 'multi'], example: 'single' })
     @IsIn(['single','multi'])
-    selection_type!:string
+    selection_type!:'single'|'multi';
 
     @ApiPropertyOptional({ description: 'บังคับให้ลูกค้าเลือกหรือไม่ ค่าเริ่มต้น false', example: true })
     @IsOptional()
