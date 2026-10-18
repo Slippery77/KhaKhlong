@@ -10,7 +10,7 @@ export class CreateOrderDto {
   })
   @IsUUID()
   @IsNotEmpty()
-  orderId: string;
+  orderId!: string;
 
   @ApiProperty({
     description: 'รหัสโต๊ะที่เปิดบิล (UUID)',
@@ -18,7 +18,7 @@ export class CreateOrderDto {
   })
   @IsUUID()
   @IsNotEmpty()
-  tableId: string;
+  tableId!: string;
 
   @ApiPropertyOptional({
     description: 'รายการอาหารที่สั่งพร้อมการเปิดบิล (ถ้ามี)',

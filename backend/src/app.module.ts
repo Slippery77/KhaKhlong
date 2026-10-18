@@ -14,6 +14,7 @@ import { TablesModule } from './modules/tables/tables.module';
 import { KdsModule } from './modules/kds/kds.module';
 import { OrdersModule } from './modules/orders/orders.module';
 import * as Joi from 'joi';
+import { ShiftsModule } from './modules/shifts/shifts.module';
 
 @Module({
   imports: [
@@ -42,6 +43,7 @@ import * as Joi from 'joi';
     TablesModule,
     KdsModule,
     OrdersModule,
+    ShiftsModule,
     ThrottlerModule.forRoot([{
       ttl: 60000,
       limit: 100,

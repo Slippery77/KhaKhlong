@@ -9,7 +9,7 @@ export class CloseUnpaidDto {
   })
   @IsNotEmpty()
   @IsIn(['voided_all', 'empty', 'walkout'])
-  closeReason: 'voided_all' | 'empty' | 'walkout';
+  closeReason!: 'voided_all' | 'empty' | 'walkout';
 
   @ApiPropertyOptional({
     description: 'หมายเหตุเพิ่มเติม (ถ้ามี)',

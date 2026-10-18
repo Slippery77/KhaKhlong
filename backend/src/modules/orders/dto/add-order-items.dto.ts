@@ -9,7 +9,7 @@ export class CreateOrderItemDto {
   })
   @IsUUID()
   @IsNotEmpty()
-  orderItemId: string;
+  orderItemId!: string;
 
   @ApiProperty({
     description: 'รหัสเมนูอาหาร (UUID)',
@@ -17,7 +17,7 @@ export class CreateOrderItemDto {
   })
   @IsUUID()
   @IsNotEmpty()
-  menuItemId: string;
+  menuItemId!: string;
 
   @ApiPropertyOptional({
     description: 'คำขอพิเศษ (เช่น ไม่ใส่ผักชี, หวานน้อย)',
@@ -46,5 +46,5 @@ export class AddOrderItemsDto {
   @IsArray()
   @ValidateNested({ each: true })
   @Type(() => CreateOrderItemDto)
-  items: CreateOrderItemDto[];
+  items!: CreateOrderItemDto[];
 }
