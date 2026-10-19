@@ -13,6 +13,7 @@ import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { TablesModule } from './modules/tables/tables.module';
 import { KdsModule } from './modules/kds/kds.module';
 import { OrdersModule } from './modules/orders/orders.module';
+import { InventoryModule } from './modules/inventory/inventory.module';
 import * as Joi from 'joi';
 
 @Module({
@@ -42,6 +43,7 @@ import * as Joi from 'joi';
     TablesModule,
     KdsModule,
     OrdersModule,
+    InventoryModule,
     ThrottlerModule.forRoot([{
       ttl: 60000,
       limit: 100,

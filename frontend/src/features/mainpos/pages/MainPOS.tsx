@@ -4,8 +4,9 @@ import MenuCard from "../components/MenuCard"
 import MenuSidebar from "../components/MenuSidebar"
 import OrderSidebar from "../components/OrderSidebar"
 import ModifierPopup from "../components/ModifierPopup"
+import PaymentModal from "../components/PaymentModal"
 import SearchBar from "../components/SearchBar"
-import { ArrowLeft, Search, ChevronDown, ChefHat, CheckCircle2, X } from "lucide-react"
+import { ArrowLeft, Search, ChevronDown, ChefHat, CheckCircle2, X, ChartLine } from "lucide-react"
 import { useKDS } from "../../kds/context/KDSContext"
 import { useNavigate } from "react-router-dom"
 import { useFullMenu } from "../hooks/useFullMenu"
@@ -50,6 +51,32 @@ export default function MainPOS() {
         tableName: "",
         itemCount: 0,
     })
+
+    // State สำหรับเปิดหน้าต่างชำระเงิน
+    const [isPaymentOpen, setIsPaymentOpen] = useState<boolean>(false)
+
+    // แจ้งเตือนเมื่อชำระเงินสำเร็จ
+    const [paidToast, setPaidToast] = useState<{
+        show: boolean
+        billDesc: string
+    }>({
+        show: false,
+        billDesc: "",
+    })
+
+    function handlePaymentSuccess(billDesc: string) {
+        setcartMenu([])
+        setOrder(false)
+        setIsPaymentOpen(false)
+        setPaidToast({
+            show: true,
+            billDesc,
+        })
+
+        setTimeout(() => {
+            setPaidToast((prev) => ({ ...prev, show: false }))
+        }, 5000)
+    }
 
     // รายการโต๊ะสำหรับเลือก
     const AVAILABLE_TABLES = ["โต๊ะ 1", "โต๊ะ 2", "โต๊ะ 3", "โต๊ะ 4", "โต๊ะ 5", "โต๊ะ 6", "โต๊ะ 7", "โต๊ะ 8"]
@@ -338,9 +365,52 @@ export default function MainPOS() {
                             onReduceValue={onReduceValue}
                             onIncreaseValue={onIncreaseValue}
                             onSendToKitchen={handleSendToKitchen}
+                            onPayment={() => setIsPaymentOpen(true)}
                         />
                     )}
                 </aside>
+
+                {/* Modal ชำระเงิน */}
+                {isPaymentOpen && (
+                    <PaymentModal
+                        table={currentTable}
+                        cartMenu={cartMenu}
+                        onClose={() => setIsPaymentOpen(false)}
+                        onPaymentSuccess={handlePaymentSuccess}
+                    />
+                )}
+
+                {/* Toast แจ้งเตือนเมื่อชำระเงินสำเร็จ พร้อมปุ่มไปหน้ารายการขาย */}
+                {paidToast.show && (
+                    <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-[#2D241E] text-white px-5 py-3 rounded-2xl shadow-xl flex items-center gap-3.5 font-kanit border border-stone-700 animate-in fade-in slide-in-from-bottom-4 duration-200">
+                        <div className="w-8 h-8 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0">
+                            <CheckCircle2 className="w-5 h-5" />
+                        </div>
+                        <div className="flex flex-col">
+                            <span className="text-sm font-semibold">ชำระเงินสำเร็จ! ({paidToast.billDesc})</span>
+                            <span className="text-xs text-stone-300">
+                                บิลถูกบันทึกลงในรายการขายอัตโนมัติเรียบร้อยแล้ว
+                            </span>
+                        </div>
+                        <div className="flex items-center gap-2 ml-2">
+                            <button
+                                type="button"
+                                onClick={() => navigate("/sale-report")}
+                                className="px-3 py-1.5 rounded-xl bg-[#A68874] hover:bg-[#967763] text-white text-xs font-medium transition-all cursor-pointer flex items-center gap-1.5 shrink-0"
+                            >
+                                <ChartLine className="w-3.5 h-3.5" />
+                                <span>ดูรายการขาย</span>
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setPaidToast((prev) => ({ ...prev, show: false }))}
+                                className="p-1 rounded-lg text-stone-400 hover:text-white cursor-pointer"
+                            >
+                                <X className="w-4 h-4" />
+                            </button>
+                        </div>
+                    </div>
+                )}
 
                 {/* Toast แจ้งเตือนเมื่อส่งเข้าครัวสำเร็จ พร้อมปุ่มเปิดดูจอครัว KDS */}
                 {sentToast.show && (

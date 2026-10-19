@@ -185,11 +185,11 @@
 
 ตาราง `ingredients`, `inventory_transactions` + view `v_ingredient_stock`
 
-- [ ] `POST /ingredients` + CRUD — `inventory:adjust`
-- [ ] `GET /inventory/stock` — จาก view · `inventory:check`
-- [ ] `POST /inventory/restock` — รับของ · `inventory:adjust`
-- [ ] `POST /inventory/waste` — ของเสีย · `inventory:adjust`
-- [ ] `POST /inventory/count` — นับยอดคงเหลือ · `inventory:adjust`
+- [x] `POST /ingredients` + CRUD — `inventory:adjust`
+- [x] `GET /inventory/stock` — จาก view · `inventory:check`
+- [x] `POST /inventory/restock` — รับของ · `inventory:adjust`
+- [x] `POST /inventory/waste` — ของเสีย · `inventory:adjust`
+- [x] `POST /inventory/count` — นับยอดคงเหลือ · `inventory:adjust`
 
 **หมายเหตุ**
 - ใช้ `record_stock_count()` ที่ DB เตรียมไว้
