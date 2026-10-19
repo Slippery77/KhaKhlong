@@ -132,6 +132,12 @@ export class ShiftsService {
     
     async verifyShift(shift_id:string, userId:string){
         let result;
+        const shift = await this.shiftRepository.getShiftStatusForUpdate(shift_id);
+        if (!shift) throw new NotFoundException('ไม่พบกะนี้');
+        if (!['pending_verification', 'escalated'].includes(shift.status)) {
+            throw new ConflictException('กะนี้ไม่ต้องรับรอง หรือรับรองไปแล้ว');
+        }
+        
         try {
             result = await this.shiftRepository.verifyShift(shift_id,userId);
             if (!result) throw new NotFoundException('ไม่พบกะนี้');

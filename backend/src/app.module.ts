@@ -15,6 +15,7 @@ import { KdsModule } from './modules/kds/kds.module';
 import { OrdersModule } from './modules/orders/orders.module';
 import * as Joi from 'joi';
 import { ShiftsModule } from './modules/shifts/shifts.module';
+import { SystemConfigModule } from './modules/system-config/system-config.module';
 
 @Module({
   imports: [
@@ -44,6 +45,7 @@ import { ShiftsModule } from './modules/shifts/shifts.module';
     KdsModule,
     OrdersModule,
     ShiftsModule,
+    SystemConfigModule,
     ThrottlerModule.forRoot([{
       ttl: 60000,
       limit: 100,
