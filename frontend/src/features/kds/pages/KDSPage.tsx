@@ -2,28 +2,26 @@ import { useState } from "react"
 import Header from "../../../components/Header"
 import KDSCard from "../components/KDSCard"
 import { useKDS } from "../context/KDSContext"
+import { useKDSQueue } from "../hooks/useKDSQueue"
 import type { KDSStatus } from "../types/kds.types"
-import { ChefHat, Bell, CheckCircle2, CookingPot, HelpCircle, X, RefreshCw } from "lucide-react"
+import { ChefHat, Bell, CheckCircle2, CookingPot, HelpCircle, X, RefreshCw, RotateCcw } from "lucide-react"
 
 export default function KDSPage() {
-    const {
-        orders,
-        updateOrderStatus,
-        cancelOrder,
-        completeOrder,
-        clearAllOrders,
-    } = useKDS()
+    const { clearAllOrders } = useKDS()
+
+    // ข้อมูลจาก backend (polling ทุก 3 วินาที)
+    const { tickets, isLoading, error, reload, updateItemStatus } = useKDSQueue()
 
     // State สำหรับการกรองสถานะ (null หมายถึงแสดงทั้งหมดตามรูป mockup 2)
     const [filterStatus, setFilterStatus] = useState<KDSStatus | null>(null)
     const [showHelpModal, setShowHelpModal] = useState(false)
 
-    // แยกออเดอร์ตามสถานะทั้ง 3
-    const pendingOrders = orders.filter((o) => o.status === "รอทำ")
-    const cookingOrders = orders.filter((o) => o.status === "กำลังทำ")
-    const readyOrders = orders.filter((o) => o.status === "พร้อมเสิร์ฟ")
+    // แยก tickets ตามสถานะ
+    const pendingOrders = tickets.filter((t) => t.overallStatus === "รอทำ")
+    const cookingOrders = tickets.filter((t) => t.overallStatus === "กำลังทำ")
+    const readyOrders = tickets.filter((t) => t.overallStatus === "พร้อมเสิร์ฟ")
 
-    const totalOrdersCount = orders.length
+    const totalOrdersCount = tickets.length
 
     return (
         <div className="flex flex-col h-screen w-screen overflow-hidden bg-[#FAF7F2] font-kanit">
@@ -105,7 +103,24 @@ export default function KDSPage() {
 
             {/* เนื้อหาหลักของหน้า KDS */}
             <main className="flex-1 overflow-y-auto p-6 md:p-8 relative">
-                {totalOrdersCount === 0 ? (
+                {isLoading ? (
+                    <div className="h-full flex flex-col items-center justify-center text-center select-none py-12">
+                        <div className="w-10 h-10 border-2 border-stone-300 border-t-[#A68874] rounded-full animate-spin mb-4" />
+                        <p className="text-sm text-stone-400 font-kanit">กำลังโหลดคิวครัว...</p>
+                    </div>
+                ) : error ? (
+                    <div className="h-full flex flex-col items-center justify-center text-center select-none py-12 gap-3">
+                        <p className="text-sm text-red-500 font-kanit">{error}</p>
+                        <button
+                            type="button"
+                            onClick={reload}
+                            className="flex items-center gap-1.5 px-4 py-2 rounded-xl border border-stone-200 text-sm text-stone-600 hover:bg-stone-50 cursor-pointer font-kanit"
+                        >
+                            <RotateCcw className="w-3.5 h-3.5" />
+                            ลองใหม่
+                        </button>
+                    </div>
+                ) : totalOrdersCount === 0 ? (
                     /* รูปแบบเมื่อไม่มีออเดอร์ในครัว (ตรงตาม Screenshot 1 เป๊ะ) */
                     <div className="h-full flex flex-col items-center justify-center text-center select-none py-12">
                         <div className="w-20 h-20 rounded-full bg-[#EFE8DC]/50 flex items-center justify-center mb-4 text-[#A89887]">
@@ -134,13 +149,11 @@ export default function KDSPage() {
 
                                 {pendingOrders.length > 0 ? (
                                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                                        {pendingOrders.map((order) => (
+                                        {pendingOrders.map((ticket) => (
                                             <KDSCard
-                                                key={order.id}
-                                                order={order}
-                                                onUpdateStatus={updateOrderStatus}
-                                                onCancelOrder={cancelOrder}
-                                                onCompleteOrder={completeOrder}
+                                                key={ticket.ticketId}
+                                                ticket={ticket}
+                                                onUpdateStatus={updateItemStatus}
                                             />
                                         ))}
                                     </div>
@@ -167,13 +180,11 @@ export default function KDSPage() {
 
                                 {cookingOrders.length > 0 ? (
                                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                                        {cookingOrders.map((order) => (
+                                        {cookingOrders.map((ticket) => (
                                             <KDSCard
-                                                key={order.id}
-                                                order={order}
-                                                onUpdateStatus={updateOrderStatus}
-                                                onCancelOrder={cancelOrder}
-                                                onCompleteOrder={completeOrder}
+                                                key={ticket.ticketId}
+                                                ticket={ticket}
+                                                onUpdateStatus={updateItemStatus}
                                             />
                                         ))}
                                     </div>
@@ -200,13 +211,11 @@ export default function KDSPage() {
 
                                 {readyOrders.length > 0 ? (
                                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                                        {readyOrders.map((order) => (
+                                        {readyOrders.map((ticket) => (
                                             <KDSCard
-                                                key={order.id}
-                                                order={order}
-                                                onUpdateStatus={updateOrderStatus}
-                                                onCancelOrder={cancelOrder}
-                                                onCompleteOrder={completeOrder}
+                                                key={ticket.ticketId}
+                                                ticket={ticket}
+                                                onUpdateStatus={updateItemStatus}
                                             />
                                         ))}
                                     </div>

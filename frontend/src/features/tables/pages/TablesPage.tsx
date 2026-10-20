@@ -40,7 +40,7 @@ export default function TablesPage() {
 
             <div className="flex flex-1 overflow-hidden">
                 {/* Sidebar ชั้น */}
-                <aside className="w-[88px] shrink-0 bg-[#F3EDE4] border-r border-stone-200 flex flex-col items-center py-4 gap-2 overflow-y-auto">
+                <aside className="w-30 shrink-0 bg-[#F3EDE4] border-r border-stone-200 flex flex-col items-center py-4 gap-2 overflow-y-auto">
                     {Array.from(floors.keys()).map((floor) => {
                         const floorTables = floors.get(floor)!
                         const occupied = floorTables.filter((t) => t.status === 'occupied').length

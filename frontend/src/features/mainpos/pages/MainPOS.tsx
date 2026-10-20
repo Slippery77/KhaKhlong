@@ -12,11 +12,12 @@ import { useNavigate, useSearchParams } from "react-router-dom"
 import { useFullMenu } from "../hooks/useFullMenu"
 import type { Menu, CartMenu, ModifierOption } from "../types/pos.types"
 import { useAuth } from "../../auth/context/AuthContext"
+import { apiFetch } from "../../../libs/appClient"
 
 export default function MainPOS() {
     const { sendOrderToKitchen } = useKDS()
     const navigate = useNavigate()
-    const { user } = useAuth()
+    const { user, accessToken } = useAuth()
     const [searchParams] = useSearchParams()
 
     // รับ tableId, tableName, orderId จาก URL (มาจากหน้าโต๊ะ)
@@ -25,22 +26,8 @@ export default function MainPOS() {
         ? decodeURIComponent(searchParams.get('tableName')!)
         : null
 
-    // เมนูจริงจาก GET /menu/full (ดู hooks/useFullMenu.ts)
-    const { categories, isLoading, error, reload } = useFullMenu()
-
-    // แปลง items ของทุกหมวดเป็น Menu[] ที่ component ในหน้านี้ใช้
-    // รวมทุกหมวดไว้ใน array เดียว เพื่อให้ช่องค้นหาหาข้ามหมวดได้
-    // TODO modifiers: ยังไม่ได้ต่อ modifier_groups จาก API → ตอนนี้ทุกเมนูกดแล้วเข้าตะกร้าเลย ไม่เปิด ModifierPopup
-    //   ทำต่อ: ให้ useFullMenu คืน modifier_groups ด้วย แล้ว map item.modifier_group_ids → ModifierGroup[] ใส่ใน modifiers
-    const menu: Menu[] = categories.flatMap((c) =>
-        c.items.map((item) => ({
-            id: item.menu_item_id,
-            name: item.name,
-            price: item.price,
-            categoryId: item.category_id,
-            isAvailable: item.is_available,
-        }))
-    )
+    // เมนูจริงจาก GET /menu/full — hook คืน menu[] พร้อม modifiers[] แล้ว
+    const { categories, menu, isLoading, error, reload } = useFullMenu()
 
     const [isOrdered, setOrder] = useState<boolean>(false)
     const [cartMenu, setcartMenu] = useState<CartMenu[]>([])
@@ -224,26 +211,93 @@ export default function MainPOS() {
     }
 
     // เมื่อกดปุ่ม "ส่งครัว" จาก OrderSidebar
-    function handleSendToKitchen() {
+    async function handleSendToKitchen() {
         if (cartMenu.length === 0) return
 
+        if (!tableIdFromUrl || !accessToken) {
+            // fallback: ไม่มี tableId → push localStorage อย่างเดียว
+            sendOrderToKitchen(currentTable, cartMenu)
+            setcartMenu([])
+            setOrder(false)
+            return
+        }
+
+        try {
+            const kitchenTicketId = crypto.randomUUID() // 1 ค่าต่อการกดส่งครัว 1 รอบ
+
+            // ── 1. หา orderId ที่ใช้จริง ──────────────────────────────
+            // ลำดับความสำคัญ:
+            //   a. open_order_id จาก URL (ส่งมาตอนกดโต๊ะที่ occupied)
+            //   b. ดึงจาก GET /tables เพื่อหา open_order_id ล่าสุด
+            //   c. สร้างบิลใหม่ (โต๊ะว่าง)
+            let orderId = searchParams.get('orderId')
+
+            if (!orderId) {
+                // ดึง open_order_id จาก table ปัจจุบัน
+                const tablesRes = await apiFetch<{ status: string; data: { table_id: string; open_order_id: string | null }[] }>(
+                    '/tables',
+                    accessToken,
+                )
+                const thisTable = tablesRes.data.find((t) => t.table_id === tableIdFromUrl)
+                orderId = thisTable?.open_order_id ?? null
+            }
+
+            if (!orderId) {
+                // โต๊ะว่างจริง → สร้างบิลใหม่
+                const newOrderId = crypto.randomUUID()
+                const createRes = await apiFetch<{ status: string; data: { order_id: string } }>(
+                    '/orders',
+                    accessToken,
+                    'POST',
+                    { orderId: newOrderId, tableId: tableIdFromUrl },
+                )
+                orderId = createRes.data?.order_id ?? newOrderId
+            }
+
+            // ── 2. แปลง cartMenu → items (1 จาน = 1 แถว) ────────────
+            const itemsToSend: {
+                orderItemId: string
+                menuItemId: string
+                specialRequest?: string
+                modifierIds?: string[]
+            }[] = []
+
+            for (const cartItem of cartMenu) {
+                const modifierIds = cartItem.selectedAddons?.map((a) => a.id) ?? []
+                const specialRequest = [cartItem.selectedSpiciness, cartItem.note]
+                    .filter(Boolean)
+                    .join(", ") || undefined
+
+                for (let i = 0; i < cartItem.quantity; i++) {
+                    itemsToSend.push({
+                        orderItemId: crypto.randomUUID(),
+                        menuItemId: cartItem.id,
+                        specialRequest,
+                        modifierIds: modifierIds.length > 0 ? modifierIds : undefined,
+                    })
+                }
+            }
+
+            // ── 3. POST /orders/:id/items + kitchenTicketId ───────────
+            // backend จะ INSERT items ด้วย status='queued' + kitchen_ticket_id ทันที
+            await apiFetch(
+                `/orders/${orderId}/items`,
+                accessToken,
+                'POST',
+                { items: itemsToSend, kitchenTicketId },
+            )
+
+        } catch (err) {
+            console.error('ส่งครัวไม่สำเร็จ:', err)
+        }
+
+        // ── 4. อัปเดต local state (badge + toast) ────────────────────
         sendOrderToKitchen(currentTable, cartMenu)
         const count = cartMenu.reduce((sum, item) => sum + item.quantity, 0)
-
-        // เคลียร์ตะกร้าเมื่อส่งเข้าครัวแล้ว
         setcartMenu([])
         setOrder(false)
-
-        // แจ้งเตือนส่งเข้าครัวสำเร็จ
-        setSentToast({
-            show: true,
-            tableName: currentTable,
-            itemCount: count,
-        })
-
-        setTimeout(() => {
-            setSentToast((prev) => ({ ...prev, show: false }))
-        }, 4500)
+        setSentToast({ show: true, tableName: currentTable, itemCount: count })
+        setTimeout(() => setSentToast((prev) => ({ ...prev, show: false })), 4500)
     }
 
     return (

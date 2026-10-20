@@ -47,4 +47,12 @@ export class AddOrderItemsDto {
   @ValidateNested({ each: true })
   @Type(() => CreateOrderItemDto)
   items!: CreateOrderItemDto[];
+
+  @ApiPropertyOptional({
+    description: 'รหัส kitchen ticket (UUID จาก client — 1 ค่าต่อการกดส่งครัว 1 รอบ)',
+    example: 'f1a2b3c4-d5e6-7890-abcd-ef1234567890',
+  })
+  @IsOptional()
+  @IsUUID()
+  kitchenTicketId?: string;
 }

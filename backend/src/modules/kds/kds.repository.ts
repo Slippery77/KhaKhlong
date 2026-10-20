@@ -87,11 +87,11 @@ export class KdsRepository {
     const sql = `
       UPDATE order_items
       SET
-        status = $2,
-        void_reason = CASE WHEN $2 = 'voided' THEN $3 ELSE void_reason END,
-        voided_by = CASE WHEN $2 = 'voided' THEN $4::uuid ELSE voided_by END,
-        voided_at = CASE WHEN $2 = 'voided' THEN now() ELSE voided_at END,
-        updated_at = now()
+        status = $2::varchar,
+        void_reason = CASE WHEN $2::varchar = 'voided' THEN $3::text ELSE void_reason END,
+        voided_by   = CASE WHEN $2::varchar = 'voided' THEN $4::uuid ELSE voided_by END,
+        voided_at   = CASE WHEN $2::varchar = 'voided' THEN now()    ELSE voided_at END,
+        updated_at  = now()
       WHERE order_item_id = $1
       RETURNING
         order_item_id,
