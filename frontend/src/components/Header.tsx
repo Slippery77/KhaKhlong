@@ -10,9 +10,9 @@ Wallet,
 Settings,
 Utensils} from "lucide-react"
 import { useState, useRef, useEffect } from "react"
-import { useLocation, Link, useNavigate } from "react-router-dom"
+import { useLocation, Link, useParams } from "react-router-dom"
 import { useKDS } from "../features/kds/context/KDSContext"
-import { useAuth } from "../features/auth/context/AuthContext"
+import { useLogin } from "../features/auth/hooks/useLogin"
 
 export interface Employee {
     name: string
@@ -21,12 +21,13 @@ export interface Employee {
 
 export default function Header() {
     const location = useLocation()
-    const navigate = useNavigate()
     const { orders } = useKDS()
     const [employee] = useState<Employee>({ name: "วิชัย ใจดี", role: "ผู้จัดการ" })
     const [isMenuOpen, setIsMenuOpen] = useState(false)
     const menuRef = useRef<HTMLDivElement>(null)
-    const { user } = useAuth();
+    const { logout } = useLogin();
+    // อ่าน slug จาก URL แทน user.tenantSlug เพราะ user หายเมื่อ refresh หน้า
+    const { tenantSlug } = useParams<{ tenantSlug: string }>()
     const isKDS = location.pathname.includes("/kds")
     const isPOS = location.pathname.includes("/mainpos")
     const isTables = location.pathname.includes("/tables")
@@ -55,7 +56,7 @@ export default function Header() {
         <header className="h-14 bg-[#FAF7F2] border-b border-stone-200 px-8 flex items-center justify-between font-kanit select-none shrink-0 relative z-30">
             {/* โลโก้ และ Breadcrumb ตามรูป mockup */}
             <div className="flex items-center gap-3">
-                <Link to={`/${user?.tenantSlug}/tables`} className="flex items-center gap-2 group cursor-pointer">
+                <Link to={`/${tenantSlug}/tables`} className="flex items-center gap-2 group cursor-pointer">
                     <div className="w-8 h-8 rounded-lg bg-[#EFE8DC] group-hover:bg-[#E5DCCF] transition-colors flex items-center justify-center text-[#8C6D58]">
                         <UtensilsCrossed className="w-4 h-4 stroke-2" />
                     </div>
@@ -112,7 +113,7 @@ export default function Header() {
                             </div>
 
                             <Link
-                                to={`/${user?.tenantSlug}/tables`}
+                                to={`/${tenantSlug}/tables`}
                                 onClick={() => setIsMenuOpen(false)}
                                 className={`flex items-center gap-3 px-4 py-2.5 text-sm transition-all hover:bg-[#FAF7F2] ${
                                     isTables ? "font-semibold text-[#8C6D58] bg-[#FAF7F2]/80" : "text-[#2D241E]"
@@ -123,7 +124,7 @@ export default function Header() {
                             </Link>
 
                             <Link
-                                to={`/${user?.tenantSlug}/mainpos`}
+                                to={`/${tenantSlug}/mainpos`}
                                 onClick={() => setIsMenuOpen(false)}
                                 className={`flex items-center gap-3 px-4 py-2.5 text-sm transition-all hover:bg-[#FAF7F2] ${
                                     isPOS ? "font-semibold text-[#8C6D58] bg-[#FAF7F2]/80" : "text-[#2D241E]"
@@ -134,7 +135,7 @@ export default function Header() {
                             </Link>
 
                             <Link
-                                to={`/${user?.tenantSlug}/kds`}
+                                to={`/${tenantSlug}/kds`}
                                 onClick={() => setIsMenuOpen(false)}
                                 className={`flex items-center justify-between px-4 py-2.5 text-sm transition-all hover:bg-[#FAF7F2] ${
                                     isKDS ? "font-semibold text-[#8C6D58] bg-[#FAF7F2]/80" : "text-[#2D241E]"
@@ -152,7 +153,7 @@ export default function Header() {
                             </Link>
 
                             <Link
-                                to={`/${user?.tenantSlug}/stock`}
+                                to={`/${tenantSlug}/stock`}
                                 onClick={() => setIsMenuOpen(false)}
                                 className={`flex items-center gap-3 px-4 py-2.5 text-sm transition-all hover:bg-[#FAF7F2] ${
                                     isStock ? "font-semibold text-[#8C6D58] bg-[#FAF7F2]/80" : "text-[#2D241E]"
@@ -163,7 +164,7 @@ export default function Header() {
                             </Link>
 
                             <Link
-                                to={`/${user?.tenantSlug}/sale-report`}
+                                to={`/${tenantSlug}/sale-report`}
                                 onClick={() => setIsMenuOpen(false)}
                                 className={`flex items-center gap-3 px-4 py-2.5 text-sm transition-all hover:bg-[#FAF7F2] ${
                                     isSalereport ? "font-semibold text-[#8C6D58] bg-[#FAF7F2]/80" : "text-[#2D241E]"
@@ -174,7 +175,7 @@ export default function Header() {
                             </Link>
 
                             <Link
-                                to={`/${user?.tenantSlug}/siftwork`}
+                                to={`/${tenantSlug}/siftwork`}
                                 onClick={() => setIsMenuOpen(false)}
                                 className={`flex items-center gap-3 px-4 py-2.5 text-sm transition-all hover:bg-[#FAF7F2] ${
                                     isSiftwork ? "font-semibold text-[#8C6D58] bg-[#FAF7F2]/80" : "text-[#2D241E]"
@@ -185,7 +186,7 @@ export default function Header() {
                             </Link>
 
                             <Link
-                                to={`/${user?.tenantSlug}/setting/menu`}
+                                to={`/${tenantSlug}/setting/menu`}
                                 onClick={() => setIsMenuOpen(false)}
                                 className={`flex items-center gap-3 px-4 py-2.5 text-sm transition-all hover:bg-[#FAF7F2] ${
                                     isSetting ? "font-semibold text-[#8C6D58] bg-[#FAF7F2]/80" : "text-[#2D241E]"
@@ -194,7 +195,6 @@ export default function Header() {
                                 <Settings className="w-4 h-4 text-[#8C6D58]" />
                                 <span>ตั้งค่า</span>
                             </Link>
-                            
 
                             <div className="border-t border-stone-100 my-1" />
 
@@ -202,7 +202,7 @@ export default function Header() {
                                 type="button"
                                 onClick={() => {
                                     setIsMenuOpen(false)
-                                    navigate(`/${user?.tenantSlug}/`)
+                                    logout()
                                 }}
                                 className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-rose-600 hover:bg-rose-50 transition-all cursor-pointer text-left"
                             >

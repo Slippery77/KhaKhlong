@@ -4,6 +4,8 @@ import { LoginDto } from './dto/login.dto';
 import { LoginEmailDto } from './dto/login-with-email.dto';
 import { Public } from './guards/public.decorator';
 import { Throttle } from '@nestjs/throttler';
+import { ApiOkResponse, ApiOperation, ApiUnauthorizedResponse } from '@nestjs/swagger';
+import { AnyAuthenticated } from './guards/permissions.decorator';
 
 // Controller สำหรับจัดการ endpoint ที่เกี่ยวกับการยืนยันตัวตนของผู้ใช้
 @Controller('auth')
@@ -12,7 +14,9 @@ export class AuthController {
     constructor(private readonly authService: AuthService) {}
 
     // กำหนดให้ response ของ endpoint นี้คืนสถานะ HTTP 200 เมื่อ login สำเร็จ
-  
+
+    @ApiOperation({ summary: 'เข้าสู่ระบบ' })
+    @ApiOkResponse({ description: 'เข้าสู่ระบบสำเร็จ' })
     @HttpCode(HttpStatus.OK)
     // Route สำหรับการเข้าสู่ระบบที่อยู่ที่ /auth/login
     @Throttle({default:{ttl:60000, limit:5}})
@@ -26,4 +30,15 @@ export class AuthController {
     // async loginWithEmail(@Body() dto: LoginEmailDto){
     //     return this.authService.signInWithEmail(dto);
     // } 
+
+    
+    @HttpCode(HttpStatus.OK)
+    @ApiOperation({ summary: 'ออกจากระบบ' })
+    @ApiOkResponse({ description: 'ออกจากระบบแล้ว' })
+    @ApiUnauthorizedResponse({ description: 'token ไม่ถูกต้องหรือหมดอายุ' })
+    @AnyAuthenticated()
+    @Post('logout')
+    async logout() {
+        return this.authService.logout();
+    }
 }

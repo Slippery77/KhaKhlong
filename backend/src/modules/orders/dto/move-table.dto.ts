@@ -8,5 +8,5 @@ export class MoveTableDto {
   })
   @IsUUID()
   @IsNotEmpty()
-  newTableId: string;
+  newTableId!: string;
 }

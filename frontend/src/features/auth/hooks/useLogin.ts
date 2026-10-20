@@ -1,11 +1,15 @@
 import { useState } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import type { LoginCredentials, LoginResponse } from '../types/auth.types';
 import { useAuth } from '../context/AuthContext';
+import { apiFetch } from '../../../libs/appClient';
 
 export function useLogin(){
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [error, setError] = useState<string | null>(null);
-    const { setAuth } = useAuth();
+    const { accessToken, setAuth, clearAuth } = useAuth();
+    const navigate = useNavigate()
+    const { tenantSlug } = useParams<{ tenantSlug: string }>()
 
     const login = async (credentials: LoginCredentials)=>{
         setError(null);
@@ -31,10 +35,25 @@ export function useLogin(){
             setIsSubmitting(false);
         }
     }
+    const logout = async ()=>{
+        setIsSubmitting(true)
+        try{
+            await apiFetch('/auth/logout', accessToken, 'POST')
+        }catch(err){
+            console.error('logout failed', err);
+        }
+        finally{
+            clearAuth();
+            navigate(`/${tenantSlug}/login`);
+        }
+    }
 
     return {
         login,
+        logout,
         isSubmitting,
         error,
     };
+
+    
 }

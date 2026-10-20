@@ -89,4 +89,20 @@ export class OrdersRepository {
     // TODO: เขียน SQL Batch INSERT ... ON CONFLICT DO NOTHING
     return [];
   }
+
+  async hasPendingOrders(){
+    const sql=`
+        SELECT o.order_id, o.order_number, t.table_number,
+          COUNT(oi.order_item_id) FILTER (WHERE oi.status <> 'voided') AS active_items,
+          COUNT(oi.order_item_id) FILTER (WHERE oi.status IN ('draft','queued','preparing','ready')) AS pending_items
+        FROM orders o
+        JOIN dining_tables t ON t.table_id = o.table_id
+        LEFT JOIN order_items oi ON oi.order_id = o.order_id
+        WHERE o.closed_at IS NULL
+        GROUP BY o.order_id, o.order_number, t.table_number
+        ORDER BY o.order_number;
+    `;
+    const result = await this.db.query(sql);
+    return result.rows;
+  }
 }

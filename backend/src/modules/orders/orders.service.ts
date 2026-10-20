@@ -92,4 +92,19 @@ export class OrdersService {
   async syncOrders(dto: any) {
     return this.ordersRepository.syncOrders(dto);
   }
+
+  async findOpenOrdersForClose(){
+    const result = await this.ordersRepository.hasPendingOrders();
+    return result.map((r) => {
+      const active = Number(r.active_items);
+      const pending = Number(r.pending_items);
+        return {
+          orderId: r.order_id,
+          orderNumber: r.order_number,
+          tableNumber: r.table_number,
+          activeItemCount: active,
+          suggestedAction: active === 0 ? 'close_unpaid' : pending > 0 ? 'in_progress' : 'pay',
+        };
+      });
+  }
 }
