@@ -16,20 +16,44 @@ export class TablesRepository {
    * - ตาราง dining_tables ใช้ SELECT table_id, table_number, capacity, floor, status, is_active FROM dining_tables
    */
   async findAll() {
-    const sql = ` 
-      SELECT 
-        table_id, 
-        table_number, 
-        capacity, 
-        floor, 
-        status, 
-        created_at, 
-        updated_at
-      FROM dining_tables
-      ORDER BY floor ASC,
-    table_number ASC;`
-    // TODO: เขียน SQL SELECT สำหรับดึงรายการโต๊ะ
-    const result = await this.db.query(sql)
+    // LEFT JOIN กับ orders (open only) + order_items (non-voided)
+    // เพื่อคืน open_order_id, item_count, total_amount ไปพร้อมกัน
+    // ให้ frontend แสดงจำนวนรายการและยอดค้างชำระบนการ์ดโต๊ะ
+    const sql = `
+      SELECT
+        t.table_id,
+        t.table_number,
+        t.capacity,
+        t.floor,
+        t.status,
+        t.created_at,
+        t.updated_at,
+        o.order_id                            AS open_order_id,
+        COUNT(oi.order_item_id)               AS item_count,
+        COALESCE(SUM(
+          CASE WHEN oi.is_comped THEN 0
+               ELSE oi.unit_price_snapshot + COALESCE(mod.mod_sum, 0)
+          END
+        ), 0)                                 AS total_amount
+      FROM dining_tables t
+      LEFT JOIN orders o
+             ON o.table_id = t.table_id
+            AND o.closed_at IS NULL
+      LEFT JOIN order_items oi
+             ON oi.order_id = o.order_id
+            AND oi.status <> 'voided'
+      LEFT JOIN (
+        SELECT order_item_id, SUM(price_delta_snapshot) AS mod_sum
+        FROM order_item_modifiers
+        GROUP BY order_item_id
+      ) mod ON mod.order_item_id = oi.order_item_id
+      GROUP BY
+        t.table_id, t.table_number, t.capacity, t.floor, t.status,
+        t.created_at, t.updated_at,
+        o.order_id
+      ORDER BY t.floor ASC, t.table_number ASC;
+    `;
+    const result = await this.db.query(sql);
     return result.rows;
   }
 

@@ -7,7 +7,8 @@ X,
 Package,
 ChartLine,
 Wallet,
-Settings} from "lucide-react"
+Settings,
+Utensils} from "lucide-react"
 import { useState, useRef, useEffect } from "react"
 import { useLocation, Link, useNavigate } from "react-router-dom"
 import { useKDS } from "../features/kds/context/KDSContext"
@@ -28,6 +29,7 @@ export default function Header() {
     const { user } = useAuth();
     const isKDS = location.pathname.includes("/kds")
     const isPOS = location.pathname.includes("/mainpos")
+    const isTables = location.pathname.includes("/tables")
     const isSetting = location.pathname.includes("/setting")
     const isSiftwork = location.pathname.includes("/siftwork")
     const isSalereport = location.pathname.includes("/sale-report")
@@ -53,7 +55,7 @@ export default function Header() {
         <header className="h-14 bg-[#FAF7F2] border-b border-stone-200 px-8 flex items-center justify-between font-kanit select-none shrink-0 relative z-30">
             {/* โลโก้ และ Breadcrumb ตามรูป mockup */}
             <div className="flex items-center gap-3">
-                <Link to={`/${user?.tenantSlug}/mainpos`} className="flex items-center gap-2 group cursor-pointer">
+                <Link to={`/${user?.tenantSlug}/tables`} className="flex items-center gap-2 group cursor-pointer">
                     <div className="w-8 h-8 rounded-lg bg-[#EFE8DC] group-hover:bg-[#E5DCCF] transition-colors flex items-center justify-center text-[#8C6D58]">
                         <UtensilsCrossed className="w-4 h-4 stroke-2" />
                     </div>
@@ -67,6 +69,7 @@ export default function Header() {
                 <span className="text-sm font-medium text-[#8C6D58]">
                     {isKDS && ("KDS")}
                     {isPOS && ("POS")}
+                    {isTables && ("โต๊ะ")}
                     {isStock && ("สต็อก")}
                     {isSalereport && ("ยอดขาย")}
                     {isSetting && ("ตั้งค่า")}
@@ -107,6 +110,17 @@ export default function Header() {
                             <div className="px-4 py-2 border-b border-stone-100">
                                 <p className="text-xs text-stone-400 font-medium">เมนูระบบ</p>
                             </div>
+
+                            <Link
+                                to={`/${user?.tenantSlug}/tables`}
+                                onClick={() => setIsMenuOpen(false)}
+                                className={`flex items-center gap-3 px-4 py-2.5 text-sm transition-all hover:bg-[#FAF7F2] ${
+                                    isTables ? "font-semibold text-[#8C6D58] bg-[#FAF7F2]/80" : "text-[#2D241E]"
+                                }`}
+                            >
+                                <Utensils className="w-4 h-4 text-[#8C6D58]" />
+                                <span>โต๊ะ</span>
+                            </Link>
 
                             <Link
                                 to={`/${user?.tenantSlug}/mainpos`}

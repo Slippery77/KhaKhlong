@@ -6,15 +6,24 @@ import OrderSidebar from "../components/OrderSidebar"
 import ModifierPopup from "../components/ModifierPopup"
 import PaymentModal from "../components/PaymentModal"
 import SearchBar from "../components/SearchBar"
-import { ArrowLeft, Search, ChevronDown, ChefHat, CheckCircle2, X, ChartLine } from "lucide-react"
+import { ArrowLeft, Search, ChefHat, CheckCircle2, X, ChartLine } from "lucide-react"
 import { useKDS } from "../../kds/context/KDSContext"
-import { useNavigate } from "react-router-dom"
+import { useNavigate, useSearchParams } from "react-router-dom"
 import { useFullMenu } from "../hooks/useFullMenu"
 import type { Menu, CartMenu, ModifierOption } from "../types/pos.types"
+import { useAuth } from "../../auth/context/AuthContext"
 
 export default function MainPOS() {
     const { sendOrderToKitchen } = useKDS()
     const navigate = useNavigate()
+    const { user } = useAuth()
+    const [searchParams] = useSearchParams()
+
+    // รับ tableId, tableName, orderId จาก URL (มาจากหน้าโต๊ะ)
+    const tableIdFromUrl = searchParams.get('tableId')
+    const tableNameFromUrl = searchParams.get('tableName')
+        ? decodeURIComponent(searchParams.get('tableName')!)
+        : null
 
     // เมนูจริงจาก GET /menu/full (ดู hooks/useFullMenu.ts)
     const { categories, isLoading, error, reload } = useFullMenu()
@@ -35,10 +44,8 @@ export default function MainPOS() {
 
     const [isOrdered, setOrder] = useState<boolean>(false)
     const [cartMenu, setcartMenu] = useState<CartMenu[]>([])
-    // เก็บ category_id ของหมวดที่กด (null = ยังไม่ได้กด)
     const [seletedCategory, setSelectCategory] = useState<string | null>(null)
-    const [currentTable, setCurrentTable] = useState<string>("โต๊ะ 1")
-    const [showTableSelect, setShowTableSelect] = useState<boolean>(false)
+    const [currentTable] = useState<string>(tableNameFromUrl ?? "โต๊ะ 1")
     const [currentText, setcurrentText] = useState<string>("")
 
     // แจ้งเตือนเมื่อส่งเข้าครัวสำเร็จ
@@ -78,8 +85,8 @@ export default function MainPOS() {
         }, 5000)
     }
 
-    // รายการโต๊ะสำหรับเลือก
-    const AVAILABLE_TABLES = ["โต๊ะ 1", "โต๊ะ 2", "โต๊ะ 3", "โต๊ะ 4", "โต๊ะ 5", "โต๊ะ 6", "โต๊ะ 7", "โต๊ะ 8"]
+    // รายการโต๊ะสำหรับเลือก (ไม่ใช้แล้ว — เลือกจากหน้าโต๊ะแทน)
+    // const AVAILABLE_TABLES = [...]
 
     // State สำหรับเปิด Modifier Popup/Panel
     const [selectedMenuForModifier, setSelectedMenuForModifier] = useState<Menu | null>(null)
@@ -258,11 +265,9 @@ export default function MainPOS() {
                         <div className="flex items-center gap-2">
                             <button
                                 type="button"
-                                onClick={() => {
-                                    setShowTableSelect(!showTableSelect)
-                                }}
+                                onClick={() => navigate(`/${user?.tenantSlug}/tables`)}
                                 className="flex items-center gap-1.5 text-sm font-medium text-[#6B5A49] hover:text-[#2D241E] active:scale-95 transition-all cursor-pointer font-kanit"
-                                title="เลือกโต๊ะ"
+                                title="กลับไปหน้าโต๊ะ"
                             >
                                 <ArrowLeft className="w-4 h-4 text-[#8C7A68]" />
                                 <span>โต๊ะ</span>
@@ -270,44 +275,9 @@ export default function MainPOS() {
 
                             <div className="h-4 w-[1px] bg-stone-300 mx-1" />
 
-                            <div className="relative">
-                                <button
-                                    type="button"
-                                    onClick={() => setShowTableSelect(!showTableSelect)}
-                                    className="flex items-center gap-1 px-2 py-1 rounded-lg hover:bg-stone-200/60 active:scale-95 transition-all cursor-pointer font-kanit"
-                                    title="คลิกเพื่อเปลี่ยนโต๊ะ"
-                                >
-                                    <span className="text-base font-semibold text-[#2D241E] whitespace-nowrap">
-                                        {currentTable}
-                                    </span>
-                                    <ChevronDown className="w-4 h-4 text-stone-500" />
-                                </button>
-
-                                {showTableSelect && (
-                                    <div className="absolute left-0 top-full mt-1.5 w-36 bg-white border border-stone-200 rounded-xl shadow-lg py-1.5 z-40 font-kanit">
-                                        <div className="px-3 py-1 text-[11px] font-semibold text-stone-400 border-b border-stone-100">
-                                            เลือกโต๊ะ
-                                        </div>
-                                        {AVAILABLE_TABLES.map((t) => (
-                                            <button
-                                                key={t}
-                                                type="button"
-                                                onClick={() => {
-                                                    setCurrentTable(t)
-                                                    setShowTableSelect(false)
-                                                }}
-                                                className={`w-full text-left px-3 py-1.5 text-sm transition-all hover:bg-[#FAF7F2] cursor-pointer ${
-                                                    currentTable === t
-                                                        ? "font-semibold text-[#8C6D58] bg-[#FAF7F2]"
-                                                        : "text-stone-700"
-                                                }`}
-                                            >
-                                                {t}
-                                            </button>
-                                        ))}
-                                    </div>
-                                )}
-                            </div>
+                            <span className="text-base font-semibold text-[#2D241E] font-kanit">
+                                โต๊ะ {currentTable}
+                            </span>
                         </div>
 
                         <div className="flex-1 max-w-md">
