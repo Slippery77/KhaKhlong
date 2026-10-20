@@ -60,6 +60,7 @@ export function useFullMenu() {
     const [ isLoading, setIsLoading ] = useState<boolean>(true);
 
     const load = useCallback( async (silent = false) =>{
+        if(!accessToken) return; // ยังไม่ล็อกอิน / เพิ่ง logout ไม่ต้องยิง API
         if(!silent)
             setIsLoading(true);
         setError(null);

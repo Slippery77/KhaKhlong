@@ -20,9 +20,7 @@ export function AppRouter() {
             <Route path='/:tenantSlug/setting/menu' element={<MenuEdit />} />
             <Route path='/:tenantSlug/setting/modifier' element={<EditModiferPage />} />
             <Route path='/:tenantSlug/siftwork' element={<SiftworkPage />} />
-            <Route path='/stock' element={<StockPage />} />
             <Route path='/:tenantSlug/stock' element={<StockPage />} />
-            <Route path='/sale-report' element={<SaleReportPage />} />
             <Route path='/:tenantSlug/sale-report' element={<SaleReportPage />} />
         </Routes>
     );

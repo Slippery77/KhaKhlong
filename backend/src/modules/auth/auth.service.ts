@@ -6,6 +6,7 @@ import { RolesService } from '../roles/roles.service';
 import { UsersService } from '../users/users.service';
 import { TenantsService } from '../tenants/tenants.service';
 import { DbContextService } from '../../database/db-context.service';
+import { AuthRepository } from './auth.repository';
 
 @Injectable()
 export class AuthService {
@@ -16,6 +17,7 @@ export class AuthService {
         private jwtService: JwtService,
         private tenantService: TenantsService,
         private readonly db: DbContextService,
+        private readonly authRepository: AuthRepository,
     ) {}
 
     // ฟังก์ชันสำหรับการเข้าสู่ระบบ
@@ -61,5 +63,10 @@ export class AuthService {
                 };
             }
         );
+    }
+    
+    async logout(){
+        await this.authRepository.writeLogoutAudit();
+        return { status:'success', message:'ออกจากระบบสำเร็จ'}
     }
 }
