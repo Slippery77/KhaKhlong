@@ -53,7 +53,7 @@ export default function Header() {
         <header className="h-14 bg-[#FAF7F2] border-b border-stone-200 px-8 flex items-center justify-between font-kanit select-none shrink-0 relative z-30">
             {/* โลโก้ และ Breadcrumb ตามรูป mockup */}
             <div className="flex items-center gap-3">
-                <Link to="/mainpos" className="flex items-center gap-2 group cursor-pointer">
+                <Link to={`/${user?.tenantSlug}/mainpos`} className="flex items-center gap-2 group cursor-pointer">
                     <div className="w-8 h-8 rounded-lg bg-[#EFE8DC] group-hover:bg-[#E5DCCF] transition-colors flex items-center justify-center text-[#8C6D58]">
                         <UtensilsCrossed className="w-4 h-4 stroke-2" />
                     </div>
@@ -109,7 +109,7 @@ export default function Header() {
                             </div>
 
                             <Link
-                                to="/mainpos"
+                                to={`/${user?.tenantSlug}/mainpos`}
                                 onClick={() => setIsMenuOpen(false)}
                                 className={`flex items-center gap-3 px-4 py-2.5 text-sm transition-all hover:bg-[#FAF7F2] ${
                                     isPOS ? "font-semibold text-[#8C6D58] bg-[#FAF7F2]/80" : "text-[#2D241E]"
@@ -120,7 +120,7 @@ export default function Header() {
                             </Link>
 
                             <Link
-                                to="/kds"
+                                to={`/${user?.tenantSlug}/kds`}
                                 onClick={() => setIsMenuOpen(false)}
                                 className={`flex items-center justify-between px-4 py-2.5 text-sm transition-all hover:bg-[#FAF7F2] ${
                                     isKDS ? "font-semibold text-[#8C6D58] bg-[#FAF7F2]/80" : "text-[#2D241E]"
@@ -138,7 +138,7 @@ export default function Header() {
                             </Link>
 
                             <Link
-                                to="/stock"
+                                to={`/${user?.tenantSlug}/stock`}
                                 onClick={() => setIsMenuOpen(false)}
                                 className={`flex items-center gap-3 px-4 py-2.5 text-sm transition-all hover:bg-[#FAF7F2] ${
                                     isStock ? "font-semibold text-[#8C6D58] bg-[#FAF7F2]/80" : "text-[#2D241E]"
@@ -149,7 +149,7 @@ export default function Header() {
                             </Link>
 
                             <Link
-                                to="/sale-report"
+                                to={`/${user?.tenantSlug}/sale-report`}
                                 onClick={() => setIsMenuOpen(false)}
                                 className={`flex items-center gap-3 px-4 py-2.5 text-sm transition-all hover:bg-[#FAF7F2] ${
                                     isSalereport ? "font-semibold text-[#8C6D58] bg-[#FAF7F2]/80" : "text-[#2D241E]"
@@ -160,7 +160,7 @@ export default function Header() {
                             </Link>
 
                             <Link
-                                to="/siftwork"
+                                to={`/${user?.tenantSlug}/siftwork`}
                                 onClick={() => setIsMenuOpen(false)}
                                 className={`flex items-center gap-3 px-4 py-2.5 text-sm transition-all hover:bg-[#FAF7F2] ${
                                     isSiftwork ? "font-semibold text-[#8C6D58] bg-[#FAF7F2]/80" : "text-[#2D241E]"
@@ -188,7 +188,7 @@ export default function Header() {
                                 type="button"
                                 onClick={() => {
                                     setIsMenuOpen(false)
-                                    navigate("/")
+                                    navigate(`/${user?.tenantSlug}/`)
                                 }}
                                 className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-rose-600 hover:bg-rose-50 transition-all cursor-pointer text-left"
                             >

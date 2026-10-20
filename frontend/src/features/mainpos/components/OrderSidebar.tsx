@@ -9,6 +9,7 @@ interface PropsOrderSidebar {
     onReduceValue?: (item: CartMenu) => void
     onIncreaseValue?: (item: CartMenu) => void
     onSendToKitchen?: () => void
+    onPayment?: () => void
 }
 
 export default function OrderSidebar(props: PropsOrderSidebar) {
@@ -152,6 +153,7 @@ export default function OrderSidebar(props: PropsOrderSidebar) {
                     </button>
                     <button
                         type="button"
+                        onClick={props.onPayment}
                         className="w-full py-2.5 px-4 rounded-full bg-[#A68874] text-white font-medium text-sm hover:bg-[#967763] active:scale-[0.99] transition-all cursor-pointer shadow-sm disabled:opacity-40 disabled:cursor-not-allowed"
                         disabled={props.cartMenu.length === 0}
                     >

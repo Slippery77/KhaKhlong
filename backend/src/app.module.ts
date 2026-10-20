@@ -13,6 +13,7 @@ import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { TablesModule } from './modules/tables/tables.module';
 import { KdsModule } from './modules/kds/kds.module';
 import { OrdersModule } from './modules/orders/orders.module';
+import { InventoryModule } from './modules/inventory/inventory.module';
 import * as Joi from 'joi';
 import { ShiftsModule } from './modules/shifts/shifts.module';
 import { SystemConfigModule } from './modules/system-config/system-config.module';
@@ -46,6 +47,7 @@ import { SystemConfigModule } from './modules/system-config/system-config.module
     OrdersModule,
     ShiftsModule,
     SystemConfigModule,
+    InventoryModule,
     ThrottlerModule.forRoot([{
       ttl: 60000,
       limit: 100,

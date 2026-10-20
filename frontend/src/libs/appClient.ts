@@ -6,7 +6,7 @@ export class ApiError extends Error {
   }
 }
 
-type Method = 'GET' | 'POST' | 'PATCH' | 'PUT';
+type Method = 'GET' | 'POST' | 'PATCH' | 'PUT' | 'DELETE';
 
 export async function apiFetch<T>( // function ที่รอข้อมูลจาก request
   path: string,             // ไปที่ไหน เช่น '/menu/admin'
