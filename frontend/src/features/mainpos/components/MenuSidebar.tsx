@@ -1,5 +1,5 @@
 import CategoryCard from "./CategoryCard"
-import { UtensilsCrossed, IceCreamCone, Croissant, CupSoda } from "lucide-react"
+import { UtensilsCrossed } from "lucide-react"
 import type { Category } from "../types/item.types";
 
 // TODO (หมวดจริงจาก API)

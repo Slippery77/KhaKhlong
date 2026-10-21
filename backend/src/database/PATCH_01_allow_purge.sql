@@ -31,3 +31,8 @@ REVOKE EXECUTE ON FUNCTION admin_purge_tenant(uuid) FROM PUBLIC;
 -- ตรวจว่าแก้แล้ว ต้องได้ true
 SELECT (prosrc LIKE '%''off'', true%') AS "แก้ไขเรียบร้อย"
 FROM pg_proc WHERE proname = 'admin_purge_tenant';
+
+INSERT INTO role_permissions (role_id, permission_id)
+SELECT r.role_id, p.permission_id FROM roles r, permissions p
+WHERE r.role_name = 'employee' AND p.permission_key = 'cash:movement'
+ON CONFLICT DO NOTHING;

@@ -12,7 +12,11 @@ import { APP_INTERCEPTOR, APP_GUARD } from '@nestjs/core';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { TablesModule } from './modules/tables/tables.module';
 import { KdsModule } from './modules/kds/kds.module';
+import { OrdersModule } from './modules/orders/orders.module';
+import { InventoryModule } from './modules/inventory/inventory.module';
 import * as Joi from 'joi';
+import { ShiftsModule } from './modules/shifts/shifts.module';
+import { SystemConfigModule } from './modules/system-config/system-config.module';
 
 @Module({
   imports: [
@@ -30,6 +34,7 @@ import * as Joi from 'joi';
         DB_SSL: Joi.boolean().default(false),
         JWT_SECRET: Joi.string().min(32).required(),
         JWT_EXPIRES_IN: Joi.string().default('1d'),
+        REFRESH_EXPIRES_HOURS: Joi.number().integer().min(1).max(72).default(16),
         CORS_ORIGIN: Joi.string().required(),
       }),
     }),
@@ -40,6 +45,10 @@ import * as Joi from 'joi';
     MenuModule,
     TablesModule,
     KdsModule,
+    OrdersModule,
+    ShiftsModule,
+    SystemConfigModule,
+    InventoryModule,
     ThrottlerModule.forRoot([{
       ttl: 60000,
       limit: 100,

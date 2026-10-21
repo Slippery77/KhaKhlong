@@ -1301,7 +1301,7 @@ BEGIN
   PERFORM set_config('app.allow_purge', 'off', true);
 END $$;
 
--- login ยังไม่มี tenant context จึงต้องข้าม RLS เฉพาะ 2 ฟังก์ชันนี้
+-- login ยังไม่มี tenant context จึงต้องข้าม RLS เฉพาะ 3 ฟังก์ชันนี้
 CREATE FUNCTION resolve_tenant(p_slug text)
 RETURNS TABLE(tenant_id uuid, is_active boolean)
 LANGUAGE sql SECURITY DEFINER SET search_path = public, pg_temp AS $$
@@ -1312,6 +1312,12 @@ RETURNS TABLE(users_id uuid, tenant_id uuid)
 LANGUAGE sql SECURITY DEFINER SET search_path = public, pg_temp AS $$
   SELECT u.users_id, u.tenant_id FROM users u
    WHERE lower(u.email) = lower(p_email) AND u.is_active $$;
+
+-- refresh ยังไม่มี tenant context เหมือน login
+CREATE FUNCTION resolve_refresh_token(p_hash text)
+RETURNS TABLE(tenant_id uuid, user_id uuid)
+LANGUAGE sql SECURITY DEFINER SET search_path = public, pg_temp AS $$
+  SELECT r.tenant_id, r.user_id FROM refresh_tokens r WHERE r.token_hash = p_hash $$;
 
 -- ############################################################
 -- PART 3/4 : SEED  (reference data — รันซ้ำได้)
@@ -1451,6 +1457,7 @@ REVOKE DELETE ON tenants, users, orders, order_items FROM pos_app;
 REVOKE EXECUTE ON FUNCTION admin_purge_tenant(uuid) FROM PUBLIC;
 GRANT EXECUTE ON FUNCTION escalate_overdue_shifts(), purge_old_audit_logs(),
                           resolve_tenant(text), resolve_user_by_email(text),
+                          resolve_refresh_token(text),
                           reopen_shift(uuid, uuid, text),
                           record_stock_count(uuid, uuid, numeric, uuid, text) TO pos_app;
 

@@ -17,4 +17,5 @@ export interface AuthUser {
 export interface LoginResponse {
     'accessToken': string; // Token สำหรับการเข้าถึง API (JWT Token)
     'user': AuthUser;
+    'refreshToken':string;
 }

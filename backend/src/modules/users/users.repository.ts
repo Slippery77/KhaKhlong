@@ -5,6 +5,17 @@ import { DbContextService } from '../../database/db-context.service';
 export class UsersRepository {
     constructor(private readonly db: DbContextService) {}
 
+    async findActiveById(userId:string){
+        const sql = `
+            SELECT u.users_id, u.username, u.tenant_id, u.is_active, r.role_name
+            FROM users u
+            JOIN roles r ON r.role_id = u.role_id
+            WHERE u.users_id = $1
+        `;
+        const result = await this.db.query(sql,[userId]);
+        return result.rows[0]??null
+    }
+
     async createOwner(
         tenant_id: string,
         role_id: string,

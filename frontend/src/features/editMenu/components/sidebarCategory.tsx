@@ -30,7 +30,7 @@ export default function SidebarCategory({categories, selectedId, onSelect, onAdd
                        <div
                           className={`flex items-center rounded-xl border transition-colors ${
                             c.category_id === selectedId
-                              ? 'border-[#8C6D58] bg-[#8C6D58] font-semibold text-white'
+                              ? 'border-[#8C6D58] bg-[#8C6D58] font-kanit text-white'
                               : 'border-[#b08968] bg-[#FAF7F2] text-[#2D241E] hover:bg-white'
                           } ${c.is_active ? '' : 'opacity-50'}`}      // หมวดที่ปิดอยู่ แสดงจาง
                         >
@@ -38,7 +38,7 @@ export default function SidebarCategory({categories, selectedId, onSelect, onAdd
                           <button
                             type="button"
                             onClick={() => onSelect(c.category_id)}
-                            className="min-w-0 flex-1 truncate px-3 py-2 text-left text-sm transition active:opacity-70"
+                            className="min-w-0 flex-1 truncate px-3 py-2 text-left text-sm transition active:opacity-70 font-kanit"
                           >
                             {c.name}
                           </button>
@@ -62,7 +62,7 @@ export default function SidebarCategory({categories, selectedId, onSelect, onAdd
           <div className="shrink-0 border-t-2 border-[#b08968] p-2">
           <button
             onClick={() => setShowPopup(true)}
-            className="flex w-full items-center justify-center gap-1 rounded-2xl border border-[#b08968] py-1.5 text-sm transition hover:bg-white active:scale-95"
+            className="flex w-full items-center justify-center gap-1 rounded-2xl border border-[#b08968] py-1.5 text-sm transition hover:bg-white active:scale-95 font-kanit"
           >
             <Plus size={16} /> เพิ่มหมวด
           </button>

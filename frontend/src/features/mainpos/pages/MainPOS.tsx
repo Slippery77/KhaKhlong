@@ -4,40 +4,35 @@ import MenuCard from "../components/MenuCard"
 import MenuSidebar from "../components/MenuSidebar"
 import OrderSidebar from "../components/OrderSidebar"
 import ModifierPopup from "../components/ModifierPopup"
+import PaymentModal from "../components/PaymentModal"
 import SearchBar from "../components/SearchBar"
-import { ArrowLeft, Search, ChevronDown, ChefHat, CheckCircle2, X } from "lucide-react"
+import { ArrowLeft, Search, ChefHat, CheckCircle2, X, ChartLine } from "lucide-react"
 import { useKDS } from "../../kds/context/KDSContext"
-import { useNavigate } from "react-router-dom"
+import { useNavigate, useSearchParams } from "react-router-dom"
 import { useFullMenu } from "../hooks/useFullMenu"
 import type { Menu, CartMenu, ModifierOption } from "../types/pos.types"
+import { useAuth } from "../../auth/context/AuthContext"
+import { apiFetch } from "../../../libs/appClient"
 
 export default function MainPOS() {
     const { sendOrderToKitchen } = useKDS()
     const navigate = useNavigate()
+    const { user, accessToken } = useAuth()
+    const [searchParams] = useSearchParams()
 
-    // เมนูจริงจาก GET /menu/full (ดู hooks/useFullMenu.ts)
-    const { categories, isLoading, error, reload } = useFullMenu()
+    // รับ tableId, tableName, orderId จาก URL (มาจากหน้าโต๊ะ)
+    const tableIdFromUrl = searchParams.get('tableId')
+    const tableNameFromUrl = searchParams.get('tableName')
+        ? decodeURIComponent(searchParams.get('tableName')!)
+        : null
 
-    // แปลง items ของทุกหมวดเป็น Menu[] ที่ component ในหน้านี้ใช้
-    // รวมทุกหมวดไว้ใน array เดียว เพื่อให้ช่องค้นหาหาข้ามหมวดได้
-    // TODO modifiers: ยังไม่ได้ต่อ modifier_groups จาก API → ตอนนี้ทุกเมนูกดแล้วเข้าตะกร้าเลย ไม่เปิด ModifierPopup
-    //   ทำต่อ: ให้ useFullMenu คืน modifier_groups ด้วย แล้ว map item.modifier_group_ids → ModifierGroup[] ใส่ใน modifiers
-    const menu: Menu[] = categories.flatMap((c) =>
-        c.items.map((item) => ({
-            id: item.menu_item_id,
-            name: item.name,
-            price: item.price,
-            categoryId: item.category_id,
-            isAvailable: item.is_available,
-        }))
-    )
+    // เมนูจริงจาก GET /menu/full — hook คืน menu[] พร้อม modifiers[] แล้ว
+    const { categories, menu, isLoading, error, reload } = useFullMenu()
 
     const [isOrdered, setOrder] = useState<boolean>(false)
     const [cartMenu, setcartMenu] = useState<CartMenu[]>([])
-    // เก็บ category_id ของหมวดที่กด (null = ยังไม่ได้กด)
     const [seletedCategory, setSelectCategory] = useState<string | null>(null)
-    const [currentTable, setCurrentTable] = useState<string>("โต๊ะ 1")
-    const [showTableSelect, setShowTableSelect] = useState<boolean>(false)
+    const [currentTable] = useState<string>(tableNameFromUrl ?? "โต๊ะ 1")
     const [currentText, setcurrentText] = useState<string>("")
 
     // แจ้งเตือนเมื่อส่งเข้าครัวสำเร็จ
@@ -51,8 +46,34 @@ export default function MainPOS() {
         itemCount: 0,
     })
 
-    // รายการโต๊ะสำหรับเลือก
-    const AVAILABLE_TABLES = ["โต๊ะ 1", "โต๊ะ 2", "โต๊ะ 3", "โต๊ะ 4", "โต๊ะ 5", "โต๊ะ 6", "โต๊ะ 7", "โต๊ะ 8"]
+    // State สำหรับเปิดหน้าต่างชำระเงิน
+    const [isPaymentOpen, setIsPaymentOpen] = useState<boolean>(false)
+
+    // แจ้งเตือนเมื่อชำระเงินสำเร็จ
+    const [paidToast, setPaidToast] = useState<{
+        show: boolean
+        billDesc: string
+    }>({
+        show: false,
+        billDesc: "",
+    })
+
+    function handlePaymentSuccess(billDesc: string) {
+        setcartMenu([])
+        setOrder(false)
+        setIsPaymentOpen(false)
+        setPaidToast({
+            show: true,
+            billDesc,
+        })
+
+        setTimeout(() => {
+            setPaidToast((prev) => ({ ...prev, show: false }))
+        }, 5000)
+    }
+
+    // รายการโต๊ะสำหรับเลือก (ไม่ใช้แล้ว — เลือกจากหน้าโต๊ะแทน)
+    // const AVAILABLE_TABLES = [...]
 
     // State สำหรับเปิด Modifier Popup/Panel
     const [selectedMenuForModifier, setSelectedMenuForModifier] = useState<Menu | null>(null)
@@ -190,26 +211,93 @@ export default function MainPOS() {
     }
 
     // เมื่อกดปุ่ม "ส่งครัว" จาก OrderSidebar
-    function handleSendToKitchen() {
+    async function handleSendToKitchen() {
         if (cartMenu.length === 0) return
 
+        if (!tableIdFromUrl || !accessToken) {
+            // fallback: ไม่มี tableId → push localStorage อย่างเดียว
+            sendOrderToKitchen(currentTable, cartMenu)
+            setcartMenu([])
+            setOrder(false)
+            return
+        }
+
+        try {
+            const kitchenTicketId = crypto.randomUUID() // 1 ค่าต่อการกดส่งครัว 1 รอบ
+
+            // ── 1. หา orderId ที่ใช้จริง ──────────────────────────────
+            // ลำดับความสำคัญ:
+            //   a. open_order_id จาก URL (ส่งมาตอนกดโต๊ะที่ occupied)
+            //   b. ดึงจาก GET /tables เพื่อหา open_order_id ล่าสุด
+            //   c. สร้างบิลใหม่ (โต๊ะว่าง)
+            let orderId = searchParams.get('orderId')
+
+            if (!orderId) {
+                // ดึง open_order_id จาก table ปัจจุบัน
+                const tablesRes = await apiFetch<{ status: string; data: { table_id: string; open_order_id: string | null }[] }>(
+                    '/tables',
+                    accessToken,
+                )
+                const thisTable = tablesRes.data.find((t) => t.table_id === tableIdFromUrl)
+                orderId = thisTable?.open_order_id ?? null
+            }
+
+            if (!orderId) {
+                // โต๊ะว่างจริง → สร้างบิลใหม่
+                const newOrderId = crypto.randomUUID()
+                const createRes = await apiFetch<{ status: string; data: { order_id: string } }>(
+                    '/orders',
+                    accessToken,
+                    'POST',
+                    { orderId: newOrderId, tableId: tableIdFromUrl },
+                )
+                orderId = createRes.data?.order_id ?? newOrderId
+            }
+
+            // ── 2. แปลง cartMenu → items (1 จาน = 1 แถว) ────────────
+            const itemsToSend: {
+                orderItemId: string
+                menuItemId: string
+                specialRequest?: string
+                modifierIds?: string[]
+            }[] = []
+
+            for (const cartItem of cartMenu) {
+                const modifierIds = cartItem.selectedAddons?.map((a) => a.id) ?? []
+                const specialRequest = [cartItem.selectedSpiciness, cartItem.note]
+                    .filter(Boolean)
+                    .join(", ") || undefined
+
+                for (let i = 0; i < cartItem.quantity; i++) {
+                    itemsToSend.push({
+                        orderItemId: crypto.randomUUID(),
+                        menuItemId: cartItem.id,
+                        specialRequest,
+                        modifierIds: modifierIds.length > 0 ? modifierIds : undefined,
+                    })
+                }
+            }
+
+            // ── 3. POST /orders/:id/items + kitchenTicketId ───────────
+            // backend จะ INSERT items ด้วย status='queued' + kitchen_ticket_id ทันที
+            await apiFetch(
+                `/orders/${orderId}/items`,
+                accessToken,
+                'POST',
+                { items: itemsToSend, kitchenTicketId },
+            )
+
+        } catch (err) {
+            console.error('ส่งครัวไม่สำเร็จ:', err)
+        }
+
+        // ── 4. อัปเดต local state (badge + toast) ────────────────────
         sendOrderToKitchen(currentTable, cartMenu)
         const count = cartMenu.reduce((sum, item) => sum + item.quantity, 0)
-
-        // เคลียร์ตะกร้าเมื่อส่งเข้าครัวแล้ว
         setcartMenu([])
         setOrder(false)
-
-        // แจ้งเตือนส่งเข้าครัวสำเร็จ
-        setSentToast({
-            show: true,
-            tableName: currentTable,
-            itemCount: count,
-        })
-
-        setTimeout(() => {
-            setSentToast((prev) => ({ ...prev, show: false }))
-        }, 4500)
+        setSentToast({ show: true, tableName: currentTable, itemCount: count })
+        setTimeout(() => setSentToast((prev) => ({ ...prev, show: false })), 4500)
     }
 
     return (
@@ -231,11 +319,9 @@ export default function MainPOS() {
                         <div className="flex items-center gap-2">
                             <button
                                 type="button"
-                                onClick={() => {
-                                    setShowTableSelect(!showTableSelect)
-                                }}
+                                onClick={() => navigate(`/${user?.tenantSlug}/tables`)}
                                 className="flex items-center gap-1.5 text-sm font-medium text-[#6B5A49] hover:text-[#2D241E] active:scale-95 transition-all cursor-pointer font-kanit"
-                                title="เลือกโต๊ะ"
+                                title="กลับไปหน้าโต๊ะ"
                             >
                                 <ArrowLeft className="w-4 h-4 text-[#8C7A68]" />
                                 <span>โต๊ะ</span>
@@ -243,44 +329,9 @@ export default function MainPOS() {
 
                             <div className="h-4 w-[1px] bg-stone-300 mx-1" />
 
-                            <div className="relative">
-                                <button
-                                    type="button"
-                                    onClick={() => setShowTableSelect(!showTableSelect)}
-                                    className="flex items-center gap-1 px-2 py-1 rounded-lg hover:bg-stone-200/60 active:scale-95 transition-all cursor-pointer font-kanit"
-                                    title="คลิกเพื่อเปลี่ยนโต๊ะ"
-                                >
-                                    <span className="text-base font-semibold text-[#2D241E] whitespace-nowrap">
-                                        {currentTable}
-                                    </span>
-                                    <ChevronDown className="w-4 h-4 text-stone-500" />
-                                </button>
-
-                                {showTableSelect && (
-                                    <div className="absolute left-0 top-full mt-1.5 w-36 bg-white border border-stone-200 rounded-xl shadow-lg py-1.5 z-40 font-kanit">
-                                        <div className="px-3 py-1 text-[11px] font-semibold text-stone-400 border-b border-stone-100">
-                                            เลือกโต๊ะ
-                                        </div>
-                                        {AVAILABLE_TABLES.map((t) => (
-                                            <button
-                                                key={t}
-                                                type="button"
-                                                onClick={() => {
-                                                    setCurrentTable(t)
-                                                    setShowTableSelect(false)
-                                                }}
-                                                className={`w-full text-left px-3 py-1.5 text-sm transition-all hover:bg-[#FAF7F2] cursor-pointer ${
-                                                    currentTable === t
-                                                        ? "font-semibold text-[#8C6D58] bg-[#FAF7F2]"
-                                                        : "text-stone-700"
-                                                }`}
-                                            >
-                                                {t}
-                                            </button>
-                                        ))}
-                                    </div>
-                                )}
-                            </div>
+                            <span className="text-base font-semibold text-[#2D241E] font-kanit">
+                                โต๊ะ {currentTable}
+                            </span>
                         </div>
 
                         <div className="flex-1 max-w-md">
@@ -338,9 +389,52 @@ export default function MainPOS() {
                             onReduceValue={onReduceValue}
                             onIncreaseValue={onIncreaseValue}
                             onSendToKitchen={handleSendToKitchen}
+                            onPayment={() => setIsPaymentOpen(true)}
                         />
                     )}
                 </aside>
+
+                {/* Modal ชำระเงิน */}
+                {isPaymentOpen && (
+                    <PaymentModal
+                        table={currentTable}
+                        cartMenu={cartMenu}
+                        onClose={() => setIsPaymentOpen(false)}
+                        onPaymentSuccess={handlePaymentSuccess}
+                    />
+                )}
+
+                {/* Toast แจ้งเตือนเมื่อชำระเงินสำเร็จ พร้อมปุ่มไปหน้ารายการขาย */}
+                {paidToast.show && (
+                    <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-[#2D241E] text-white px-5 py-3 rounded-2xl shadow-xl flex items-center gap-3.5 font-kanit border border-stone-700 animate-in fade-in slide-in-from-bottom-4 duration-200">
+                        <div className="w-8 h-8 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0">
+                            <CheckCircle2 className="w-5 h-5" />
+                        </div>
+                        <div className="flex flex-col">
+                            <span className="text-sm font-semibold">ชำระเงินสำเร็จ! ({paidToast.billDesc})</span>
+                            <span className="text-xs text-stone-300">
+                                บิลถูกบันทึกลงในรายการขายอัตโนมัติเรียบร้อยแล้ว
+                            </span>
+                        </div>
+                        <div className="flex items-center gap-2 ml-2">
+                            <button
+                                type="button"
+                                onClick={() => navigate("/sale-report")}
+                                className="px-3 py-1.5 rounded-xl bg-[#A68874] hover:bg-[#967763] text-white text-xs font-medium transition-all cursor-pointer flex items-center gap-1.5 shrink-0"
+                            >
+                                <ChartLine className="w-3.5 h-3.5" />
+                                <span>ดูรายการขาย</span>
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => setPaidToast((prev) => ({ ...prev, show: false }))}
+                                className="p-1 rounded-lg text-stone-400 hover:text-white cursor-pointer"
+                            >
+                                <X className="w-4 h-4" />
+                            </button>
+                        </div>
+                    </div>
+                )}
 
                 {/* Toast แจ้งเตือนเมื่อส่งเข้าครัวสำเร็จ พร้อมปุ่มเปิดดูจอครัว KDS */}
                 {sentToast.show && (

@@ -37,6 +37,10 @@ export class UsersService {
         return this.usersRepository.findEmail(email);
     }
 
+    async findActiveById(userId:string){
+         return await this.usersRepository.findActiveById(userId)
+    }
+
     async createUser(tenantID: string, dto: CreateUserDTO) {
         try {
             const isUsernameExisted = await this.usersRepository.findUsernameAndTenantID(tenantID, dto.username);
