@@ -48,46 +48,221 @@ export class OrdersRepository {
 
   /**
    * ดึงรายการบิลที่ยังเปิดอยู่ทั้งหมด (closed_at IS NULL)
+   * JOIN dining_tables เพื่อคืน table_number ไปด้วย
    */
   async findOpenOrders() {
-    // TODO: เขียน SQL SELECT บิลที่ยังไม่ปิด
-    return [];
+    const sql = `
+      SELECT
+        o.order_id,
+        o.order_number,
+        o.business_date,
+        o.table_id,
+        o.created_by,
+        o.created_at,
+        o.updated_at,
+        t.table_number,
+        COUNT(oi.order_item_id) FILTER (WHERE oi.status <> 'voided') AS item_count,
+        COALESCE(SUM(
+          CASE WHEN oi.is_comped THEN 0
+               ELSE oi.unit_price_snapshot + COALESCE(mod.mod_sum, 0)
+          END
+        ), 0) AS total_amount
+      FROM orders o
+      JOIN dining_tables t ON t.table_id = o.table_id
+      LEFT JOIN order_items oi ON oi.order_id = o.order_id
+      LEFT JOIN (
+        SELECT order_item_id, SUM(price_delta_snapshot) AS mod_sum
+        FROM order_item_modifiers
+        GROUP BY order_item_id
+      ) mod ON mod.order_item_id = oi.order_item_id
+      WHERE o.closed_at IS NULL
+      GROUP BY o.order_id, o.order_number, o.business_date,
+               o.table_id, o.created_by, o.created_at, o.updated_at,
+               t.table_number
+      ORDER BY o.order_number;
+    `;
+    const result = await this.db.query(sql);
+    return result.rows;
   }
 
   /**
    * เพิ่มรายการอาหารเข้าบิล
-   * ข้อบังคับ:
-   * 1. บันทึก 1 จานต่อ 1 แถว ใน order_items
-   * 2. บันทึก unit_price_snapshot และ item_name_snapshot
-   * 3. บันทึก modifiers ใน order_item_modifiers
+   * - 1 จาน = 1 แถว (ไม่มี quantity โดยเจตนา)
+   * - อ่าน price + name snapshot จาก menu_items และ modifiers ใน DB
+   *   ห้ามรับค่า snapshot จาก client เพราะ trigger บังคับ immutable หลัง insert
+   * - ON CONFLICT (order_item_id) DO NOTHING รองรับ offline retry
    */
-  async addOrderItems(orderId: string, items: CreateOrderItemDto[]) {
-    // TODO: เขียน SQL INSERT เข้า order_items และ order_item_modifiers
-    return [];
+  async addOrderItems(orderId: string, items: CreateOrderItemDto[], kitchenTicketId?: string) {
+    const insertedItems: any[] = [];
+
+    for (const item of items) {
+      // ดึง snapshot ราคาและชื่อจาก DB — ห้ามรับจาก client
+      const menuSql = `
+        SELECT name, price
+        FROM menu_items
+        WHERE menu_item_id = $1;
+      `;
+      const menuResult = await this.db.query(menuSql, [item.menuItemId]);
+      const menuItem = menuResult.rows[0];
+
+      if (!menuItem) continue;
+
+      // INSERT order_item — ถ้ามี kitchenTicketId ให้ใส่และตั้ง status เป็น 'queued' ทันที
+      const itemSql = kitchenTicketId
+        ? `
+          INSERT INTO order_items
+            (order_item_id, tenant_id, order_id, menu_item_id,
+             unit_price_snapshot, item_name_snapshot, special_request,
+             kitchen_ticket_id, status, queued_at)
+          VALUES ($1, app_tenant_id(), $2, $3, $4, $5, $6, $7, 'queued', now())
+          ON CONFLICT (order_item_id) DO NOTHING
+          RETURNING ${ORDER_ITEMS_COL}, order_item_id;
+        `
+        : `
+          INSERT INTO order_items
+            (order_item_id, tenant_id, order_id, menu_item_id,
+             unit_price_snapshot, item_name_snapshot, special_request)
+          VALUES ($1, app_tenant_id(), $2, $3, $4, $5, $6)
+          ON CONFLICT (order_item_id) DO NOTHING
+          RETURNING ${ORDER_ITEMS_COL}, order_item_id;
+        `;
+
+      const params = kitchenTicketId
+        ? [item.orderItemId, orderId, item.menuItemId, menuItem.price, menuItem.name, item.specialRequest ?? null, kitchenTicketId]
+        : [item.orderItemId, orderId, item.menuItemId, menuItem.price, menuItem.name, item.specialRequest ?? null];
+
+      const itemResult = await this.db.query(itemSql, params);
+      const insertedItem = itemResult.rows[0];
+      if (!insertedItem) continue; // ON CONFLICT DO NOTHING → รายการมีอยู่แล้ว
+
+      // INSERT modifiers ถ้ามี
+      const modifierSnapshots: any[] = [];
+      if (item.modifierIds && item.modifierIds.length > 0) {
+        for (const modifierId of item.modifierIds) {
+          // ดึง snapshot จาก DB
+          const modSql = `
+            SELECT name, price_delta
+            FROM modifiers
+            WHERE modifier_id = $1;
+          `;
+          const modResult = await this.db.query(modSql, [modifierId]);
+          const modifier = modResult.rows[0];
+          if (!modifier) continue;
+
+          const oimSql = `
+            INSERT INTO order_item_modifiers
+              (tenant_id, order_item_id, modifier_id,
+               price_delta_snapshot, modifier_name_snapshot)
+            VALUES (app_tenant_id(), $1, $2, $3, $4)
+            ON CONFLICT (order_item_id, modifier_id) DO NOTHING;
+          `;
+          await this.db.query(oimSql, [
+            item.orderItemId,
+            modifierId,
+            modifier.price_delta,
+            modifier.name,
+          ]);
+
+          modifierSnapshots.push({
+            modifierId,
+            name: modifier.name,
+            priceDelta: modifier.price_delta,
+          });
+        }
+      }
+
+      insertedItems.push({ ...insertedItem, modifiers: modifierSnapshots });
+    }
+
+    return insertedItems;
   }
 
   /**
    * ย้ายโต๊ะของบิลที่ยังไม่ปิด
+   * trigger trg_orders_before จะ:
+   *  - ตรวจว่าโต๊ะปลายทาง status = 'available'
+   * trigger trg_orders_after จะ:
+   *  - เรียก sync_table_status() ทั้งโต๊ะเก่าและใหม่อัตโนมัติ
    */
   async moveTable(orderId: string, newTableId: string) {
-    // TODO: เขียน SQL UPDATE table_id ใน orders
-    return null;
+    const sql = `
+      UPDATE orders
+      SET table_id = $1
+      WHERE order_id = $2
+        AND closed_at IS NULL
+      RETURNING ${ORDERS_COL};
+    `;
+    const result = await this.db.query(sql, [newTableId, orderId]);
+    return result.rows[0] ?? null;
   }
 
   /**
    * ปิดบิลโดยไม่เก็บเงิน (voided_all, empty, walkout)
+   * trigger trg_orders_before จะ:
+   *  - ตรวจว่า voided_all/empty ต้องไม่มี order_items ที่ยังไม่ voided
+   *  - ตรวจสิทธิ์ order:close_unpaid (DB ตรวจซ้ำ)
+   *  - ตั้ง closed_at = now() ให้อัตโนมัติถ้าไม่ได้ส่งมา
+   * trigger trg_orders_after จะ:
+   *  - เขียน audit log 'order_closed_unpaid' อัตโนมัติ
+   *  - เรียก sync_table_status() โต๊ะกลับเป็น available
    */
   async closeUnpaid(orderId: string, dto: CloseUnpaidDto, closedBy: string) {
-    // TODO: เขียน SQL UPDATE closed_at, closed_by, close_reason ใน orders
-    return null;
+    const sql = `
+      UPDATE orders
+      SET close_reason = $1,
+          closed_by    = $2,
+          closed_at    = now()
+      WHERE order_id = $3
+        AND closed_at IS NULL
+      RETURNING ${ORDERS_COL};
+    `;
+    const result = await this.db.query(sql, [dto.closeReason, closedBy, orderId]);
+    return result.rows[0] ?? null;
   }
 
   /**
-   * บันทึกซิงค์ข้อมูลบิลแบบ Offline Batch
+   * ซิงค์บิลและรายการอาหารจากอุปกรณ์ที่ทำงานแบบ Offline
+   * - ใช้ ON CONFLICT DO NOTHING เหมือน createOrder
+   * - ส่ง order_id จาก client (idempotent)
+   * - ส่ง items ต่อบิลได้เลยในครั้งเดียว
    */
   async syncOrders(orders: any[]) {
-    // TODO: เขียน SQL Batch INSERT ... ON CONFLICT DO NOTHING
-    return [];
+    const results: any[] = [];
+
+    for (const orderDto of orders) {
+      // INSERT order (idempotent)
+      const orderSql = `
+        INSERT INTO orders (order_id, tenant_id, table_id, created_by)
+        VALUES ($1, app_tenant_id(), $2, $3)
+        ON CONFLICT (order_id) DO NOTHING
+        RETURNING ${ORDERS_COL};
+      `;
+      const orderResult = await this.db.query(orderSql, [
+        orderDto.orderId,
+        orderDto.tableId,
+        orderDto.createdBy,
+      ]);
+
+      const createdOrder = orderResult.rows[0];
+
+      // INSERT items ถ้ามี (ไม่ว่าจะสร้าง order ใหม่หรือมีอยู่แล้ว)
+      let insertedItems: any[] = [];
+      if (orderDto.items && orderDto.items.length > 0) {
+        insertedItems = await this.addOrderItems(
+          orderDto.orderId,
+          orderDto.items,
+        );
+      }
+
+      results.push({
+        orderId: orderDto.orderId,
+        isNew: !!createdOrder,
+        order: createdOrder ?? null,
+        items: insertedItems,
+      });
+    }
+
+    return results;
   }
 
   async hasPendingOrders(){

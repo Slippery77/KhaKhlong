@@ -50,9 +50,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => setAuthHandlers(null);
 }, [navigate]);
 
-  const setAuth = (token: string, user: AuthUser) => {
+  const setAuth = (token: string, newUser: AuthUser) => {
     setAccessToken(token);
-    setUser(user);
+    setUser(newUser);
   };
 
   const clearAuth = () => {
@@ -78,4 +78,3 @@ export function useAuth() {
   }
   return context;
 }
-

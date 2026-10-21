@@ -9,18 +9,18 @@
 //   6) รวม type ไว้ที่ไฟล์นี้ที่เดียวแล้ว ✅ (MainPOS / MenuCard / ModifierPopup / OrderSidebar import จากที่นี่)
 
 export interface ModifierOption {
-    id: number
+    id: string          // modifier_id (UUID)
     name: string
-    price: number
+    price: number       // price_delta จาก API
 }
 export type ModifierOpiton = ModifierOption // รองรับกรณีสะกดชื่อเดิม
 
 export interface ModifierGroup {
-    id: number
-    title: string
+    id: string          // modifier_group_id (UUID)
+    title: string       // name จาก API
     Choice: ModifierOption[]
-    type: "radio" | "checkbox" | string
-    price?: number
+    type: "radio" | "checkbox"  // single → radio, multi → checkbox
+    isRequired: boolean
 }
 
 // เมนูที่หน้า POS ใช้ (แปลงมาจาก MenuItem ของ API ใน MainPOS)
@@ -44,27 +44,3 @@ export interface CartMenu {
     selectedAddons?: ModifierOption[]
     note?: string
 }
-
-// ตัวอย่าง Modifier สำหรับข้าวผัดกุ้ง
-export const KHAO_PAD_MODIFIERS: ModifierGroup[] = [
-    {
-        id: 1,
-        title: "ระดับความเผ็ด",
-        type: "radio",
-        Choice: [
-            { id: 101, name: "ไม่เผ็ด", price: 0 },
-            { id: 102, name: "เผ็ดปกติ", price: 0 },
-            { id: 103, name: "เผ็ดมาก", price: 0 },
-        ],
-    },
-    {
-        id: 2,
-        title: "เพิ่มเติม",
-        type: "checkbox",
-        Choice: [
-            { id: 201, name: "เพิ่มไข่ดาว", price: 10 },
-            { id: 202, name: "เพิ่มข้าว", price: 10 },
-            { id: 203, name: "เพิ่มเนื้อ", price: 10 },
-        ],
-    },
-]

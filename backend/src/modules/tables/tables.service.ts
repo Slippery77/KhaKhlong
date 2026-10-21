@@ -34,8 +34,22 @@ export class TablesService {
    * TODO: ดึงรายการผังโต๊ะทั้งหมด
    */
   async findAll() {
-    // TODO: เรียก tablesRepository.findAll
-    return this.tablesRepository.findAll();
+    const rows = await this.tablesRepository.findAll();
+    return {
+      status: 'success',
+      data: rows.map((r: any) => ({
+        table_id: r.table_id,
+        table_number: r.table_number,
+        capacity: r.capacity,
+        floor: r.floor,
+        status: r.status,
+        created_at: r.created_at,
+        updated_at: r.updated_at,
+        open_order_id: r.open_order_id ?? null,
+        item_count: Number(r.item_count),
+        total_amount: Number(r.total_amount),
+      })),
+    };
   }
 
   /**
