@@ -11,8 +11,12 @@ Settings,
 Utensils} from "lucide-react"
 import { useState, useRef, useEffect } from "react"
 import { useLocation, Link, useParams } from "react-router-dom"
-import { useKDS } from "../features/kds/context/KDSContext"
 import { useLogin } from "../features/auth/hooks/useLogin"
+import { useAuth } from "../features/auth/context/AuthContext"
+import { apiFetch } from "../libs/appClient"
+import { groupItemsToTickets } from "../features/kds/types/kds.types"
+import type { ApiKDSItem } from "../features/kds/types/kds.types"
+import { ROLE_LABEL } from "../features/users/types/user.types"
 
 export interface Employee {
     name: string
@@ -21,11 +25,18 @@ export interface Employee {
 
 export default function Header() {
     const location = useLocation()
-    const { orders } = useKDS()
-    const [employee] = useState<Employee>({ name: "วิชัย ใจดี", role: "ผู้จัดการ" })
+    const { user, accessToken } = useAuth()
     const [isMenuOpen, setIsMenuOpen] = useState(false)
+    // จำนวนออเดอร์ "รอทำ" จาก backend ตัวเดียวกับหน้า KDS (/kds/queue)
+    // เดิมใช้ localStorage ของ KDSContext ซึ่งคนละแหล่งกับหน้า KDS → badge ค้างไม่ตรงกัน
+    const [pendingOrdersCount, setPendingOrdersCount] = useState(0)
     const menuRef = useRef<HTMLDivElement>(null)
     const { logout } = useLogin();
+    // ชื่อ+ตำแหน่งจริงจาก session — เซสชันเก่า (ก่อนเพิ่ม display_name) ใช้ username แทน
+    const employee: Employee = {
+        name: user?.display_name || user?.username || "ไม่มีชื่อ",
+        role: ROLE_LABEL[user?.role as keyof typeof ROLE_LABEL] ?? user?.role ?? "",
+    }
     // อ่าน slug จาก URL แทน user.tenantSlug เพราะ user หายเมื่อ refresh หน้า
     const { tenantSlug } = useParams<{ tenantSlug: string }>()
     const isKDS = location.pathname.includes("/kds")
@@ -35,7 +46,29 @@ export default function Header() {
     const isSiftwork = location.pathname.includes("/siftwork")
     const isSalereport = location.pathname.includes("/sale-report")
     const isStock = location.pathname.includes("/stock")
-    const pendingOrdersCount = orders.filter((o) => o.status === "รอทำ").length
+
+    // ดึงคิวครัวจาก backend ทุกครั้งที่เปิดเมนู — badge จะตรงกับหน้า KDS เสมอ
+    useEffect(() => {
+        if (!isMenuOpen || !accessToken) {
+            return
+        }
+        let cancelled = false
+        ;(async () => {
+            try {
+                const res = await apiFetch<{ status: string; data: ApiKDSItem[] }>("/kds/queue", accessToken)
+                if (cancelled) return
+                // นับเป็น "ตั๋ว" (1 การกดส่งครัว) ที่ยังไม่เสร็จ แบบเดียวกับหน้า KDS
+                const tickets = groupItemsToTickets(res.data ?? [])
+                setPendingOrdersCount(tickets.filter((t) => t.overallStatus === "รอทำ").length)
+            } catch {
+                // โหลดไม่ได้ = ไม่แสดง badge (ไม่ให้ badge ค้างจากข้อมูลเก่า)
+                if (!cancelled) setPendingOrdersCount(0)
+            }
+        })()
+        return () => {
+            cancelled = true
+        }
+    }, [isMenuOpen, accessToken])
 
     // ปิดเมนูเมื่อคลิกข้างนอก
     useEffect(() => {

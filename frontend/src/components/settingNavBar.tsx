@@ -7,21 +7,21 @@ export default function SettingNavBar(){
             <ul className="flex bg-[#FAF7F2] gap-4 p-3">
                 <li>
                     <NavLink to={`/${tenantSlug}/fake-path-test`}
-                    className={({isActive})=> isActive ? 'font-kanit text-[#FFFFFF] border-2 rounded-xl bg-[#B79479]' : 'text-stone-500'}
+                    className={({isActive})=> isActive ? 'font-kanit text-[#FFFFFF] border-2 rounded-xl bg-[#B79479] p-2' : 'text-stone-500'}
                 >
                 ร้านอาหาร
                     </NavLink>
                 </li>
                 <li>
                     <NavLink to={`/${tenantSlug}/fake-path-test`}
-                    className={({isActive})=> isActive ? 'font-kanit text-[#FFFFFF] border-2 rounded-xl bg-[#B79479]' : 'text-stone-500'}
+                    className={({isActive})=> isActive ? 'font-kanit text-[#FFFFFF] border-2 rounded-xl bg-[#B79479] p-2' : 'text-stone-500'}
                 >
                 อัตราค่าบริการ
                     </NavLink>
                 </li>
                 <li>
-                    <NavLink to={`/${tenantSlug}/fake-path-test`}
-                    className={({isActive})=> isActive ? 'font-kanit text-[#FFFFFF] border-2 rounded-xl bg-[#B79479]' : 'text-stone-500'}
+                    <NavLink to={`/${tenantSlug}/setting/tables`}
+                    className={({isActive})=> isActive ? 'font-kanit text-[#FFFFFF] border-2 rounded-xl bg-[#B79479] p-2' : 'text-stone-500'}
                 >
                 โต๊ะอาหาร
                     </NavLink>
@@ -42,8 +42,8 @@ export default function SettingNavBar(){
                     </NavLink>
                 </li>
                 <li>
-                    <NavLink to={`/${tenantSlug}/fake-path-test`}
-                    className={({isActive})=> isActive ? 'font-kanit text-[#FFFFFF] border-2 rounded-xl bg-[#B79479]' : 'text-stone-500'}
+                    <NavLink to={`/${tenantSlug}/setting/users`}
+                    className={({isActive})=> isActive ? 'font-kanit text-[#FFFFFF] border-2 rounded-xl bg-[#B79479] p-2' : 'text-stone-500'}
                 >
                 บัญชีผู้ใช้
                     </NavLink>

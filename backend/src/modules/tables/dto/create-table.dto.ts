@@ -1,5 +1,5 @@
-import { IsNotEmpty, IsString, IsInt, Min, IsOptional, MaxLength } from 'class-validator';
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { IsNotEmpty, IsString, IsInt, Min, IsOptional, IsUUID, MaxLength } from 'class-validator';
+import { ApiProperty } from '@nestjs/swagger';
 
 export class CreateTableDto {
   @ApiProperty({
@@ -21,14 +21,12 @@ export class CreateTableDto {
   @Min(1)
   capacity: number;
 
-  @ApiPropertyOptional({
-    description: 'ชั้นที่โต๊ะตั้งอยู่ (ค่าเริ่มต้นคือ 1)',
-    example: 1,
-    minimum: 1,
-    default: 1,
+  @ApiProperty({
+    description: 'รหัสชั้น (floor_id จาก GET /floors) — ชั้นต้องถูกเพิ่มไว้ก่อน',
+    example: 'c1000000-0000-0000-0000-000000000001',
+    format: 'uuid',
   })
-  @IsInt()
-  @Min(1)
-  @IsOptional()
-  floor?: number;
+  @IsUUID()
+  @IsNotEmpty()
+  floorId: string;
 }

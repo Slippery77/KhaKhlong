@@ -3,6 +3,8 @@ export interface RegisterOwner{
     email : string;
     password : string;
     confirmPassword : string;
+    /** ชื่อแสดง (display_name ใน backend) — เว้นว่างหน้าบ้านได้ ระบบจะใช้ username แทน */
+    display_name?: string;
 } 
 
 export interface RegisterRestaurant{

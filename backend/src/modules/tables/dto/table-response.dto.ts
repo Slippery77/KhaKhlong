@@ -21,10 +21,18 @@ export class DiningTableDto {
   capacity: number;
 
   @ApiProperty({
-    description: 'ชั้นที่โต๊ะตั้งอยู่',
-    example: 1,
+    description: 'รหัสชั้นที่โต๊ะสังกัด (FK ไปหาตาราง floors)',
+    format: 'uuid',
+    example: 'c1000000-0000-0000-0000-000000000001',
   })
-  floor: number;
+  floor_id: string;
+
+  @ApiProperty({
+    description: 'เลขชั้น (JOIN จากตาราง floors ไว้แสดงผล)',
+    example: 1,
+    nullable: true,
+  })
+  floor_no: number | null;
 
   @ApiProperty({
     description: 'สถานะของโต๊ะ (available = ว่าง, occupied = มีลูกค้า/มีบิล, out_of_service = ปิดใช้งาน)',

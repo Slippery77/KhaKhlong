@@ -9,6 +9,8 @@ import { StockPage } from '../features/inventory';
 import SaleReportPage from '../features/saleReport/pages/SaleReportPage';
 import EditModiferPage from '../features/editModifer/pages/edit_modifer_pages';
 import TablesPage from '../features/tables/pages/TablesPage';
+import UsersPage from '../features/users/pages/UsersPage';
+import TableSettingPage from '../features/tableSetting/pages/TableSettingPage';
 
 export function AppRouter() {
     return (
@@ -21,6 +23,8 @@ export function AppRouter() {
             <Route path='/:tenantSlug/kds' element={<KDSPage />} />
             <Route path='/:tenantSlug/setting/menu' element={<MenuEdit />} />
             <Route path='/:tenantSlug/setting/modifier' element={<EditModiferPage />} />
+            <Route path='/:tenantSlug/setting/users' element={<UsersPage />} />
+            <Route path='/:tenantSlug/setting/tables' element={<TableSettingPage />} />
             <Route path='/:tenantSlug/siftwork' element={<SiftworkPage />} />
             <Route path='/:tenantSlug/stock' element={<StockPage />} />
             <Route path='/:tenantSlug/sale-report' element={<SaleReportPage />} />
