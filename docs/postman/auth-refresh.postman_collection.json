@@ -1,0 +1,1477 @@
+{
+  "info": {
+    "name": "PWA-POS — Auth: refresh token & logout",
+    "description": "ทดสอบบท 5-7 ของ refresh token: login ออก refresh token, POST /auth/refresh (rotation + reuse detection), POST /auth/logout (ลบ refresh token ของเครื่องนั้น)\n\nวิธีใช้\n1. แท็บ Variables ของ collection: กรอก tenantSlug, username, password ของ user ทดสอบ 1 คน (role ไหนก็ได้)\n2. คลิกขวาที่ collection > Run collection > ติ๊กออกโฟลเดอร์ 5 (ต้องทำ SQL ด้วยมือ) > Run\n3. ห้ามสลับลำดับ ทุก request ใช้ตัวแปรจาก request ก่อนหน้า\n4. รันทั้งชุดใช้เวลาประมาณ 3-4 นาที เพราะทุก login รอ 13 วินาที และทุก refresh รอ 7 วินาที กัน rate limit (429)\n5. โฟลเดอร์ 5 รันทีละ request ตามคำอธิบายในแต่ละ request\n\nเช็คใน pgAdmin (แท็บ postgres) หลังรัน\n\nหา users_id:\nSELECT users_id FROM users WHERE username = '<username>';\n\nสถานะ refresh token (หลังข้อ 2.1 แถวใหม่ของเครื่อง 1 ต้องมี expires_at เท่ากับแถว login ของเครื่อง 1 ทุกวินาที = absolute lifetime):\nSELECT left(token_hash, 8) AS hash, device_info, created_at, expires_at,\n       expires_at - created_at AS lifetime, revoked_at\nFROM refresh_tokens WHERE user_id = '<uid>' ORDER BY created_at;\n\naudit logout (ต้องมีแถว logout และ ip_address / device_info ไม่ใช่ unknown):\nSELECT action_type, ip_address, device_info, created_at\nFROM audit_logs WHERE user_id = '<uid>' ORDER BY created_at DESC LIMIT 5;\n\nล้างก่อนรันรอบใหม่ (เครื่อง dev เท่านั้น ลบ refresh token ทั้งหมดของ user นี้):\nDELETE FROM refresh_tokens WHERE user_id = '<uid>';",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3000/api"
+    },
+    {
+      "key": "tenantSlug",
+      "value": "ใส่-slug-ร้าน"
+    },
+    {
+      "key": "username",
+      "value": ""
+    },
+    {
+      "key": "password",
+      "value": ""
+    },
+    {
+      "key": "access",
+      "value": ""
+    },
+    {
+      "key": "refresh",
+      "value": ""
+    },
+    {
+      "key": "refresh_prev",
+      "value": ""
+    },
+    {
+      "key": "access2",
+      "value": ""
+    },
+    {
+      "key": "refresh2",
+      "value": ""
+    }
+  ],
+  "item": [
+    {
+      "name": "1. Login (บท 5)",
+      "item": [
+        {
+          "name": "1.1 Login เครื่อง 1",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tenantSlug\": \"{{tenantSlug}}\",\n  \"username\": \"{{username}}\",\n  \"password\": \"{{password}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// login จำกัด 5 ครั้ง/นาที รอ 13 วินาทีก่อนยิงทุกครั้ง กัน 429 ตอนรันทั้ง collection",
+                  "setTimeout(() => {}, 13000);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 200\", () => pm.response.to.have.status(200));",
+                  "const j = pm.response.json();",
+                  "pm.test(\"ได้ accessToken\", () => pm.expect(j.accessToken).to.be.a(\"string\"));",
+                  "pm.test(\"ได้ refreshToken ยาว 43 ตัว\", () => pm.expect(j.refreshToken).to.have.lengthOf(43));",
+                  "pm.collectionVariables.set(\"access\", j.accessToken);",
+                  "pm.collectionVariables.set(\"refresh\", j.refreshToken);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "1.2 Login รหัสผิด (ห้าม)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tenantSlug\": \"{{tenantSlug}}\",\n  \"username\": \"{{username}}\",\n  \"password\": \"wrong-password-xyz\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "ต้องได้ 401 และใน refresh_tokens ต้องไม่มีแถวใหม่"
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// login จำกัด 5 ครั้ง/นาที รอ 13 วินาทีก่อนยิงทุกครั้ง กัน 429 ตอนรันทั้ง collection",
+                  "setTimeout(() => {}, 13000);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 401\", () => pm.response.to.have.status(401));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "1.3 Login เครื่อง 2",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tenantSlug\": \"{{tenantSlug}}\",\n  \"username\": \"{{username}}\",\n  \"password\": \"{{password}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// login จำกัด 5 ครั้ง/นาที รอ 13 วินาทีก่อนยิงทุกครั้ง กัน 429 ตอนรันทั้ง collection",
+                  "setTimeout(() => {}, 13000);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 200\", () => pm.response.to.have.status(200));",
+                  "const j = pm.response.json();",
+                  "pm.test(\"ได้ accessToken\", () => pm.expect(j.accessToken).to.be.a(\"string\"));",
+                  "pm.test(\"ได้ refreshToken ยาว 43 ตัว\", () => pm.expect(j.refreshToken).to.have.lengthOf(43));",
+                  "pm.collectionVariables.set(\"access2\", j.accessToken);",
+                  "pm.collectionVariables.set(\"refresh2\", j.refreshToken);"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "2. Refresh ปกติ (บท 6)",
+      "item": [
+        {
+          "name": "2.1 Refresh เครื่อง 1",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/refresh",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "refresh"
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refreshToken\": \"{{refresh}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "ใบเดิมเก็บไว้ใน refresh_prev สำหรับทดสอบ reuse ในข้อ 3.1"
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// refresh จำกัด 10 ครั้ง/นาที รอ 7 วินาทีก่อนยิงทุกครั้ง กัน 429",
+                  "setTimeout(() => {}, 7000);",
+                  "pm.collectionVariables.set(\"refresh_prev\", pm.collectionVariables.get(\"refresh\"));"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 200\", () => pm.response.to.have.status(200));",
+                  "const j = pm.response.json();",
+                  "const old = pm.collectionVariables.get(\"refresh\");",
+                  "pm.test(\"ได้ refreshToken ใบใหม่ ไม่ซ้ำใบเดิม\", () => { pm.expect(j.refreshToken).to.have.lengthOf(43); pm.expect(j.refreshToken).to.not.eql(old); });",
+                  "pm.test(\"ได้ accessToken ใบใหม่\", () => pm.expect(j.accessToken).to.be.a(\"string\"));",
+                  "pm.collectionVariables.set(\"access\", j.accessToken);",
+                  "pm.collectionVariables.set(\"refresh\", j.refreshToken);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "2.2 ใช้ access ใบใหม่ได้จริง",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/menu/full",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "menu",
+                "full"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access}}",
+                  "type": "string"
+                }
+              ]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "2.3 Refresh เครื่อง 2 (ต้องยังใช้ได้)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/refresh",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "refresh"
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refreshToken\": \"{{refresh2}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "ผ่าน = refresh ของเครื่อง 1 ไม่ได้ไปยกเลิกเครื่อง 2"
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// refresh จำกัด 10 ครั้ง/นาที รอ 7 วินาทีก่อนยิงทุกครั้ง กัน 429",
+                  "setTimeout(() => {}, 7000);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 200\", () => pm.response.to.have.status(200));",
+                  "const j = pm.response.json();",
+                  "const old = pm.collectionVariables.get(\"refresh2\");",
+                  "pm.test(\"ได้ refreshToken ใบใหม่ ไม่ซ้ำใบเดิม\", () => { pm.expect(j.refreshToken).to.have.lengthOf(43); pm.expect(j.refreshToken).to.not.eql(old); });",
+                  "pm.test(\"ได้ accessToken ใบใหม่\", () => pm.expect(j.accessToken).to.be.a(\"string\"));",
+                  "pm.collectionVariables.set(\"access2\", j.accessToken);",
+                  "pm.collectionVariables.set(\"refresh2\", j.refreshToken);"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "3. Reuse detection (บท 6)",
+      "item": [
+        {
+          "name": "3.1 ใช้ refresh ใบเก่าของเครื่อง 1 (ห้าม)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/refresh",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "refresh"
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refreshToken\": \"{{refresh_prev}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "ใบนี้ถูก rotate ไปแล้วในข้อ 2.1 ถูกใช้ซ้ำ = ระบบถือว่าถูกขโมย ต้องยกเลิกทุกใบของ user"
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// refresh จำกัด 10 ครั้ง/นาที รอ 7 วินาทีก่อนยิงทุกครั้ง กัน 429",
+                  "setTimeout(() => {}, 7000);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 401\", () => pm.response.to.have.status(401));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "3.2 ใบล่าสุดของเครื่อง 1 ถูกยกเลิกด้วย",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/refresh",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "refresh"
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refreshToken\": \"{{refresh}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// refresh จำกัด 10 ครั้ง/นาที รอ 7 วินาทีก่อนยิงทุกครั้ง กัน 429",
+                  "setTimeout(() => {}, 7000);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 401\", () => pm.response.to.have.status(401));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "3.3 เครื่อง 2 ถูกยกเลิกด้วย",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/refresh",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "refresh"
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refreshToken\": \"{{refresh2}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "ถ้าได้ 200 แปลว่า revokeAllForUser ถูก rollback (มีการ throw ใน transaction)"
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// refresh จำกัด 10 ครั้ง/นาที รอ 7 วินาทีก่อนยิงทุกครั้ง กัน 429",
+                  "setTimeout(() => {}, 7000);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 401\", () => pm.response.to.have.status(401));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "4. ข้อมูลผิด",
+      "item": [
+        {
+          "name": "4.1 token มั่ว (401)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/refresh",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "refresh"
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refreshToken\": \"abc\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// refresh จำกัด 10 ครั้ง/นาที รอ 7 วินาทีก่อนยิงทุกครั้ง กัน 429",
+                  "setTimeout(() => {}, 7000);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 401\", () => pm.response.to.have.status(401));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "4.2 body ว่าง (400)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/refresh",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "refresh"
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// refresh จำกัด 10 ครั้ง/นาที รอ 7 วินาทีก่อนยิงทุกครั้ง กัน 429",
+                  "setTimeout(() => {}, 7000);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 400\", () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "4.3 token เป็นตัวเลข (400)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/refresh",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "refresh"
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refreshToken\": 123\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// refresh จำกัด 10 ครั้ง/นาที รอ 7 วินาทีก่อนยิงทุกครั้ง กัน 429",
+                  "setTimeout(() => {}, 7000);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 400\", () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "4.4 field เกิน (400)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/refresh",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "refresh"
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refreshToken\": \"abc\",\n  \"x\": 1\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// refresh จำกัด 10 ครั้ง/นาที รอ 7 วินาทีก่อนยิงทุกครั้ง กัน 429",
+                  "setTimeout(() => {}, 7000);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 400\", () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "6. Logout (บท 7)",
+      "item": [
+        {
+          "name": "6.1 Login เครื่อง 1",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tenantSlug\": \"{{tenantSlug}}\",\n  \"username\": \"{{username}}\",\n  \"password\": \"{{password}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// login จำกัด 5 ครั้ง/นาที รอ 13 วินาทีก่อนยิงทุกครั้ง กัน 429 ตอนรันทั้ง collection",
+                  "setTimeout(() => {}, 13000);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 200\", () => pm.response.to.have.status(200));",
+                  "const j = pm.response.json();",
+                  "pm.test(\"ได้ accessToken\", () => pm.expect(j.accessToken).to.be.a(\"string\"));",
+                  "pm.test(\"ได้ refreshToken ยาว 43 ตัว\", () => pm.expect(j.refreshToken).to.have.lengthOf(43));",
+                  "pm.collectionVariables.set(\"access\", j.accessToken);",
+                  "pm.collectionVariables.set(\"refresh\", j.refreshToken);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "6.2 Login เครื่อง 2",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tenantSlug\": \"{{tenantSlug}}\",\n  \"username\": \"{{username}}\",\n  \"password\": \"{{password}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// login จำกัด 5 ครั้ง/นาที รอ 13 วินาทีก่อนยิงทุกครั้ง กัน 429 ตอนรันทั้ง collection",
+                  "setTimeout(() => {}, 13000);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 200\", () => pm.response.to.have.status(200));",
+                  "const j = pm.response.json();",
+                  "pm.test(\"ได้ accessToken\", () => pm.expect(j.accessToken).to.be.a(\"string\"));",
+                  "pm.test(\"ได้ refreshToken ยาว 43 ตัว\", () => pm.expect(j.refreshToken).to.have.lengthOf(43));",
+                  "pm.collectionVariables.set(\"access2\", j.accessToken);",
+                  "pm.collectionVariables.set(\"refresh2\", j.refreshToken);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "6.3 Logout เครื่อง 1",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/logout",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "logout"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refreshToken\": \"{{refresh}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "แถวของเครื่อง 1 ต้องหายจาก refresh_tokens และมีแถว logout ใน audit_logs"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "6.4 Refresh ด้วยใบที่ logout แล้ว (ห้าม)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/refresh",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "refresh"
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refreshToken\": \"{{refresh}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "แถวถูกลบไปแล้ว ต้องได้ 401 ธรรมดา ไม่ trigger reuse detection"
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// refresh จำกัด 10 ครั้ง/นาที รอ 7 วินาทีก่อนยิงทุกครั้ง กัน 429",
+                  "setTimeout(() => {}, 7000);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 401\", () => pm.response.to.have.status(401));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "6.5 เครื่อง 2 ยังใช้ได้",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/refresh",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "refresh"
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refreshToken\": \"{{refresh2}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "ข้อนี้คือเหตุผลที่เลือกแบบ C ถ้าได้ 401 แปลว่า logout ไป trigger reuse detection แล้วยกเลิกทุกเครื่อง"
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// refresh จำกัด 10 ครั้ง/นาที รอ 7 วินาทีก่อนยิงทุกครั้ง กัน 429",
+                  "setTimeout(() => {}, 7000);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 200\", () => pm.response.to.have.status(200));",
+                  "const j = pm.response.json();",
+                  "const old = pm.collectionVariables.get(\"refresh2\");",
+                  "pm.test(\"ได้ refreshToken ใบใหม่ ไม่ซ้ำใบเดิม\", () => { pm.expect(j.refreshToken).to.have.lengthOf(43); pm.expect(j.refreshToken).to.not.eql(old); });",
+                  "pm.test(\"ได้ accessToken ใบใหม่\", () => pm.expect(j.accessToken).to.be.a(\"string\"));",
+                  "pm.collectionVariables.set(\"access2\", j.accessToken);",
+                  "pm.collectionVariables.set(\"refresh2\", j.refreshToken);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "6.6 Logout body ว่าง (ยังต้องผ่าน)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/logout",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "logout"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access2}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "refreshToken เป็น optional ต้องยังเขียน audit ได้"
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 200\", () => pm.response.to.have.status(200));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "6.7 Logout refreshToken เป็นตัวเลข (400)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/logout",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "logout"
+              ]
+            },
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access2}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refreshToken\": 123\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 400\", () => pm.response.to.have.status(400));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "6.8 Logout ไม่มี Bearer (401)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/logout",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "logout"
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 401\", () => pm.response.to.have.status(401));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "5. [รันทีละข้อ] หมดอายุ และปิดบัญชี",
+      "description": "ต้องทำ SQL ใน pgAdmin (แท็บ postgres) ระหว่างทาง ห้ามรันด้วย Runner ทำตามคำอธิบายในแต่ละ request",
+      "item": [
+        {
+          "name": "5.1 Login (เตรียม)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tenantSlug\": \"{{tenantSlug}}\",\n  \"username\": \"{{username}}\",\n  \"password\": \"{{password}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// login จำกัด 5 ครั้ง/นาที รอ 13 วินาทีก่อนยิงทุกครั้ง กัน 429 ตอนรันทั้ง collection",
+                  "setTimeout(() => {}, 13000);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 200\", () => pm.response.to.have.status(200));",
+                  "const j = pm.response.json();",
+                  "pm.test(\"ได้ accessToken\", () => pm.expect(j.accessToken).to.be.a(\"string\"));",
+                  "pm.test(\"ได้ refreshToken ยาว 43 ตัว\", () => pm.expect(j.refreshToken).to.have.lengthOf(43));",
+                  "pm.collectionVariables.set(\"access\", j.accessToken);",
+                  "pm.collectionVariables.set(\"refresh\", j.refreshToken);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "5.2 Refresh หลังหมดอายุ (ห้าม)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/refresh",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "refresh"
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refreshToken\": \"{{refresh}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "ก่อนกด Send รันใน pgAdmin:\n\nUPDATE refresh_tokens SET expires_at = now() - interval '1 minute'\nWHERE user_id = '<uid>' AND revoked_at IS NULL;"
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// refresh จำกัด 10 ครั้ง/นาที รอ 7 วินาทีก่อนยิงทุกครั้ง กัน 429",
+                  "setTimeout(() => {}, 7000);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 401\", () => pm.response.to.have.status(401));"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "5.3 Login (เตรียม)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "login"
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tenantSlug\": \"{{tenantSlug}}\",\n  \"username\": \"{{username}}\",\n  \"password\": \"{{password}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            }
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// login จำกัด 5 ครั้ง/นาที รอ 13 วินาทีก่อนยิงทุกครั้ง กัน 429 ตอนรันทั้ง collection",
+                  "setTimeout(() => {}, 13000);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 200\", () => pm.response.to.have.status(200));",
+                  "const j = pm.response.json();",
+                  "pm.test(\"ได้ accessToken\", () => pm.expect(j.accessToken).to.be.a(\"string\"));",
+                  "pm.test(\"ได้ refreshToken ยาว 43 ตัว\", () => pm.expect(j.refreshToken).to.have.lengthOf(43));",
+                  "pm.collectionVariables.set(\"access\", j.accessToken);",
+                  "pm.collectionVariables.set(\"refresh\", j.refreshToken);"
+                ]
+              }
+            }
+          ]
+        },
+        {
+          "name": "5.4 Refresh หลังปิดบัญชี (ห้าม)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/refresh",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "refresh"
+              ]
+            },
+            "auth": {
+              "type": "noauth"
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refreshToken\": \"{{refresh}}\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "description": "ก่อนกด Send รันใน pgAdmin:\n\nUPDATE users SET is_active = false, deactivated_at = now() WHERE users_id = '<uid>';\n\nหลังทดสอบต้องเปิดกลับ ไม่งั้น login ไม่ได้:\n\nUPDATE users SET is_active = true, deactivated_at = NULL WHERE users_id = '<uid>';\n\nหมายเหตุ: access token เดิมยังใช้ได้จนหมดอายุ เพราะยังไม่ได้ทำ token_version"
+          },
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// refresh จำกัด 10 ครั้ง/นาที รอ 7 วินาทีก่อนยิงทุกครั้ง กัน 429",
+                  "setTimeout(() => {}, 7000);"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test(\"status 401\", () => pm.response.to.have.status(401));"
+                ]
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

@@ -6,6 +6,8 @@ import { Public } from './guards/public.decorator';
 import { Throttle } from '@nestjs/throttler';
 import { ApiOkResponse, ApiOperation, ApiUnauthorizedResponse } from '@nestjs/swagger';
 import { AnyAuthenticated } from './guards/permissions.decorator';
+import { RefreshDTO } from './dto/refresh.dto';
+import { LogoutDTO } from './dto/logout.dto';
 
 // Controller สำหรับจัดการ endpoint ที่เกี่ยวกับการยืนยันตัวตนของผู้ใช้
 @Controller('auth')
@@ -38,7 +40,22 @@ export class AuthController {
     @ApiUnauthorizedResponse({ description: 'token ไม่ถูกต้องหรือหมดอายุ' })
     @AnyAuthenticated()
     @Post('logout')
-    async logout() {
-        return this.authService.logout();
+    async logout(@Body() dto:LogoutDTO) {
+        return this.authService.logout(dto.refreshToken);
+    }
+
+    @ApiOperation({
+        summary:"ขอ access token ใหม่ด้วย refresh token"
+    })
+    @ApiOkResponse({ description: 'ได้ access token และ refresh token ใบใหม่' })
+    @ApiUnauthorizedResponse({ description: 'refresh token ไม่ถูกต้อง หมดอายุ หรือถูกเพิกถอน' })
+    @Throttle({ default: { ttl: 60000, limit: 10 } })
+    @Public()
+    @Post('refresh')
+    @HttpCode(HttpStatus.OK)
+    //@Ip() ip: string, เอาไว้ใส่ตอน product จริง
+    //@Headers('user-agent') ua: string,
+    async refreshToken(@Body() dto:RefreshDTO){
+        return this.authService.refresh(dto.refreshToken);
     }
 }

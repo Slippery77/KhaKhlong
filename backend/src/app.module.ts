@@ -34,6 +34,7 @@ import { SystemConfigModule } from './modules/system-config/system-config.module
         DB_SSL: Joi.boolean().default(false),
         JWT_SECRET: Joi.string().min(32).required(),
         JWT_EXPIRES_IN: Joi.string().default('1d'),
+        REFRESH_EXPIRES_HOURS: Joi.number().integer().min(1).max(72).default(16),
         CORS_ORIGIN: Joi.string().required(),
       }),
     }),
