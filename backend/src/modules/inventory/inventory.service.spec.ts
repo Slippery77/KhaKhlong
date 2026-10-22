@@ -8,6 +8,7 @@ describe('InventoryService', () => {
 
   const ingredient = {
     ingredient_id: '550e8400-e29b-41d4-a716-446655440000',
+    tenant_id: '550e8400-e29b-41d4-a716-446655440001',
     name: 'เนื้อหมูสันนอก',
     stock_unit: 'กรัม',
     purchase_unit: null,

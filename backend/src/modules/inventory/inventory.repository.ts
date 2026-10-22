@@ -79,7 +79,7 @@ export class InventoryRepository {
   /**
    * อัปเดตข้อมูลวัตถุดิบ
    */
-  async updateIngredient(id: string, dto: UpdateIngredientDto) {
+  async updateIngredient(id: string, dto: UpdateIngredientDto): Promise<IngredientRow | null> {
     const sql = `
       UPDATE ingredients
       SET
@@ -215,7 +215,7 @@ export class InventoryRepository {
         app_tenant_id(),
         $1,
         'waste',
-        -$2,
+        ($2)::numeric * -1,
         $3,
         $4,
         COALESCE($5, app_user_id())
