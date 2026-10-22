@@ -1,4 +1,5 @@
-import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, ForbiddenException, HttpException, HttpStatus, Injectable, NotFoundException } from '@nestjs/common';
+import * as bcrypt from 'bcrypt';
 import { ShiftsRepository } from './shifts.repository';
 import { OpenShiftsDTO } from './dto/openShifts.dto';
 import { toCashBookResponse, toCashMovementResponse, toShiftResponse } from './mapper/shift.mapper';
@@ -130,16 +131,49 @@ export class ShiftsService {
         return {status:'success', data:toShiftResponse(result)}
     }
     
-    async verifyShift(shift_id:string, userId:string){
+    // กัน brute force PIN 6 หลัก: นับครั้งผิดต่อกะ (PIN ผิดระบุตัวคนไม่ได้ จึงนับรวมทั้งกะ)
+    private readonly pinAttempts = new Map<string, { count: number; firstAt: number }>();
+    private static readonly PIN_MAX_ATTEMPTS = 5;
+    private static readonly PIN_WINDOW_MS = 5 * 60 * 1000;
+
+    async verifyShift(shift_id:string, pin:string){
         let result;
         const shift = await this.shiftRepository.getShiftStatusForUpdate(shift_id);
         if (!shift) throw new NotFoundException('ไม่พบกะนี้');
         if (!['pending_verification', 'escalated'].includes(shift.status)) {
             throw new ConflictException('กะนี้ไม่ต้องรับรอง หรือรับรองไปแล้ว');
         }
-        
+
+        const attempts = this.pinAttempts.get(shift_id);
+        const now = Date.now();
+        if (attempts && now - attempts.firstAt < ShiftsService.PIN_WINDOW_MS
+            && attempts.count >= ShiftsService.PIN_MAX_ATTEMPTS) {
+            throw new HttpException(
+                'กรอก PIN ผิดหลายครั้งเกินไป กรุณารอ 5 นาทีแล้วลองใหม่',
+                HttpStatus.TOO_MANY_REQUESTS,
+            );
+        }
+
+        // หาเจ้าของ PIN ในกลุ่มผู้จัดการ/เจ้าของร้านของร้านนี้ (PIN ของใครก็ได้ ไม่ต้องสลับ login)
+        const verifiers = await this.shiftRepository.findPinVerifiers();
+        let verifierId: string | null = null;
+        for (const verifier of verifiers) {
+            if (await bcrypt.compare(pin, verifier.pin_hash)) {
+                verifierId = verifier.users_id;
+                break;
+            }
+        }
+        if (!verifierId) {
+            const current = attempts && now - attempts.firstAt < ShiftsService.PIN_WINDOW_MS
+                ? attempts
+                : { count: 0, firstAt: now };
+            this.pinAttempts.set(shift_id, { count: current.count + 1, firstAt: current.firstAt });
+            throw new ForbiddenException('PIN ไม่ถูกต้อง หรือผู้ใช้นี้ไม่มีสิทธิ์รับรองยอด');
+        }
+        this.pinAttempts.delete(shift_id);
+
         try {
-            result = await this.shiftRepository.verifyShift(shift_id,userId);
+            result = await this.shiftRepository.verifyShift(shift_id,verifierId);
             if (!result) throw new NotFoundException('ไม่พบกะนี้');
         } catch (err:any) {
             const msg:string = err.message??'';

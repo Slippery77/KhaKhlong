@@ -4,7 +4,7 @@ import Register_page from '../features/registerOwner/pages/register_pages';
 import MainPOS from '../features/mainpos/pages/MainPOS';
 import KDSPage from '../features/kds/pages/KDSPage';
 import { MenuEdit } from '../features/editMenu/pages/menu_edit';
-import SiftworkPage from '../features/auth/pages/Siftwork_page';
+import { ShiftPage } from '../features/shifts';
 import { StockPage } from '../features/inventory';
 import SaleReportPage from '../features/saleReport/pages/SaleReportPage';
 import EditModiferPage from '../features/editModifer/pages/edit_modifer_pages';
@@ -25,7 +25,7 @@ export function AppRouter() {
             <Route path='/:tenantSlug/setting/modifier' element={<EditModiferPage />} />
             <Route path='/:tenantSlug/setting/users' element={<UsersPage />} />
             <Route path='/:tenantSlug/setting/tables' element={<TableSettingPage />} />
-            <Route path='/:tenantSlug/siftwork' element={<SiftworkPage />} />
+            <Route path='/:tenantSlug/siftwork' element={<ShiftPage />} />
             <Route path='/:tenantSlug/stock' element={<StockPage />} />
             <Route path='/:tenantSlug/sale-report' element={<SaleReportPage />} />
         </Routes>

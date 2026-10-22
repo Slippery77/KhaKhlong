@@ -6,6 +6,7 @@ import { OpenShiftsDTO } from './dto/openShifts.dto';
 import { ClosingShiftDTO } from './dto/closeShift.dto';
 import { ReopenShiftDto } from './dto/reopenShift.dto';
 import { ListShiftsQueryDto } from './dto/listShift.dto';
+import { VerifyShiftDto } from './dto/verifyShift.dto';
 
 @ApiBearerAuth()
 @ApiTags('shifts')
@@ -81,21 +82,24 @@ export class ShiftsController {
     }
 
     @ApiOperation({
-        summary: 'รับรองยอดปิดกะ',
+        summary: 'รับรองยอดปิดกะด้วย PIN ผู้จัดการ/เจ้าของร้าน',
         description:
-            'ใช้กับกะที่ยอดเงินไม่ตรง (pending_verification) Manager หรือ Owner กดรับรองได้ ' +
-            'ถ้ากะถูกส่งต่อ (escalated) ต้องเป็น Owner รับรองแล้วกะปิดตาย เปิดใหม่ไม่ได้',
+            'ใช้กับกะที่ยอดเงินไม่ตรง (pending_verification) — ผู้จัดการหรือเจ้าของร้านกรอก PIN 6 หลัก ' +
+            'ระบบตรวจ PIN ของผู้ใช้ที่ยัง active และมีสิทธิ์ shift:verify ในร้านนี้ (PIN ของใครก็ได้ ไม่ต้องสลับบัญชี) ' +
+            'ผู้รับรอง (verified_by) คือเจ้าของ PIN ไม่ใช่คนที่ login อยู่ ' +
+            'ถ้ากะถูกส่งต่อ (escalated) ต้องเป็นเจ้าของร้านเท่านั้น รับรองแล้วกะปิดตายเปิดใหม่ไม่ได้ ' +
+            'กรอก PIN ผิดติดกัน 5 ครั้งจะถูกล็อก 5 นาที',
     })
     @ApiOkResponse({ description: 'รับรองสำเร็จ status เป็น verified' })
-    @ApiForbiddenResponse({ description: 'ไม่มีสิทธิ์ shift:verify หรือกะ escalated แต่ไม่ใช่ Owner' })
+    @ApiBadRequestResponse({ description: 'PIN ไม่ใช่ตัวเลข 6 หลัก หรือ id ไม่ใช่ UUID' })
+    @ApiForbiddenResponse({ description: 'PIN ไม่ถูกต้อง หรือกะ escalated แต่ผู้รับรองไม่ใช่ owner' })
     @ApiNotFoundResponse({ description: 'ไม่พบกะนี้' })
     @ApiConflictResponse({ description: 'กะไม่ได้อยู่ในสถานะที่ต้องรับรอง' })
     @HttpCode(200)
-    @RequirePermissions('shift:verify')
+    @AnyAuthenticated()
     @Post(':shift_id/verify')
-    async verifyShift(@Param('shift_id',ParseUUIDPipe) shiftId:string, @Req() req ){
-        const userId = req.user.sub;
-        return this.shiftsService.verifyShift(shiftId, userId);
+    async verifyShift(@Param('shift_id',ParseUUIDPipe) shiftId:string, @Body() dto:VerifyShiftDto ){
+        return this.shiftsService.verifyShift(shiftId, dto.pin);
     }
 
 

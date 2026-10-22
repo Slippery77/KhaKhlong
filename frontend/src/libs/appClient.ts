@@ -2,9 +2,11 @@ import { getRefreshToken ,setRefreshToken } from "../features/auth/authStorage";
 
 export class ApiError extends Error {
   status: number;
-  constructor(status: number, message: string) {
+  body: unknown;
+  constructor(status: number, message: string, body?: unknown) {
     super(message);
     this.status = status;
+    this.body = body;
   }
 }
 
@@ -94,7 +96,7 @@ export async function apiFetch<T>( // function ที่รอข้อมูล
       const err = await res.json().catch(() => null);   // บาง error ไม่มี body
       const raw = err?.message ?? res.statusText;
       const message = Array.isArray(raw) ? raw.join(', ') : raw;
-      throw new ApiError(res.status, message);
+      throw new ApiError(res.status, message, err);
     }
     return res.json() as Promise<T>; //ส่งข้อมูลกลับไปยังคนที่เรียก
 }
