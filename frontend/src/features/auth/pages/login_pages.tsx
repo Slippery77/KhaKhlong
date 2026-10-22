@@ -1,6 +1,9 @@
-import { UtensilsCrossed, ChefHat, ClipboardList, CheckCircle2 } from "lucide-react";
+import { ChefHat, ClipboardList, CheckCircle2 } from "lucide-react";
 import { useLocation } from "react-router-dom";
 import LoginForm from "../components/login_form";
+// โลโก้ค้าคล่องจริงจาก docs/brand (lockup = symbol + wordmark เป็น outlined path)
+import logoWhite from "../../../assets/logo-lockup-white.svg";
+import logoBrand from "../../../assets/logo-lockup-brand.svg";
 
 export function LoginPage() {
     // state ที่หน้า register ส่งมาหลังสมัครสำเร็จ
@@ -15,16 +18,15 @@ export function LoginPage() {
                 <div className="pointer-events-none absolute -right-24 -top-24 h-72 w-72 rounded-full bg-white/10" />
                 <div className="pointer-events-none absolute -bottom-32 -left-20 h-80 w-80 rounded-full bg-white/5" />
 
-                <div className="relative flex items-center gap-3">
-                    <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-white/15">
-                        <UtensilsCrossed className="h-6 w-6" aria-hidden="true" />
-                    </span>
-                    <span className="text-xl font-semibold tracking-wide">
-                        ค้าคล่อง
-                        <span className="ml-2 text-sm font-normal text-white/60">
-                            KhaKhlong
-                        </span>
-                    </span>
+                {/* โลโก้จริง (สี reverse/ขาว ตาม guidelines: บนพื้นน้ำตาลเข้มใช้สีขาว) */}
+                <div className="relative flex items-center">
+                    <img
+                        src={logoWhite}
+                        alt="ค้าคล่อง KhaKhlong"
+                        className="h-20 w-auto"
+                        width={623}
+                        height={256}
+                    />
                 </div>
 
                 <div className="relative space-y-4">
@@ -56,17 +58,15 @@ export function LoginPage() {
 
             {/* ── แผงขวา: ฟอร์มเข้าสู่ระบบ ─────────────────────────── */}
             <main className="flex flex-1 flex-col items-center justify-center px-4 py-10">
-                {/* โลโก้เล็ก ๆ บนมือถือ (แผงแบรนด์ถูกซ่อน) */}
-                <div className="mb-6 flex items-center gap-3 lg:hidden">
-                    <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#8C6D58] text-white">
-                        <UtensilsCrossed className="h-5 w-5" aria-hidden="true" />
-                    </span>
-                    <span className="text-lg font-semibold text-[#2D241E]">
-                        ค้าคล่อง
-                        <span className="ml-1.5 text-sm font-normal text-[#7A6A5C]">
-                            KhaKhlong
-                        </span>
-                    </span>
+                {/* โลโก้จริงบนมือถือ (แผงแบรนด์ถูกซ่อน) — สีแบรนด์บนพื้นครีม */}
+                <div className="mb-6 flex items-center lg:hidden">
+                    <img
+                        src={logoBrand}
+                        alt="ค้าคล่อง KhaKhlong"
+                        className="h-12 w-auto"
+                        width={623}
+                        height={256}
+                    />
                 </div>
 
                 <div className="w-full max-w-md rounded-2xl border border-[#E8DFD5] bg-white p-8 shadow-[0_4px_24px_rgba(45,36,30,0.07)]">
