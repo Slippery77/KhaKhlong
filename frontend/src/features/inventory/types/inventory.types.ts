@@ -65,3 +65,25 @@ export interface InventoryTransaction {
 export interface PaginatedApiEnvelope<T> extends ApiEnvelope<T> {
   pagination: { total: number; limit: number; offset: number };
 }
+
+/** รายการนับสต็อกหนึ่งแถวสำหรับ POST /inventory/count/batch */
+export interface StockCountInput {
+  ingredient_id: string;
+  counted_quantity: number;
+  note?: string;
+}
+
+export interface StockCountResultItem {
+  ingredient_id: string;
+  ingredient_name: string;
+  stock_unit: string;
+  counted_quantity: number;
+  /** counted_quantity - ยอดระบบ (ลบ = ใช้ไป/ขาด, บวก = นับได้เกิน) */
+  delta: number;
+}
+
+export interface StockCountBatchResult {
+  items: StockCountResultItem[];
+  adjusted_count: number;
+  unchanged_count: number;
+}

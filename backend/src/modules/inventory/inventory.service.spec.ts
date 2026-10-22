@@ -1,4 +1,4 @@
-import { ConflictException, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, NotFoundException } from '@nestjs/common';
 import { InventoryRepository } from './inventory.repository';
 import { InventoryService } from './inventory.service';
 
@@ -97,5 +97,63 @@ describe('InventoryService', () => {
       status: 'success',
       data: { delta: 125.5, counted_quantity: 125.5 },
     });
+  });
+
+  it('counts multiple ingredients in one batch and separates adjusted from unchanged', async () => {
+    const egg = {
+      ...ingredient,
+      ingredient_id: '550e8400-e29b-41d4-a716-446655440002',
+      name: 'ไข่ไก่',
+      stock_unit: 'ฟอง',
+    };
+    repository.findIngredientById
+      .mockResolvedValueOnce(ingredient)
+      .mockResolvedValueOnce(egg);
+    repository.recordStockCount
+      .mockResolvedValueOnce({ delta: '-200' })
+      .mockResolvedValueOnce({ delta: '0' });
+
+    const result = await service.recordStockCountBatch(
+      {
+        items: [
+          { ingredient_id: ingredient.ingredient_id, counted_quantity: 800 },
+          { ingredient_id: egg.ingredient_id, counted_quantity: 30 },
+        ],
+      },
+      'user-id',
+    );
+
+    expect(result).toMatchObject({
+      status: 'success',
+      data: { adjusted_count: 1, unchanged_count: 1 },
+    });
+    expect(result.data.items).toEqual([
+      {
+        ingredient_id: ingredient.ingredient_id,
+        ingredient_name: ingredient.name,
+        stock_unit: ingredient.stock_unit,
+        counted_quantity: 800,
+        delta: -200,
+      },
+      {
+        ingredient_id: egg.ingredient_id,
+        ingredient_name: egg.name,
+        stock_unit: egg.stock_unit,
+        counted_quantity: 30,
+        delta: 0,
+      },
+    ]);
+  });
+
+  it('rejects duplicate ingredients in the same batch before adjusting anything', async () => {
+    await expect(
+      service.recordStockCountBatch({
+        items: [
+          { ingredient_id: ingredient.ingredient_id, counted_quantity: 10 },
+          { ingredient_id: ingredient.ingredient_id, counted_quantity: 20 },
+        ],
+      }),
+    ).rejects.toBeInstanceOf(BadRequestException);
+    expect(repository.recordStockCount.mock.calls).toHaveLength(0);
   });
 });

@@ -6,6 +6,7 @@ import CloseShiftCard from '../components/CloseShiftCard';
 import MismatchPanel from '../components/MismatchPanel';
 import OpenShiftCard from '../components/OpenShiftCard';
 import ShiftClosedCard from '../components/ShiftClosedCard';
+import StockAdjustmentCard from '../components/StockAdjustmentCard';
 import { secondaryButtonClass } from '../constants';
 import { useShift } from '../hooks/useShift';
 import { SHIFT_STATUS_LABEL, formatBusinessDate } from '../utils/shiftFormat';
@@ -40,7 +41,7 @@ export default function ShiftPage() {
               <div>
                 <h1 className="text-lg font-bold">ปิดกะ / นับเงิน</h1>
                 <p className="mt-0.5 text-sm text-[#7A6A5C]">
-                  นับเงินสดในลิ้นชัก เทียบกับยอดในระบบ แล้วปิดกะประจำวัน
+                  นับเงินสดในลิ้นชักและวัตถุดิบคงเหลือ เทียบกับยอดในระบบ แล้วปิดกะประจำวัน
                 </p>
               </div>
             </div>
@@ -93,20 +94,31 @@ export default function ShiftPage() {
               {!shift && <OpenShiftCard isSubmitting={isSubmitting} onSubmit={openShift} />}
 
               {shift?.status === 'open' && (
-                <CloseShiftCard shift={shift} isSubmitting={isSubmitting} onSubmit={closeShift} />
+                <>
+                  <StockAdjustmentCard />
+                  <CloseShiftCard shift={shift} isSubmitting={isSubmitting} onSubmit={closeShift} />
+                </>
               )}
 
               {shift && awaitingVerification && (
-                <MismatchPanel
-                  shift={shift}
-                  role={user?.role}
-                  isSubmitting={isSubmitting}
-                  pinError={pinError}
-                  onVerify={verifyWithPin}
-                />
+                <>
+                  <MismatchPanel
+                    shift={shift}
+                    role={user?.role}
+                    isSubmitting={isSubmitting}
+                    pinError={pinError}
+                    onVerify={verifyWithPin}
+                  />
+                  <StockAdjustmentCard />
+                </>
               )}
 
-              {shift && isClosed && <ShiftClosedCard shift={shift} />}
+              {shift && isClosed && (
+                <>
+                  <ShiftClosedCard shift={shift} />
+                  <StockAdjustmentCard />
+                </>
+              )}
             </div>
           )}
         </div>
