@@ -9,6 +9,7 @@ import { StockPage } from '../features/inventory';
 import SaleReportPage from '../features/saleReport/pages/SaleReportPage';
 import EditModiferPage from '../features/editModifer/pages/edit_modifer_pages';
 import TablesPage from '../features/tables/pages/TablesPage';
+import EditVat from '../features/editVat/pages/editVat';
 
 export function AppRouter() {
     return (
@@ -24,6 +25,7 @@ export function AppRouter() {
             <Route path='/:tenantSlug/siftwork' element={<SiftworkPage />} />
             <Route path='/:tenantSlug/stock' element={<StockPage />} />
             <Route path='/:tenantSlug/sale-report' element={<SaleReportPage />} />
+            <Route path='/:tenantSlug/setting/vat' element={<EditVat/>}/>
         </Routes>
     );
 }

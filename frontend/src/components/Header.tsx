@@ -10,7 +10,7 @@ Wallet,
 Settings,
 Utensils} from "lucide-react"
 import { useState, useRef, useEffect } from "react"
-import { useLocation, Link, useParams } from "react-router-dom"
+import { useLocation, Link, useParams, useNavigate } from "react-router-dom"
 import { useKDS } from "../features/kds/context/KDSContext"
 import { useLogin } from "../features/auth/hooks/useLogin"
 
@@ -36,7 +36,7 @@ export default function Header() {
     const isSalereport = location.pathname.includes("/sale-report")
     const isStock = location.pathname.includes("/stock")
     const pendingOrdersCount = orders.filter((o) => o.status === "รอทำ").length
-
+    const navigate = useNavigate();
     // ปิดเมนูเมื่อคลิกข้างนอก
     useEffect(() => {
         function handleClickOutside(event: MouseEvent) {
@@ -192,7 +192,9 @@ export default function Header() {
                                 onClick={() => {
                                     setIsMenuOpen(false)
                                     logout()
+                                    navigate(`/${tenantSlug}/login`)
                                 }}
+                                
                                 className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-rose-600 hover:bg-rose-50 transition-all cursor-pointer text-left"
                             >
                                 <LogOut className="w-4 h-4" />

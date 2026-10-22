@@ -390,6 +390,25 @@ SELECT cfg(app_tenant_id(), 'max_reprints')::int;
 - หรือมีปุ่ม "เสิร์ฟแล้ว" ให้พนักงานหน้าร้านกดแทน
 - หรือบังคับในหน้าตั้งค่า: ปิด KDS ได้ต่อเมื่อปิด `require_all_served_before_payment` ด้วย
 
+### ⚠️ `trg_payments_before()` ไม่ได้ตรวจยอดค่าบริการ
+
+trigger เช็คแค่ `total_amount = ยอดรายการ + service_charge_amount + rounding` (โหมด `inclusive`) แต่**ไม่เช็คว่า `service_charge_amount` ตรงกับ `service_charge_rate`** client จึงส่งค่าบริการเป็นเลขอะไรก็ได้ ขณะที่ `service_charge_rate_snapshot` บันทึกอัตราจาก config ทำให้ใบเสร็จกับรายงานไม่ตรงกับเงินจริง
+
+ทางแก้ที่เสนอ (ยังไม่ได้ทำ ต้องทำก่อนเริ่ม module Payment): เพิ่มการตรวจก่อนแยกตามโหมด VAT
+
+```sql
+IF NEW.service_charge_amount <> round(v_gross * NEW.service_charge_rate_snapshot / 100, 2) THEN
+  RAISE EXCEPTION 'service_charge % does not match rate % of items %',
+    NEW.service_charge_amount, NEW.service_charge_rate_snapshot, v_gross;
+END IF;
+```
+
+ต้อง reject ไม่ใช่เขียนทับ เพราะ trigger บังคับให้ `total_amount` ตรงกับ `payment_attempts.amount` ถ้าเขียนทับค่าบริการ ยอดรวมจะไม่ตรงกับ attempt และ Payment service ต้องคำนวณค่าบริการใน SQL ด้วยสูตรเดียวกัน ไม่ใช่ใน TypeScript
+
+### หน้าตั้งค่าภาษีใน Version แรก
+
+หน้า Edit Vat/Service Charge ใช้ปุ่มเปิด/ปิด VAT ปุ่มเดียว เปิดส่ง `inclusive` ปิดส่ง `none` โหมด `exclusive` เลื่อนไป Version 2 (ดู scope หัวข้อ 3.2.1) ถ้าค่าใน DB เป็น `exclusive` อยู่แล้ว (เช่นจากการทดสอบ) หน้าจอต้องแสดงว่าเปิดอยู่และแจ้งว่าโหมดนี้ยังไม่รองรับในหน้านี้ ไม่ใช่พัง
+
 ### `shift_escalation_hours` ต้องมีตัวเรียก
 
 ฟังก์ชัน `escalate_overdue_shifts()` ไม่ได้ทำงานเอง ต้องมี scheduled job (เช่น `@nestjs/schedule` cron) เรียกเป็นระยะ ถ้าไม่มี config ตัวนี้ก็ไม่มีผล
