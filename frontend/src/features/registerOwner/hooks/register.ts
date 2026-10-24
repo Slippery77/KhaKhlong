@@ -8,7 +8,8 @@ export default function useRegister(){
         setError(null);
         setIsSubmitting(true);
         try{
-            const response = await fetch('/api/register/registerOwner',{
+            // path จริงของ backend คือ POST /api/register (RegisterController @Controller('register') + @Post(''))
+            const response = await fetch('/api/register',{
                 method: 'POST',
                 headers:{'Content-Type':'application/json',},
                 body: JSON.stringify(payload),

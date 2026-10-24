@@ -1,7 +1,7 @@
 # Shift Module — คู่มือ Endpoint
 
-อัปเดต: 2026-10-18
-สถานะ: **ทำเสร็จแล้ว 4 endpoint** (`open`, `current`, `close`, `cash-movements`) กำลังทำ `GET /cashbook` ที่เหลือคือ `reopen`, `verify`, `GET /shifts`
+อัปเดต: 2026-10-22
+สถานะ: **ทำเสร็จครบทุก endpoint** (`open`, `current`, `close`, `cash-movements`, `cashbook`, `reopen`, `verify` ที่ตรวจ PIN, `GET /shifts`) — เหลือแค่ตัวเรียก `escalate_overdue_shifts()` ตามหัวข้อ 2.9
 
 ทำก่อน Orders เพราะ `POST /orders` ต้องมีกะเปิด (trigger `trg_orders_before`, กฎ ORD-12)
 
@@ -126,11 +126,16 @@ Shape ของ shift ที่ตอบกลับ (ตามโค้ดป�
 - เปิดได้เฉพาะ `closed_auto` และ `pending_verification` ส่วน `verified`/`escalated` ได้ `cannot reopen a verified shift` ตอบ `409`
 - ฟังก์ชันใช้ `set_config(..., true)` ซึ่งอยู่ได้แค่ใน transaction (`TenantContextInterceptor` ห่อ request ไว้ใน transaction เดียวอยู่แล้ว)
 
-### 2.7 `POST /shifts/:id/verify` — รับรองยอด
-- สิทธิ์: `shift:verify` (Manager, Owner)
-- ไม่มี body: `UPDATE ... SET status = 'verified', verified_by = <me>`
-- ทำได้จาก `pending_verification` หรือ `escalated` ถ้า `escalated` ต้องเป็น Owner (trigger บังคับ)
-- `closed_auto` verify ไม่ได้ (`invalid shift transition`) ตอบ `409`
+### 2.7 `POST /shifts/:id/verify` — รับรองยอดด้วย PIN ✅
+- สิทธิ์: **`@AnyAuthenticated()`** — คนที่กดอาจเป็นพนักงานที่ปิดกะ แต่สิทธิ์รับรองมาจาก PIN ของผู้จัดการ/เจ้าของร้าน
+- Body: `{ pin }` (ตัวเลข 6 หลัก, validate ที่ DTO)
+- ลำดับใน service: ตรวจสถานะกะ (`pending_verification`/`escalated`) → กัน brute force → หาเจ้าของ PIN → `UPDATE ... SET status='verified', verified_by=<เจ้าของ PIN>`
+- **การหาเจ้าของ PIN:** query ผู้ใช้ที่ `is_active`, มี `pin_hash`, มีสิทธิ์ `shift:verify` ผ่าน role และ `pin_locked_until` ไม่ค้าง แล้วไล่ `bcrypt.compare` (ร้านเล็กมีผู้จัดการไม่กี่คน) — PIN ของใครก็ได้ในร้าน ไม่ต้องสลับ login
+- **`verified_by` คือเจ้าของ PIN** ไม่ใช่ `req.user.sub` — trigger `trg_shift_flow` ตรวจสิทธิ์จาก `verified_by` อยู่แล้ว (บรรทัด `has_permission(NEW.verified_by,'shift:verify')`) จึงยังกันการข้ามสิทธิ์ได้ที่ชั้น DB
+- Error: PIN ไม่ตรง/ไม่มีสิทธิ์ `403`, PIN ผิดรูปแบบ `400`, สถานะไม่ใช่รอตรวจ `409`, ไม่พบกะ `404`
+- กะ `escalated` ต้องเป็น Owner เท่านั้น (trigger บังคับ `escalated shift must be verified by owner`)
+- **กัน brute force:** นับครั้งผิดต่อ `shift_id` (PIN ผิดระบุตัวคนไม่ได้) ครบ 5 ครั้ง → `429` ล็อก 5 นาที (เก็บใน memory ของ service; รีสตาร์ท backend แล้วตัวนับรีเซ็ต — ยอมรับได้ในรอบนี้)
+- **ข้อจำกัดที่รู้ตัว:** คอลัมน์ `pin_failed_attempts`/`pin_locked_until` รายคนยังไม่ถูกขยับ เพราะ PIN ผิดไม่สามารถระบุได้ว่าเป็นของใคร ต้องรอ endpoint `POST /auth/verify-pin` แบบระบุตัวตน (ใช้กับ Void/Comp ตาม COMP-02) ค่อยกลับมาทำ
 
 ### 2.8 `GET /shifts` — ประวัติกะ
 - สิทธิ์: `report:view_all` (Manager, Owner) **เฉพาะ Manager/Owner ในรอบนี้** ฝั่ง Employee เลื่อนออกไป (ไม่มีหน้าจอรองรับ)
@@ -151,6 +156,7 @@ Shape ของ shift ที่ตอบกลับ (ตามโค้ดป�
 | ใครเห็นสมุดเงินสดรายวัน | ทุก role เห็นทั้งวัน | ลิ้นชักใช้ร่วมกัน (SHIFT-08) คนต่อกะต้องเห็นรายการของคนก่อน |
 | Employee บันทึกเงินเข้า-ออก | **ได้** (ตัวเลือก ค: ไม่ต้อง PIN) | เลือกแบบง่ายสุดเพื่อลดงาน ต้องแก้ seed (ดูหัวข้อ 4) ความเสี่ยง: สร้างรายการเงินออกเพื่อกลบเงินขาด ลดความเสี่ยงด้วยการที่ทุกรายการเห็นชื่อ ทุกคนเห็น และแก้ไม่ได้ **ทบทวนใหม่เมื่อมี `verifyPin`** (เปลี่ยนเป็นต้องใส่ PIN ผู้จัดการ) |
 | Blind count ระหว่างวัน | เลิก | การ์ดเงินสดคงเหลือและรายการทั้งวันทำให้ทุกคนคำนวณเองได้ ยอมรับเพราะกลุ่มเป้าหมายเป็นร้านเล็กที่ไว้ใจกัน (SHIFT-08) เก็บไว้เฉพาะลำดับหน้าปิดกะ: กรอกยอดนับก่อนแล้วค่อยโชว์ expected |
+| ใครรับรองยอดปิดกะ | **PIN ของผู้จัดการ/เจ้าของร้านคนใดก็ได้ในร้าน** | ผู้จัดการเดินมาที่เครื่องแล้วกรอก PIN จบ ไม่ต้องสลับบัญชี (USR-03: PIN มีไว้ใช้บ่อยระหว่างวันเพื่อความเร็ว) `verified_by` = เจ้าของ PIN และ trigger ตรวจสิทธิ์จากคนนั้น — ข้อจำกัด: PIN ผิดระบุตัวคนไม่ได้ จึงนับครั้งผิดต่อกะและล็อก 5 นาทีแทน |
 | `cash-movements` ส่ง `shiftId` ไหม | ไม่ส่ง server หากะเอง | กันส่งรหัสกะเก่าที่แคชไว้ในแอป (PWA) ข้อยกเว้นที่ยอมรับ: กะเมื่อวานถูก reopen พร้อมกะวันนี้ จะลงกะวันนี้เสมอ |
 | ส่ง `movementId` ซ้ำ | ตอบ `201` + รายการเดิม | แนวเดียวกับ idempotency key ของ Stripe ที่ส่งคำตอบเดิมกลับ frontend ไม่ต้องแยก 200/201 |
 | ชื่อ endpoint รายการเงินรายวัน | `/cashbook` | เดิมชื่อ `/cash-ledger` เปลี่ยนเพราะ "ledger" ต้องอธิบาย ส่วน cashbook (สมุดเงินสด) เข้าใจทันที |
@@ -191,4 +197,6 @@ ON CONFLICT DO NOTHING;
 
 ## 6. ลำดับการทำ
 
-~~`POST /shifts/open`~~ → ~~`GET /shifts/current`~~ → ~~`POST /shifts/:id/close`~~ → ~~`POST /cash-movements`~~ → `GET /cashbook` → `reopen` → `verify` → `GET /shifts`
+~~`POST /shifts/open`~~ → ~~`GET /shifts/current`~~ → ~~`POST /shifts/:id/close`~~ → ~~`POST /cash-movements`~~ → ~~`GET /cashbook`~~ → ~~`reopen`~~ → ~~`verify` (PIN)~~ → ~~`GET /shifts`~~
+
+หน้าจอฝั่ง frontend: `/:tenantSlug/siftwork` (`frontend/src/features/shifts/`) — เปิดกะ / นับเงินปิดกะ / แสดงยอดขาด-เกิน / ให้ผู้จัดการกรอก PIN รับรอง

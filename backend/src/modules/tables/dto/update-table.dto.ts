@@ -1,4 +1,4 @@
-import { IsOptional, IsString, IsInt, Min, MaxLength } from 'class-validator';
+import { IsOptional, IsString, IsInt, IsUUID, Min, MaxLength } from 'class-validator';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 
 export class UpdateTableDto {
@@ -23,12 +23,11 @@ export class UpdateTableDto {
   capacity?: number;
 
   @ApiPropertyOptional({
-    description: 'ชั้นที่โต๊ะตั้งอยู่',
-    example: 2,
-    minimum: 1,
+    description: 'ย้ายโต๊ะไปชั้นอื่น (floor_id จาก GET /floors) — ชั้นต้องมีอยู่จริง',
+    example: 'c1000000-0000-0000-0000-000000000001',
+    format: 'uuid',
   })
-  @IsInt()
-  @Min(1)
+  @IsUUID()
   @IsOptional()
-  floor?: number;
+  floorId?: string;
 }

@@ -11,12 +11,14 @@ import { TenantContextInterceptor } from './common/interceptors/tenant-context.i
 import { APP_INTERCEPTOR, APP_GUARD } from '@nestjs/core';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { TablesModule } from './modules/tables/tables.module';
+import { FloorsModule } from './modules/floors/floors.module';
 import { KdsModule } from './modules/kds/kds.module';
 import { OrdersModule } from './modules/orders/orders.module';
 import { InventoryModule } from './modules/inventory/inventory.module';
 import * as Joi from 'joi';
 import { ShiftsModule } from './modules/shifts/shifts.module';
 import { SystemConfigModule } from './modules/system-config/system-config.module';
+import { PaymentModule } from './modules/payment/payment.module';
 
 @Module({
   imports: [
@@ -44,11 +46,13 @@ import { SystemConfigModule } from './modules/system-config/system-config.module
     RegistersModule,
     MenuModule,
     TablesModule,
+    FloorsModule,
     KdsModule,
     OrdersModule,
     ShiftsModule,
     SystemConfigModule,
     InventoryModule,
+    PaymentModule,
     ThrottlerModule.forRoot([{
       ttl: 60000,
       limit: 100,

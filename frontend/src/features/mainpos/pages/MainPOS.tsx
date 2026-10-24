@@ -6,15 +6,17 @@ import OrderSidebar from "../components/OrderSidebar"
 import ModifierPopup from "../components/ModifierPopup"
 import PaymentModal from "../components/PaymentModal"
 import SearchBar from "../components/SearchBar"
-import { ArrowLeft, Search, ChefHat, CheckCircle2, X, ChartLine } from "lucide-react"
+import { ArrowLeft, Search, ChefHat, CheckCircle2, X } from "lucide-react"
 import { useKDS } from "../../kds/context/KDSContext"
 import { useNavigate, useSearchParams } from "react-router-dom"
 import { useFullMenu } from "../hooks/useFullMenu"
 import type { Menu, CartMenu, ModifierOption } from "../types/pos.types"
 import { useAuth } from "../../auth/context/AuthContext"
-import { apiFetch } from "../../../libs/appClient"
+import { apiFetch,ApiError } from "../../../libs/appClient"
+
 
 export default function MainPOS() {
+    const [sendError , setSendError] = useState<string|null>(null);
     const { sendOrderToKitchen } = useKDS()
     const navigate = useNavigate()
     const { user, accessToken } = useAuth()
@@ -34,7 +36,8 @@ export default function MainPOS() {
     const [seletedCategory, setSelectCategory] = useState<string | null>(null)
     const [currentTable] = useState<string>(tableNameFromUrl ?? "โต๊ะ 1")
     const [currentText, setcurrentText] = useState<string>("")
-
+    // แทนที่จะให้ orderId หายไปหลัง handleSendToKitchen จบ
+    const [orderId, setOrderId] = useState<string | null>(searchParams.get('orderId'))
     // แจ้งเตือนเมื่อส่งเข้าครัวสำเร็จ
     const [sentToast, setSentToast] = useState<{
         show: boolean
@@ -49,27 +52,11 @@ export default function MainPOS() {
     // State สำหรับเปิดหน้าต่างชำระเงิน
     const [isPaymentOpen, setIsPaymentOpen] = useState<boolean>(false)
 
-    // แจ้งเตือนเมื่อชำระเงินสำเร็จ
-    const [paidToast, setPaidToast] = useState<{
-        show: boolean
-        billDesc: string
-    }>({
-        show: false,
-        billDesc: "",
-    })
-
-    function handlePaymentSuccess(billDesc: string) {
-        setcartMenu([])
+    function handlePaymentSuccess() {
         setOrder(false)
         setIsPaymentOpen(false)
-        setPaidToast({
-            show: true,
-            billDesc,
-        })
-
-        setTimeout(() => {
-            setPaidToast((prev) => ({ ...prev, show: false }))
-        }, 5000)
+        setOrderId(null)
+        navigate(`/${user?.tenantSlug}/tables`)
     }
 
     // รายการโต๊ะสำหรับเลือก (ไม่ใช้แล้ว — เลือกจากหน้าโต๊ะแทน)
@@ -222,6 +209,7 @@ export default function MainPOS() {
             return
         }
 
+        setSendError(null)
         try {
             const kitchenTicketId = crypto.randomUUID() // 1 ค่าต่อการกดส่งครัว 1 รอบ
 
@@ -230,19 +218,19 @@ export default function MainPOS() {
             //   a. open_order_id จาก URL (ส่งมาตอนกดโต๊ะที่ occupied)
             //   b. ดึงจาก GET /tables เพื่อหา open_order_id ล่าสุด
             //   c. สร้างบิลใหม่ (โต๊ะว่าง)
-            let orderId = searchParams.get('orderId')
+            let resolvedOrderId  = orderId
 
-            if (!orderId) {
+            if (!resolvedOrderId) {
                 // ดึง open_order_id จาก table ปัจจุบัน
                 const tablesRes = await apiFetch<{ status: string; data: { table_id: string; open_order_id: string | null }[] }>(
                     '/tables',
                     accessToken,
                 )
                 const thisTable = tablesRes.data.find((t) => t.table_id === tableIdFromUrl)
-                orderId = thisTable?.open_order_id ?? null
+                resolvedOrderId = thisTable?.open_order_id ?? null
             }
 
-            if (!orderId) {
+            if (!resolvedOrderId) {
                 // โต๊ะว่างจริง → สร้างบิลใหม่
                 const newOrderId = crypto.randomUUID()
                 const createRes = await apiFetch<{ status: string; data: { order_id: string } }>(
@@ -251,8 +239,9 @@ export default function MainPOS() {
                     'POST',
                     { orderId: newOrderId, tableId: tableIdFromUrl },
                 )
-                orderId = createRes.data?.order_id ?? newOrderId
+                resolvedOrderId = createRes.data?.order_id ?? newOrderId
             }
+            setOrderId(resolvedOrderId);
 
             // ── 2. แปลง cartMenu → items (1 จาน = 1 แถว) ────────────
             const itemsToSend: {
@@ -281,23 +270,22 @@ export default function MainPOS() {
             // ── 3. POST /orders/:id/items + kitchenTicketId ───────────
             // backend จะ INSERT items ด้วย status='queued' + kitchen_ticket_id ทันที
             await apiFetch(
-                `/orders/${orderId}/items`,
+                `/orders/${resolvedOrderId}/items`,
                 accessToken,
                 'POST',
                 { items: itemsToSend, kitchenTicketId },
             )
-
+            // ── 4. ล้างตะกร้า + toast ──────────────────────────────────
+            // หมายเหตุ: ไม่ต้องเรียก sendOrderToKitchen อีกต่อไป — รายการอยู่ใน backend แล้ว
+            // และ badge บน Header ดึงจาก /kds/queue (ตัวเดียวกับหน้า KDS)
+            const count = cartMenu.reduce((sum, item) => sum + item.quantity, 0)
+            setcartMenu([])
+            setOrder(false)
+            setSentToast({ show: true, tableName: currentTable, itemCount: count })
+            setTimeout(() => setSentToast((prev) => ({ ...prev, show: false })), 4500)
         } catch (err) {
-            console.error('ส่งครัวไม่สำเร็จ:', err)
+            setSendError(err instanceof ApiError ? err.message : 'ส่งครัวไม่สำเร็จ เชื่อมต่อเซิร์ฟเวอร์ไม่ได้')
         }
-
-        // ── 4. อัปเดต local state (badge + toast) ────────────────────
-        sendOrderToKitchen(currentTable, cartMenu)
-        const count = cartMenu.reduce((sum, item) => sum + item.quantity, 0)
-        setcartMenu([])
-        setOrder(false)
-        setSentToast({ show: true, tableName: currentTable, itemCount: count })
-        setTimeout(() => setSentToast((prev) => ({ ...prev, show: false })), 4500)
     }
 
     return (
@@ -327,7 +315,7 @@ export default function MainPOS() {
                                 <span>โต๊ะ</span>
                             </button>
 
-                            <div className="h-4 w-[1px] bg-stone-300 mx-1" />
+                            <div className="h-4 w-1px bg-stone-300 mx-1" />
 
                             <span className="text-base font-semibold text-[#2D241E] font-kanit">
                                 โต๊ะ {currentTable}
@@ -385,57 +373,35 @@ export default function MainPOS() {
                         <OrderSidebar
                             isOrdered={isOrdered}
                             cartMenu={cartMenu}
+                            canPay={!!orderId}
                             onDeleteFromCart={onDeleteFromCart}
                             onReduceValue={onReduceValue}
                             onIncreaseValue={onIncreaseValue}
                             onSendToKitchen={handleSendToKitchen}
-                            onPayment={() => setIsPaymentOpen(true)}
+                            onPayment={() => orderId && setIsPaymentOpen(true)}
                         />
                     )}
                 </aside>
 
                 {/* Modal ชำระเงิน */}
-                {isPaymentOpen && (
+                {isPaymentOpen && orderId && (
                     <PaymentModal
                         table={currentTable}
-                        cartMenu={cartMenu}
+                        orderId={orderId}
                         onClose={() => setIsPaymentOpen(false)}
                         onPaymentSuccess={handlePaymentSuccess}
                     />
                 )}
 
-                {/* Toast แจ้งเตือนเมื่อชำระเงินสำเร็จ พร้อมปุ่มไปหน้ารายการขาย */}
-                {paidToast.show && (
-                    <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-[#2D241E] text-white px-5 py-3 rounded-2xl shadow-xl flex items-center gap-3.5 font-kanit border border-stone-700 animate-in fade-in slide-in-from-bottom-4 duration-200">
-                        <div className="w-8 h-8 rounded-full bg-emerald-500/20 text-emerald-400 flex items-center justify-center shrink-0">
-                            <CheckCircle2 className="w-5 h-5" />
-                        </div>
-                        <div className="flex flex-col">
-                            <span className="text-sm font-semibold">ชำระเงินสำเร็จ! ({paidToast.billDesc})</span>
-                            <span className="text-xs text-stone-300">
-                                บิลถูกบันทึกลงในรายการขายอัตโนมัติเรียบร้อยแล้ว
-                            </span>
-                        </div>
-                        <div className="flex items-center gap-2 ml-2">
-                            <button
-                                type="button"
-                                onClick={() => navigate("/sale-report")}
-                                className="px-3 py-1.5 rounded-xl bg-[#A68874] hover:bg-[#967763] text-white text-xs font-medium transition-all cursor-pointer flex items-center gap-1.5 shrink-0"
-                            >
-                                <ChartLine className="w-3.5 h-3.5" />
-                                <span>ดูรายการขาย</span>
-                            </button>
-                            <button
-                                type="button"
-                                onClick={() => setPaidToast((prev) => ({ ...prev, show: false }))}
-                                className="p-1 rounded-lg text-stone-400 hover:text-white cursor-pointer"
-                            >
-                                <X className="w-4 h-4" />
-                            </button>
-                        </div>
+                {sendError && (
+                    <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-rose-600 text-white px-5 py-3 rounded-2xl shadow-xl flex items-center gap-3 font-kanit">
+                        <span className="text-sm font-medium">{sendError}</span>
+                        <button type="button" onClick={() => setSendError(null)}
+                            className="p-1 rounded-lg text-white/70 hover:text-white cursor-pointer">
+                            <X className="w-4 h-4" />
+                        </button>
                     </div>
-                )}
-
+                    )}
                 {/* Toast แจ้งเตือนเมื่อส่งเข้าครัวสำเร็จ พร้อมปุ่มเปิดดูจอครัว KDS */}
                 {sentToast.show && (
                     <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-[#2D241E] text-white px-5 py-3 rounded-2xl shadow-xl flex items-center gap-3.5 font-kanit border border-stone-700 animate-in fade-in slide-in-from-bottom-4 duration-200">
@@ -451,7 +417,7 @@ export default function MainPOS() {
                         <div className="flex items-center gap-2 ml-2">
                             <button
                                 type="button"
-                                onClick={() => navigate("/kds")}
+                                onClick={() => navigate(`/${user?.tenantSlug}/kds`)}
                                 className="px-3 py-1.5 rounded-xl bg-[#A68874] hover:bg-[#967763] text-white text-xs font-medium transition-all cursor-pointer flex items-center gap-1.5 shrink-0"
                             >
                                 <ChefHat className="w-3.5 h-3.5" />
