@@ -4,6 +4,7 @@ import { UtensilsCrossed, SendHorizontal, Trash2, Minus, Plus } from "lucide-rea
 interface PropsOrderSidebar {
     cartMenu: CartMenu[]
     isOrdered: boolean
+    canPay: boolean
     onDeleteFromCart?: (item: CartMenu) => void
     onDeleteFormCart?: (item: CartMenu) => void
     onReduceValue?: (item: CartMenu) => void
@@ -25,12 +26,7 @@ export default function OrderSidebar(props: PropsOrderSidebar) {
         (sum, item) => sum + item.price * item.quantity, 0
     )
 
-    const vat = (subtotal * 7) / 100
-
-    const grandTotal = subtotal + vat
-
-    const totalItems = props.cartMenu.reduce((sum, item) => sum + item.quantity, 0)
-
+    const totalItems = props.cartMenu.reduce((sum,item)=> sum + item.quantity,0)
     return (
         <div className="w-full h-full flex flex-col justify-between font-kanit">
             <div className="h-14 border-b border-stone-200 px-6 flex items-center justify-between">
@@ -127,18 +123,10 @@ export default function OrderSidebar(props: PropsOrderSidebar) {
             )}
 
             <div className="border-t border-stone-200 p-5 bg-[#FAF7F2]">
-                <div className="flex justify-between items-center text-sm text-stone-500 mb-2">
-                    <span>ยอดรวม</span>
-                    <span className="font-medium text-stone-700">฿ {subtotal.toLocaleString()}</span>
-                </div>
-                <div className="flex justify-between items-center text-sm text-stone-500 mb-3">
-                    <span>VAT 7%</span>
-                    <span className="font-medium text-stone-700">฿ {vat.toFixed(2)}</span>
-                </div>
-
-                <div className="border-t border-stone-200/80 pt-3 pb-4 flex justify-between items-center">
-                    <span className="text-stone-800 font-semibold text-base">รวมทั้งหมด</span>
-                    <span className="text-[#A68874] font-semibold text-base">฿ {grandTotal.toFixed(2)}</span>
+                {/* ยอดของตะกร้าเท่านั้น ยอดบิลจริง (รวมจานที่ส่งครัวแล้ว) ดูที่หน้าชำระเงิน */}
+                <div className="pb-4 flex justify-between items-center">
+                    <span className="text-stone-600 text-sm">ยอดในตะกร้า (ยังไม่ส่งครัว)</span>
+                    <span className="text-[#A68874] font-semibold text-base">฿ {subtotal.toLocaleString()}</span>
                 </div>
 
                 <div className="flex flex-col gap-2.5">
@@ -151,13 +139,14 @@ export default function OrderSidebar(props: PropsOrderSidebar) {
                         <SendHorizontal className="w-4 h-4 text-[#8C6D58]" strokeWidth={1.75} />
                         <span>ส่งครัว</span>
                     </button>
+                    {/* ขึ้นกับว่ามีบิลเปิดอยู่ ไม่ใช่ตะกร้า เพราะตอนจะจ่าย จานทุกจานส่งครัวและเสิร์ฟไปแล้ว ตะกร้าจึงว่าง */}
                     <button
                         type="button"
                         onClick={props.onPayment}
                         className="w-full py-2.5 px-4 rounded-full bg-[#A68874] text-white font-medium text-sm hover:bg-[#967763] active:scale-[0.99] transition-all cursor-pointer shadow-sm disabled:opacity-40 disabled:cursor-not-allowed"
-                        disabled={props.cartMenu.length === 0}
+                        disabled={!props.canPay}
                     >
-                        ชำระเงิน ฿{grandTotal.toFixed(2)}
+                        ชำระเงิน
                     </button>
                 </div>
             </div>

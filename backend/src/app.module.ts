@@ -17,6 +17,7 @@ import { InventoryModule } from './modules/inventory/inventory.module';
 import * as Joi from 'joi';
 import { ShiftsModule } from './modules/shifts/shifts.module';
 import { SystemConfigModule } from './modules/system-config/system-config.module';
+import { PaymentModule } from './modules/payment/payment.module';
 
 @Module({
   imports: [
@@ -49,6 +50,7 @@ import { SystemConfigModule } from './modules/system-config/system-config.module
     ShiftsModule,
     SystemConfigModule,
     InventoryModule,
+    PaymentModule,
     ThrottlerModule.forRoot([{
       ttl: 60000,
       limit: 100,
