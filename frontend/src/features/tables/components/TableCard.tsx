@@ -9,6 +9,8 @@ interface TableCardProps {
 export default function TableCard({ table, onClick }: TableCardProps) {
     const isOccupied = table.status === 'occupied'
     const isDisabled = table.status === 'out_of_service'
+    // มีรายการค้างจริง (เอาไว้แสดงจำนวนรายการ + ยอดบิล)
+    const hasOrder = isOccupied && table.item_count > 0
 
     return (
         <button
@@ -16,7 +18,7 @@ export default function TableCard({ table, onClick }: TableCardProps) {
             onClick={() => !isDisabled && onClick(table)}
             disabled={isDisabled}
             className={`
-                relative flex flex-col rounded-2xl border p-4 text-left transition-all duration-150 font-kanit
+                relative flex h-[140px] flex-col overflow-hidden rounded-2xl border p-4 text-left transition-all duration-150 font-kanit
                 ${isDisabled
                     ? 'border-stone-200 bg-stone-100 cursor-not-allowed opacity-50'
                     : isOccupied
@@ -41,30 +43,31 @@ export default function TableCard({ table, onClick }: TableCardProps) {
             </span>
 
             {/* เลขโต๊ะ */}
-            <span className={`text-3xl font-bold leading-none ${isOccupied ? 'text-[#5C3D1E]' : 'text-[#2D241E]'}`}>
+            <span className={`text-3xl font-bold leading-none truncate ${isOccupied ? 'text-[#5C3D1E]' : 'text-[#2D241E]'}`}>
                 {table.table_number}
             </span>
 
-            {/* ความจุ */}
-            <div className="flex items-center gap-1 mt-2 text-stone-400">
-                <Users className="w-3 h-3" />
-                <span className="text-xs">{table.capacity} ที่นั่ง</span>
-            </div>
-
-            {/* รายการออเดอร์ + ยอดค้างชำระ — แสดงเฉพาะโต๊ะที่มีออเดอร์ */}
-            {isOccupied && table.item_count > 0 && (
-                <div className="mt-3 pt-3 border-t border-[#E8D5BE] flex flex-col gap-0.5">
-                    <span className="text-xs text-[#8C6D58]">
-                        {table.item_count} รายการ
+            {/* ส่วนล่างการ์ด — ตรึงไว้ก้นการ์ด (mt-auto) ทุกใบสูงเท่ากันเสมอ
+                โต๊ะที่มีลูกค้าแค่แสดงข้อมูลเพิ่ม ไม่ทำให้การ์ดใหญ่ขึ้น */}
+            <div className="mt-auto pt-2.5 space-y-1">
+                <div className="flex items-center justify-between gap-1 text-stone-400">
+                    <span className="flex items-center gap-1 min-w-0">
+                        <Users className="w-3 h-3 shrink-0" />
+                        <span className="text-xs truncate">{table.capacity} ที่นั่ง</span>
                     </span>
-                    <span className="text-sm font-semibold text-[#5C3D1E]">
+                    {hasOrder && (
+                        <span className="text-xs shrink-0 text-[#8C6D58]">{table.item_count} รายการ</span>
+                    )}
+                </div>
+                {hasOrder && (
+                    <span className="block text-base font-semibold leading-snug text-[#5C3D1E] truncate">
                         ฿{table.total_amount.toLocaleString('th-TH', {
                             minimumFractionDigits: 2,
                             maximumFractionDigits: 2,
                         })}
                     </span>
-                </div>
-            )}
+                )}
+            </div>
         </button>
     )
 }

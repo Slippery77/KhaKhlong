@@ -13,6 +13,7 @@ import { toStockItemResponse } from './dto/stock-item.dto';
 import { RestockDto } from './dto/restock.dto';
 import { RecordWasteDto } from './dto/record-waste.dto';
 import { RecordStockCountDto } from './dto/record-stock-count.dto';
+import { RecordStockCountBatchDto } from './dto/record-stock-count-batch.dto';
 import {
   GetInventoryTransactionsQueryDto,
   toInventoryTransactionResponse,
@@ -259,6 +260,89 @@ export class InventoryService {
       }
       throw err;
     }
+  }
+
+  /**
+   * นับยอดคงเหลือหลายรายการในคำขอเดียว (ใช้ตอนจบวัน)
+   * ทุกคำขออยู่ใน transaction เดียวของ TenantContextInterceptor — รายการใดพัง
+   * ทั้งชุดจะ rollback ไม่มีการปรับยอดค้างครึ่ง ๆ (INV-11/INV-12)
+   */
+  async recordStockCountBatch(dto: RecordStockCountBatchDto, userId?: string) {
+    const seen = new Set<string>();
+    for (const item of dto.items) {
+      if (seen.has(item.ingredient_id)) {
+        throw new BadRequestException(
+          'มีวัตถุดิบซ้ำในรายการเดียวกัน — รวมเป็นรายการเดียวแล้วส่งอีกครั้ง',
+        );
+      }
+      seen.add(item.ingredient_id);
+    }
+
+    const results: {
+      ingredient_id: string;
+      ingredient_name: string;
+      stock_unit: string;
+      counted_quantity: number;
+      delta: number;
+    }[] = [];
+    let adjustedCount = 0;
+    let unchangedCount = 0;
+
+    try {
+      for (const item of dto.items) {
+        const ingredient = await this.inventoryRepository.findIngredientById(
+          item.ingredient_id,
+        );
+        if (!ingredient || !ingredient.is_active) {
+          throw new NotFoundException(
+            'ไม่พบข้อมูลวัตถุดิบ หรือวัตถุดิบถูกปิดการใช้งานแล้ว',
+          );
+        }
+        if (item.counted_quantity < 0) {
+          throw new BadRequestException('ยอดที่นับได้ต้องไม่ติดลบ');
+        }
+
+        const res = await this.inventoryRepository.recordStockCount(
+          item.ingredient_id,
+          item.counted_quantity,
+          userId,
+          item.note,
+        );
+        const delta = Number(res.delta ?? 0);
+        if (delta === 0) {
+          unchangedCount += 1;
+        } else {
+          adjustedCount += 1;
+        }
+
+        results.push({
+          ingredient_id: item.ingredient_id,
+          ingredient_name: ingredient.name,
+          stock_unit: ingredient.stock_unit,
+          counted_quantity: item.counted_quantity,
+          delta,
+        });
+      }
+    } catch (err: unknown) {
+      if (hasErrorMessage(err, 'ingredient not found')) {
+        throw new NotFoundException('ไม่พบข้อมูลวัตถุดิบ');
+      }
+      if (hasErrorMessage(err, 'lacks permission')) {
+        throw new ForbiddenException(
+          'ไม่มีสิทธิ์ inventory:adjust ในการนับสต็อก',
+        );
+      }
+      throw err;
+    }
+
+    return {
+      status: 'success',
+      data: {
+        items: results,
+        adjusted_count: adjustedCount,
+        unchanged_count: unchangedCount,
+      },
+    };
   }
 
   /**

@@ -14,7 +14,12 @@ export function getSavedUser():AuthUser|null{
         return null
     }
     try {
-        return JSON.parse(raw) as AuthUser;
+        const parsed = JSON.parse(raw) as AuthUser & { id?: string };
+        // เซสชันเก่าที่ยังไม่ได้ล็อกอินใหม่จะไม่มี field sub — แปลงจาก id เดิมให้ใช้ต่อได้
+        if (!parsed.sub && parsed.id) {
+            parsed.sub = parsed.id;
+        }
+        return parsed;
     } catch (error) {
         sessionStorage.removeItem(userKey);
         return null;

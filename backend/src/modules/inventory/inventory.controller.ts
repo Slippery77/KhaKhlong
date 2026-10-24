@@ -17,6 +17,7 @@ import { StockItemResponseDto } from './dto/stock-item.dto';
 import { RestockDto } from './dto/restock.dto';
 import { RecordWasteDto } from './dto/record-waste.dto';
 import { RecordStockCountDto } from './dto/record-stock-count.dto';
+import { RecordStockCountBatchDto } from './dto/record-stock-count-batch.dto';
 import {
   GetInventoryTransactionsQueryDto,
   InventoryTransactionResponseDto,
@@ -163,6 +164,40 @@ export class InventoryController {
   ) {
     const userId = req.user?.sub;
     return this.inventoryService.recordStockCount(dto, userId);
+  }
+
+  /**
+   * POST /inventory/count/batch
+   * นับยอดคงเหลือหลายรายการในคำขอเดียว (ใช้ตอนจบวัน) — สิทธิ์ inventory:adjust
+   */
+  @ApiOperation({
+    summary: 'บันทึกนับยอดคงเหลือหลายรายการ (จบวัน)',
+    description:
+      'ส่งเฉพาะวัตถุดิบที่มีการนับ ระบบคำนวณส่วนต่างรายรายการให้ ' +
+      'ทุกคำขอทำงานใน transaction เดียว หากรายการใดผิดพลาดทั้งชุดจะไม่ถูกบันทึก ' +
+      'ใช้คู่กับหน้าปิดกะเพื่อปรับวัตถุดิบที่ใช้ไปก่อนปิดวัน (สิทธิ์ inventory:adjust)',
+  })
+  @ApiOkResponse({
+    description: 'บันทึกการนับสำเร็จ พร้อมส่วนต่างรายรายการ',
+  })
+  @ApiBadRequestResponse({
+    description:
+      'ข้อมูลไม่ถูกต้อง เช่น ไม่มีรายการ, วัตถุดิบซ้ำ, counted_quantity < 0',
+  })
+  @ApiNotFoundResponse({
+    description: 'ไม่พบวัตถุดิบ หรือวัตถุดิบถูกปิดการใช้งานแล้ว',
+  })
+  @ApiForbiddenResponse({
+    description: 'ไม่มีสิทธิ์ inventory:adjust',
+  })
+  @RequirePermissions('inventory:adjust')
+  @Post('count/batch')
+  async recordStockCountBatch(
+    @Body() dto: RecordStockCountBatchDto,
+    @Req() req: AuthenticatedRequest,
+  ) {
+    const userId = req.user?.sub;
+    return this.inventoryService.recordStockCountBatch(dto, userId);
   }
 
   /**

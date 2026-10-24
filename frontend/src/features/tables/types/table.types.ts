@@ -4,7 +4,8 @@ export interface DiningTable {
     table_id: string
     table_number: string
     capacity: number
-    floor: number
+    floor_id: string          // FK ไปหาตาราง floors
+    floor_no: number | null   // เลขชั้น (JOIN จาก floors) ไว้แสดงผล
     status: TableStatus
     created_at: string
     updated_at: string

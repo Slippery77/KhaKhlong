@@ -2,11 +2,13 @@ import { getRefreshToken ,setRefreshToken } from "../features/auth/authStorage";
 
 export class ApiError extends Error {
   status: number;
-  data:any;
-  constructor(status: number, message: string , data?:any) {
+  data: any;
+  body: unknown;
+  constructor(status: number, message: string, body?: unknown) {
     super(message);
     this.status = status;
-    this.data = data;
+    this.data = body as any;
+    this.body = body;
   }
 }
 

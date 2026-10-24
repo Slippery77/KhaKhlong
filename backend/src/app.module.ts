@@ -11,6 +11,7 @@ import { TenantContextInterceptor } from './common/interceptors/tenant-context.i
 import { APP_INTERCEPTOR, APP_GUARD } from '@nestjs/core';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { TablesModule } from './modules/tables/tables.module';
+import { FloorsModule } from './modules/floors/floors.module';
 import { KdsModule } from './modules/kds/kds.module';
 import { OrdersModule } from './modules/orders/orders.module';
 import { InventoryModule } from './modules/inventory/inventory.module';
@@ -45,6 +46,7 @@ import { PaymentModule } from './modules/payment/payment.module';
     RegistersModule,
     MenuModule,
     TablesModule,
+    FloorsModule,
     KdsModule,
     OrdersModule,
     ShiftsModule,

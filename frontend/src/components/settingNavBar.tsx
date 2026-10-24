@@ -20,7 +20,7 @@ export default function SettingNavBar(){
                     </NavLink>
                 </li>
                 <li>
-                    <NavLink to={`/${tenantSlug}/fake-path-test`}
+                    <NavLink to={`/${tenantSlug}/setting/tables`}
                     className={({isActive})=> isActive ? 'font-kanit text-[#FFFFFF] border-2 rounded-xl bg-[#B79479] p-2' : 'border-2 border-transparent p-2 text-stone-500'}
                 >
                 โต๊ะอาหาร
@@ -42,7 +42,7 @@ export default function SettingNavBar(){
                     </NavLink>
                 </li>
                 <li>
-                    <NavLink to={`/${tenantSlug}/fake-path-test`}
+                    <NavLink to={`/${tenantSlug}/setting/users`}
                     className={({isActive})=> isActive ? 'font-kanit text-[#FFFFFF] border-2 rounded-xl bg-[#B79479] p-2' : 'border-2 border-transparent p-2 text-stone-500'}
                 >
                 บัญชีผู้ใช้

@@ -275,8 +275,9 @@ export default function MainPOS() {
                 'POST',
                 { items: itemsToSend, kitchenTicketId },
             )
-             // ── 4. อัปเดต local state (badge + toast) ────────────────────
-            sendOrderToKitchen(currentTable, cartMenu)
+            // ── 4. ล้างตะกร้า + toast ──────────────────────────────────
+            // หมายเหตุ: ไม่ต้องเรียก sendOrderToKitchen อีกต่อไป — รายการอยู่ใน backend แล้ว
+            // และ badge บน Header ดึงจาก /kds/queue (ตัวเดียวกับหน้า KDS)
             const count = cartMenu.reduce((sum, item) => sum + item.quantity, 0)
             setcartMenu([])
             setOrder(false)

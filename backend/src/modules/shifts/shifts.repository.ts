@@ -131,6 +131,22 @@ export class ShiftsRepository{
         return result.rows[0]??null;
     }
 
+    // ผู้ที่กรอก PIN รับรองยอดได้: ผู้ใช้ที่ยัง active มีสิทธิ์ shift:verify และมี PIN
+    async findPinVerifiers(){
+        const sql = `
+            SELECT u.users_id, u.pin_hash
+            FROM users u
+            JOIN role_permissions rp ON rp.role_id = u.role_id
+            JOIN permissions p ON p.permission_id = rp.permission_id
+            WHERE p.permission_key = 'shift:verify'
+              AND u.pin_hash IS NOT NULL
+              AND u.is_active
+              AND (u.pin_locked_until IS NULL OR u.pin_locked_until <= now());
+        `;
+        const result = await this.db.query(sql);
+        return result.rows as { users_id: string; pin_hash: string }[];
+    }
+
     async verifyShift(shiftId:string, userId:string){
         const sql = `
             UPDATE shifts

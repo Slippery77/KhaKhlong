@@ -79,6 +79,8 @@ export class AuthService {
                     user: {
                         sub: users.users_id,
                         username: users.username,
+                        // ชื่อที่แสดงบน Header — ใส่ fallback เป็น username เผื่อแถวที่ยังไม่ได้ตั้ง display_name
+                        display_name: users.display_name ?? users.username,
                         tenantID: users.tenant_id, // TODO ไว้เดี๋ยวลบถ้าไม่มีตัวไหนใช้
                         role: role.role_name,
                         tenantSlug:dto.tenantSlug

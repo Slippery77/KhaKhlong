@@ -6,6 +6,8 @@ import type {
   InventoryTransaction,
   InventoryTransactionType,
   PaginatedApiEnvelope,
+  StockCountBatchResult,
+  StockCountInput,
   StockItem,
   UpdateIngredientInput,
 } from '../types/inventory.types';
@@ -66,6 +68,12 @@ export const inventoryApi = {
       ingredient_id: ingredientId,
       counted_quantity: countedQuantity,
       ...(note?.trim() ? { note: note.trim() } : {}),
+    }),
+
+  /** นับสต็อกหลายรายการในคำขอเดียว (จบวัน) — ทั้งชุดสำเร็จหรือไม่บันทึกเลย */
+  recordStockCountBatch: (token: string | null, items: StockCountInput[]) =>
+    apiFetch<ApiEnvelope<StockCountBatchResult>>('/inventory/count/batch', token, 'POST', {
+      items,
     }),
 
   getTransactions: (
