@@ -314,7 +314,7 @@ export default function MainPOS() {
                                 <span>โต๊ะ</span>
                             </button>
 
-                            <div className="h-4 w-[1px] bg-stone-300 mx-1" />
+                            <div className="h-4 w-1px bg-stone-300 mx-1" />
 
                             <span className="text-base font-semibold text-[#2D241E] font-kanit">
                                 โต๊ะ {currentTable}
