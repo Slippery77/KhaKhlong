@@ -209,7 +209,7 @@ export default function Header() {
                             </Link>
 
                             <Link
-                                to={`/${tenantSlug}/setting/menu`}
+                                to={`/${tenantSlug}/setting/store`}
                                 onClick={() => setIsMenuOpen(false)}
                                 className={`flex items-center gap-3 px-4 py-2.5 text-sm transition-all hover:bg-[#FAF7F2] ${
                                     isSetting ? "font-semibold text-[#8C6D58] bg-[#FAF7F2]/80" : "text-[#2D241E]"
