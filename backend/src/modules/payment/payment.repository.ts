@@ -65,7 +65,7 @@ export class PaymentRepository{
             where order_id = any($1::uuid[]) and status<>'voided'
         `;
         const result = await this.db.query(sql,[orderId])
-        return Number(result.rows[0].gross)
+        return Number(result.rows[0].gross) , Number(result.rows[0].item_count)
     }
 
     async lockAttempt(id:string){

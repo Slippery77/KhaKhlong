@@ -6,6 +6,8 @@ import TableCard from '../components/TableCard'
 import type { DiningTable } from '../types/table.types'
 import { useAuth } from '../../auth/context/AuthContext'
 import { RefreshCw } from 'lucide-react'
+import OpenShiftCard from '../../shifts/components/OpenShiftCard'
+import { useShift } from '../../shifts/hooks/useShift'
 
 // จัดกลุ่มโต๊ะตามชั้น (floor_no มาจาการ JOIN floors — null แปลว่าชั้นถูกลบไปแล้ว ให้ไป"group อื่น")
 function groupByFloor(tables: DiningTable[]): Map<number, DiningTable[]> {
@@ -33,6 +35,8 @@ export default function TablesPage() {
         : Array.from(floors.entries()).filter(([floor]) => floor === selectedFloor)
     const visibleTables = visibleFloors.flatMap(([, floorTables]) => floorTables)
     const visibleOccupied = visibleTables.filter((t) => t.status === 'occupied').length
+    const { shift, isLoading:isShiftLoading, isSubmitting, error:shiftError, openShift} = useShift()
+    const needOpenShift = !isShiftLoading && !shiftError && shift === null
 
     function handleTableClick(table: DiningTable) {
         // ส่ง tableId และ tableName ไปหน้า POS ผ่าน URL query params
@@ -197,6 +201,18 @@ export default function TablesPage() {
                     )}
                 </main>
             </div>
+            {needOpenShift &&(
+                <div
+                    role="dialog"
+                    aria-model="true"
+                    aria-label="เปิดกะก่อนเริ่มขาย"
+                    className = "fixed inset-0 z-50 flex items-center justify-center bg-[#2D241E]/40 p-4 font-kanit"
+                >
+                    <div className='w-full max-w-md'>
+                        <OpenShiftCard isSubmitting={isSubmitting} onSubmit={openShift}/>
+                    </div>
+                </div>
+            )}
         </div>
     )
 }
