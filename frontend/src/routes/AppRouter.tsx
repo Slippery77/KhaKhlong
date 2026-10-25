@@ -1,4 +1,4 @@
-import { Route, Routes } from 'react-router-dom';
+﻿import { Route, Routes } from 'react-router-dom';
 import { LoginPage } from '../features/auth/pages/login_pages';
 import Register_page from '../features/registerOwner/pages/register_pages';
 import MainPOS from '../features/mainpos/pages/MainPOS';
@@ -12,6 +12,7 @@ import TablesPage from '../features/tables/pages/TablesPage';
 import EditVat from '../features/editVat/pages/editVat';
 import UsersPage from '../features/users/pages/UsersPage';
 import TableSettingPage from '../features/tableSetting/pages/TableSettingPage';
+import StoreSettingPage from '../features/store/pages/StoreSettingPage';
 
 export function AppRouter() {
     return (
@@ -26,6 +27,7 @@ export function AppRouter() {
             <Route path='/:tenantSlug/setting/modifier' element={<EditModiferPage />} />
             <Route path='/:tenantSlug/setting/users' element={<UsersPage />} />
             <Route path='/:tenantSlug/setting/tables' element={<TableSettingPage />} />
+            <Route path='/:tenantSlug/setting/store' element={<StoreSettingPage />} />
             <Route path='/:tenantSlug/siftwork' element={<ShiftPage />} />
             <Route path='/:tenantSlug/stock' element={<StockPage />} />
             <Route path='/:tenantSlug/sale-report' element={<SaleReportPage />} />
