@@ -96,10 +96,11 @@ export class PaymentService {
             throw new BadRequestException('ชำระด้วย QR ไม่ต้องระบุเงินที่รับมา')
         }
         //ยอดรวมใช้เทียบว่ายอดบิลยังเท่ากับ attempt.amount ไหม
-        const gross = await this.paymentRepository.computeGrossByAttempt(payment_attempt_id);
+        const gross  = await this.paymentRepository.computeGrossByAttempt(payment_attempt_id);
         if(gross!== amount){
             throw new ConflictException('ยอดบิลเปลี่ยนไป กรุณายกเลิกแล้วเริ่มชำระใหม่');
         }
+       
 
         await this.paymentRepository.markAttemptSuccess(payment_attempt_id);
         try {
