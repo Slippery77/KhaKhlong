@@ -82,6 +82,22 @@ export class PaymentController {
     }
 
     @ApiOperation({
+      summary: 'ดูยอดรวมก่อนชำระเงิน',
+      description:
+        'อ่านยอดรวมของบิลที่ยังเปิดอยู่จาก v_order_item_totals ใช้แสดงยอดก่อนกดเริ่มชำระ ' +
+        'ไม่สร้าง attempt ไม่จองบิล และไม่รับยอดจาก client',
+    })
+    @ApiParam({ name: 'orderId', format: 'uuid', description: 'รหัสบิล (UUID)' })
+    @ApiResponse({ status: 200, description: 'ยอดรวมและจำนวนรายการในบิล' })
+    @ApiResponse({ status: 404, description: 'ไม่พบบิล' })
+    @ApiResponse({ status: 409, description: 'บิลถูกปิดไปแล้ว' })
+    @RequirePermissions('payment:receive')
+    @Get('orders/:orderId/summary')
+    async getOrderSummary(@Param('orderId', ParseUUIDPipe) orderId: string) {
+      return this.paymentService.getOrderSummary(orderId);
+    }
+
+    @ApiOperation({
       summary: 'ดูข้อมูลใบเสร็จ',
       description:
         'ข้อมูลครบสำหรับแสดงหรือพิมพ์ใบเสร็จ: ร้าน โต๊ะ รายการอาหาร (รวมจานเหมือนกันข้ามโต๊ะ) ยอด เงินรับ เงินทอน ' +

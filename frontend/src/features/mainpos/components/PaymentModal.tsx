@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { X, Banknote, QrCode, CheckCircle2, Loader2 } from 'lucide-react';
 import { usePayment } from '../hooks/usePayment';
 import { ApiError } from '../../../libs/appClient';
+import type { OrderPaymentSummary } from '../hooks/usePayment';
 import type { PaymentAttempt, PaymentMethod, PaymentResult } from '../types/payment.type';
 
 interface PaymentModalProps {
@@ -17,7 +18,7 @@ const baht = (n: number) =>
     `฿${n.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
 export default function PaymentModal({ table, orderId, onClose, onPaymentSuccess }: PaymentModalProps) {
-    const { createAttempt, pay, cancel } = usePayment();
+    const { createAttempt, pay, cancel, getOrderSummary } = usePayment();
 
     const [step, setStep] = useState<Step>('choose');
     const [method, setMethod] = useState<PaymentMethod>('cash');
@@ -27,6 +28,11 @@ export default function PaymentModal({ table, orderId, onClose, onPaymentSuccess
     const [pendingId, setPendingId] = useState<string | null>(null);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
+    // ยอดรวมก่อนชำระเงิน — ดึงจาก server เท่านั้น (client ไม่คำนวณ VAT/ยอดรวมเอง)
+    const [summary, setSummary] = useState<OrderPaymentSummary | null>(null);
+    const [summaryLoading, setSummaryLoading] = useState(true);
+    // เพิ่มค่าเพื่อสั่งโหลดยอดใหม่จาก event handler (ไม่ setState ใน effect โดยตรง)
+    const [summaryReloadKey, setSummaryReloadKey] = useState(0);
 
     // ยอดมาจาก server เท่านั้น หน้าจอไม่คำนวณยอดเอง
     const amount = attempt?.amount ?? 0;
@@ -41,6 +47,31 @@ export default function PaymentModal({ table, orderId, onClose, onPaymentSuccess
 
     const showError = (e: unknown) =>
         setError(e instanceof ApiError ? e.message : 'เชื่อมต่อเซิร์ฟเวอร์ไม่ได้');
+
+    // โหลดยอดรวมล่าสุดของบิล (ทำใน promise callback เพื่อไม่ให้เกิด cascading render)
+    useEffect(() => {
+        let cancelled = false;
+        getOrderSummary(orderId)
+            .then((data) => {
+                if (!cancelled) setSummary(data);
+            })
+            .catch(() => {
+                // แสดงสถานะ "ดึงยอดไม่ได้" โดยไม่บล็อกการชำระ เพราะยอดจริงยืนยันตอนสร้าง attempt
+                if (!cancelled) setSummary(null);
+            })
+            .finally(() => {
+                if (!cancelled) setSummaryLoading(false);
+            });
+        return () => {
+            cancelled = true;
+        };
+    }, [getOrderSummary, orderId, summaryReloadKey]);
+
+    // เรียกจาก event handler: แสดง loading แล้วให้ effect ด้านบนโหลดยอดใหม่
+    const reloadSummary = () => {
+        setSummaryLoading(true);
+        setSummaryReloadKey((key) => key + 1);
+    };
 
     // หน้า 1: จองบิลและได้ยอดจาก server
     const handleNext = async () => {
@@ -109,6 +140,8 @@ export default function PaymentModal({ table, orderId, onClose, onPaymentSuccess
         setAttempt(null);
         setError(null);
         setStep('choose');
+        // ยอดอาจเปลี่ยนระหว่างจองบิล → ดึงยอดล่าสุดมาแสดงใหม่
+        reloadSummary();
     };
 
     const handleClose = async () => {
@@ -135,26 +168,69 @@ export default function PaymentModal({ table, orderId, onClose, onPaymentSuccess
                 </div>
 
                 <div className="p-6 space-y-5">
-                    {/* หน้า 1: เลือกวิธีจ่าย */}
+                    {/* หน้า 1: เลือกวิธีจ่าย + ยอดรวมก่อนชำระเงิน */}
                     {step === 'choose' && (
-                        <div className="grid grid-cols-2 gap-3">
-                            {([
-                                { value: 'cash', label: 'เงินสด', sub: 'Cash', Icon: Banknote },
-                                { value: 'qr_code', label: 'สแกน QR', sub: 'PromptPay', Icon: QrCode },
-                            ] as const).map(({ value, label, sub, Icon }) => (
-                                <button key={value} type="button" onClick={() => setMethod(value)}
-                                    className={`p-3.5 rounded-2xl border text-left transition flex items-center gap-3 cursor-pointer ${
-                                        method === value
-                                            ? 'border-[#A68874] bg-[#FAF7F2] text-[#8C6D58] ring-2 ring-[#A68874]/20'
-                                            : 'border-stone-200 hover:bg-stone-50 text-stone-700'
-                                    }`}>
-                                    <Icon className="w-5 h-5" />
-                                    <div>
-                                        <div className="font-semibold text-sm">{label}</div>
-                                        <div className="text-xs text-stone-400">{sub}</div>
+                        <div className="space-y-4">
+                            <div className="rounded-2xl border border-[#E8DFD5] bg-[#FAF7F2] px-5 py-4">
+                                <div className="flex items-start justify-between gap-4">
+                                    <div className="min-w-0">
+                                        <span className="block text-xs font-semibold text-stone-600">
+                                            ยอดรวมก่อนชำระเงิน
+                                        </span>
+                                        <span className="mt-1 block text-[11px] text-stone-500">
+                                            {summaryLoading ? (
+                                                'กำลังคำนวณยอด...'
+                                            ) : summary ? (
+                                                `${summary.itemCount.toLocaleString('th-TH')} รายการในบิล`
+                                            ) : (
+                                                <>
+                                                    ดึงยอดรวมไม่สำเร็จ{' '}
+                                                    <button
+                                                        type="button"
+                                                        onClick={reloadSummary}
+                                                        className="font-semibold text-[#8C6D58] underline underline-offset-2 hover:text-[#6F5644] transition-colors cursor-pointer"
+                                                    >
+                                                        ลองใหม่
+                                                    </button>
+                                                </>
+                                            )}
+                                        </span>
                                     </div>
-                                </button>
-                            ))}
+                                    <div className="text-right shrink-0" aria-live="polite">
+                                        {summaryLoading ? (
+                                            <span className="block h-8 w-24 animate-pulse rounded-lg bg-stone-200/80" />
+                                        ) : (
+                                            <span className="text-2xl font-bold tabular-nums text-[#2D241E]">
+                                                {summary ? baht(summary.amount) : '—'}
+                                            </span>
+                                        )}
+                                    </div>
+                                </div>
+                                <p className="mt-3 border-t border-[#E8DFD5] pt-2 text-[11px] leading-relaxed text-stone-500">
+                                    ยอดนี้คำนวณจากรายการในบิลบนเซิร์ฟเวอร์ และจะยืนยันอีกครั้งเมื่อเริ่มชำระเงิน
+                                </p>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-3">
+                                {([
+                                    { value: 'cash', label: 'เงินสด', sub: 'Cash', Icon: Banknote },
+                                    { value: 'qr_code', label: 'สแกน QR', sub: 'PromptPay', Icon: QrCode },
+                                ] as const).map(({ value, label, sub, Icon }) => (
+                                    <button key={value} type="button" onClick={() => setMethod(value)}
+                                        aria-pressed={method === value}
+                                        className={`p-3.5 rounded-2xl border text-left transition flex items-center gap-3 cursor-pointer ${
+                                            method === value
+                                                ? 'border-[#A68874] bg-[#FAF7F2] text-[#8C6D58] ring-2 ring-[#A68874]/20'
+                                                : 'border-stone-200 hover:bg-stone-50 text-stone-700'
+                                        }`}>
+                                        <Icon className="w-5 h-5" />
+                                        <div>
+                                            <div className="font-semibold text-sm">{label}</div>
+                                            <div className="text-xs text-stone-400">{sub}</div>
+                                        </div>
+                                    </button>
+                                ))}
+                            </div>
                         </div>
                     )}
 

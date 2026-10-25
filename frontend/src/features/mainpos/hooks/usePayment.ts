@@ -1,6 +1,13 @@
+import { useCallback } from "react";
 import { useAuth } from "../../auth/context/AuthContext";
 import { apiFetch } from "../../../libs/appClient";
 import type { PaymentMethod, PaymentResult, PaymentAttempt } from "../types/payment.type";
+
+export interface OrderPaymentSummary {
+    orderId: string
+    amount: number
+    itemCount: number
+}
 
 export function usePayment(){
     const {accessToken} = useAuth();
@@ -8,6 +15,15 @@ export function usePayment(){
     // หน้า 1: จองบิลและได้ยอดจาก server
     const createAttempt = (orderIds: string[], paymentMethod: PaymentMethod) =>
         apiFetch<{ data: PaymentAttempt }>('/payments/attempts', accessToken, 'POST', { orderIds, paymentMethod }).then(r => r.data)
+
+    // ก่อนสร้าง attempt: ดึงยอดรวมของบิลจาก server มาแสดงผล (อ่านอย่างเดียว)
+    const getOrderSummary = useCallback(
+        (orderId: string) =>
+            apiFetch<{ data: OrderPaymentSummary }>(
+                `/payments/orders/${orderId}/summary`, accessToken,
+            ).then(r => r.data),
+        [accessToken],
+    )
 
     // หน้า 2: ยืนยันรับเงิน (QR ไม่ส่ง cashReceived)
     const pay = (attemptId: string, cashReceived?: number) =>
@@ -21,5 +37,5 @@ export function usePayment(){
         apiFetch<{ data: PaymentAttempt }>(
         `/payments/attempts/${attemptId}/cancel`, accessToken, 'POST', { reason },
     ).then(r => r.data)
-    return {createAttempt,pay,cancel}
+    return {createAttempt,pay,cancel,getOrderSummary}
 }

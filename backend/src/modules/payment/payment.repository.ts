@@ -65,7 +65,28 @@ export class PaymentRepository{
             where order_id = any($1::uuid[]) and status<>'voided'
         `;
         const result = await this.db.query(sql,[orderId])
-        return Number(result.rows[0].gross) , Number(result.rows[0].item_count)
+        return Number(result.rows[0].gross);
+    }
+
+    /**
+     * ยอดรวมของบิลเดียวก่อนเริ่มชำระเงิน (อ่านอย่างเดียว)
+     * ใช้สูตรเดียวกับ computeAmount เพื่อให้ยอดที่แสดงก่อนจ่ายตรงกับ attempt.amount
+     */
+    async computeOrderSummary(orderId:string){
+        const sql = `
+            SELECT COALESCE(SUM(line_total), 0) AS amount,
+                   COUNT(*) AS item_count
+            FROM v_order_item_totals
+            WHERE order_id = $1
+              AND tenant_id = app_tenant_id()
+              AND status <> 'voided'
+        `;
+        const result = await this.db.query(sql,[orderId])
+        const row = result.rows[0]
+        return {
+            amount: Number(row?.amount ?? 0),
+            itemCount: Number(row?.item_count ?? 0),
+        }
     }
 
     async lockAttempt(id:string){
