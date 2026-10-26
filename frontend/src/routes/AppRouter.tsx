@@ -1,5 +1,6 @@
 ﻿import { Route, Routes } from 'react-router-dom';
 import { LoginPage } from '../features/auth/pages/login_pages';
+import StoreFinderPage from '../features/auth/pages/store_finder_page';
 import Register_page from '../features/registerOwner/pages/register_pages';
 import MainPOS from '../features/mainpos/pages/MainPOS';
 import KDSPage from '../features/kds/pages/KDSPage';
@@ -17,6 +18,9 @@ import StoreSettingPage from '../features/store/pages/StoreSettingPage';
 export function AppRouter() {
     return (
         <Routes>
+            {/* หน้าแรก: เด้งเข้าร้านที่เครื่องนี้จำไว้ หรือให้กรอกรหัสร้าน */}
+            <Route path='/' element={<StoreFinderPage />} />
+            <Route path='/login' element={<StoreFinderPage />} />
             <Route path='/:tenantSlug/login' element={<LoginPage />} />
             <Route path='/register' element={<Register_page />} />
             <Route path='/:tenantSlug/homepage' element={<div>Dashboard (TODO)</div>} />
@@ -32,6 +36,8 @@ export function AppRouter() {
             <Route path='/:tenantSlug/stock' element={<StockPage />} />
             <Route path='/:tenantSlug/sale-report' element={<SaleReportPage />} />
             <Route path='/:tenantSlug/setting/vat' element={<EditVat/>}/>
+            {/* URL ที่ไม่รู้จัก: กลับไปหน้าเลือกร้าน ดีกว่าปล่อยจอขาว */}
+            <Route path='*' element={<StoreFinderPage />} />
         </Routes>
     );
 }

@@ -1,16 +1,16 @@
 import { useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import type { LoginCredentials, LoginResponse } from '../types/auth.types';
 import { useAuth } from '../context/AuthContext';
 import { ApiError, apiFetch } from '../../../libs/appClient';
 import { getRefreshToken, saveSession } from '../authStorage'; // [เพิ่มใหม่] getRefreshToken ไว้ส่งตอน logout
+import { saveLastTenantSlug } from '../tenantStorage';
 
 export function useLogin(){
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const { accessToken, setAuth, clearAuth } = useAuth();
     const navigate = useNavigate()
-    const { tenantSlug } = useParams<{ tenantSlug: string }>()
 
     const login = async (credentials: LoginCredentials)=>{
         setError(null);
@@ -19,6 +19,8 @@ export function useLogin(){
             const data = await apiFetch<LoginResponse>('/auth/login',null,'POST',credentials)
             setAuth(data.accessToken, data.user); // เก็บ acess token และ ข้อมูล user ลงใน context ให้ทุก components ใช้งาน acessToken และ user เดียวกัน
             saveSession(data.refreshToken, data.user)
+            // จำร้านนี้ไว้ในเครื่อง → เปิดเว็บครั้งหน้าจะเด้งเข้าหน้าร้านเดิมทันที
+            saveLastTenantSlug(data.user.tenantSlug || credentials.tenantSlug)
             return data;
         }catch(err){
             if (err instanceof ApiError && err.status === 401) {
@@ -42,7 +44,9 @@ export function useLogin(){
         }
         finally{
             clearAuth();
-            navigate(`/${tenantSlug}/login`);
+            // กลับไปที่ "/" — ถ้าเครื่องจำร้านไว้จะเด้งเข้าหน้าร้านเดิมให้เอง
+            // (ไม่พึ่ง useParams ซึ่งอาจว่างถ้า Header ถูกใช้ خارج route ของร้าน)
+            navigate('/');
         }
     }
 
