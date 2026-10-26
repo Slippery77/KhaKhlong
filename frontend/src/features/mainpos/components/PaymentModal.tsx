@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { X, Banknote, QrCode, CheckCircle2, Loader2 } from 'lucide-react';
+import { X, Banknote, QrCode, CheckCircle2, Loader2, Info } from 'lucide-react';
 import { usePayment } from '../hooks/usePayment';
 import { ApiError } from '../../../libs/appClient';
 import type { OrderPaymentSummary } from '../hooks/usePayment';
@@ -159,7 +159,7 @@ export default function PaymentModal({ table, orderId, onClose, onPaymentSuccess
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40 backdrop-blur-xs font-kanit">
-            <div className="bg-white rounded-3xl border border-stone-200/90 shadow-2xl w-full max-w-lg overflow-hidden flex flex-col">
+            <div className="bg-white rounded-3xl border border-stone-200/90 shadow-2xl w-full max-w-lg max-h-[calc(100dvh-2rem)] overflow-hidden flex flex-col">
                 {/* Header */}
                 <div className="px-6 py-4 border-b border-stone-100 flex items-center justify-between bg-[#FAF7F2]">
                     <h3 className="font-semibold text-base text-[#2D241E]">ชำระเงิน ({table})</h3>
@@ -169,7 +169,7 @@ export default function PaymentModal({ table, orderId, onClose, onPaymentSuccess
                     </button>
                 </div>
 
-                <div className="p-6 space-y-5">
+                <div className="p-6 space-y-5 overflow-y-auto">
                     {/* หน้า 1: เลือกวิธีจ่าย + ยอดรวมก่อนชำระเงิน */}
                     {step === 'choose' && (
                         <div className="space-y-4">
@@ -239,9 +239,9 @@ export default function PaymentModal({ table, orderId, onClose, onPaymentSuccess
                     {/* หน้า 2: ยืนยัน */}
                     {step === 'confirm' && (
                         <>
-                            <div className="text-center py-4 bg-stone-50 rounded-2xl border border-stone-100">
-                                <span className="text-xs font-medium text-stone-400 block mb-1">ยอดชำระสุทธิ</span>
-                                <div className="text-3xl font-bold text-[#2D241E]">{baht(amount)}</div>
+                            <div className="text-center py-4 bg-[#FAF7F2] rounded-2xl border border-[#E8DFD5]">
+                                <span className="text-xs font-medium text-stone-500 block mb-1">ยอดชำระสุทธิ</span>
+                                <div className="text-3xl font-bold tabular-nums text-[#2D241E]">{baht(amount)}</div>
                             </div>
 
                             {method === 'cash' ? (
@@ -266,12 +266,74 @@ export default function PaymentModal({ table, orderId, onClose, onPaymentSuccess
                                     </div>
                                 </div>
                             ) : (
-                                <div className="p-4 bg-stone-50/70 rounded-2xl border border-stone-200/60 flex flex-col items-center text-center">
-                                    {/* ยังไม่มี promptpay_id ของร้าน ขั้นถัดไปค่อยสร้าง QR จริง */}
-                                    {attempt?.qrPayload && <QRCodeSVG value={attempt.qrPayload} size={192}/>}
-                                    <span className="text-xs text-stone-600">
-                                        ตรวจว่าเงินเข้าแอปธนาคารของร้านแล้ว ค่อยกดยืนยัน
-                                    </span>
+                                <div className="rounded-2xl border border-[#E8DFD5] bg-[#FAF7F2] p-4">
+                                    {/* หัวการ์ด: ชื่อวิธีจ่าย + ยอดที่ต้องโอน */}
+                                    <div className="flex items-center justify-between gap-3">
+                                        <div className="flex min-w-0 items-center gap-2.5">
+                                            <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#EFE8DC] text-[#8C6D58]">
+                                                <QrCode className="h-4 w-4" aria-hidden="true" />
+                                            </span>
+                                            <div className="min-w-0">
+                                                <p className="text-sm font-semibold text-[#2D241E]">สแกนเพื่อชำระเงิน</p>
+                                                <p className="text-[11px] text-stone-500">พร้อมเพย์ · PromptPay</p>
+                                            </div>
+                                        </div>
+                                        <span className="shrink-0 rounded-full border border-[#E8DFD5] bg-white px-3 py-1 text-xs font-semibold tabular-nums text-[#8C6D58]">
+                                            {baht(amount)}
+                                        </span>
+                                    </div>
+
+                                    {/* ตัว QR บนพื้นขาว + quiet zone ให้สแกนง่าย */}
+                                    <div className="mt-4 flex flex-col items-center">
+                                        {attempt?.qrPayload ? (
+                                            <div
+                                                role="img"
+                                                aria-label={`QR พร้อมเพย์สำหรับชำระ ${baht(amount)}`}
+                                                className="rounded-2xl border border-[#E8DFD5] bg-white p-3 shadow-sm"
+                                            >
+                                                <QRCodeSVG
+                                                    value={attempt.qrPayload}
+                                                    size={176}
+                                                    level="M"
+                                                    fgColor="#2D241E"
+                                                    bgColor="#FFFFFF"
+                                                />
+                                            </div>
+                                        ) : (
+                                            <div className="flex h-[200px] w-[200px] flex-col items-center justify-center gap-1.5 rounded-2xl border border-dashed border-[#d9c6b0] bg-white px-4 text-center">
+                                                <QrCode className="h-10 w-10 text-[#d9c6b0]" aria-hidden="true" />
+                                                <p className="text-xs font-semibold text-[#2D241E]">สร้าง QR ไม่สำเร็จ</p>
+                                                <p className="text-[11px] leading-relaxed text-stone-500">
+                                                    ตรวจสอบเลขพร้อมเพย์ของร้านในหน้าตั้งค่า แล้วกลับมาลองใหม่
+                                                </p>
+                                            </div>
+                                        )}
+
+                                        <ol className="mt-4 w-full space-y-2">
+                                            {[
+                                                'เปิดแอปธนาคาร แล้วเลือกสแกน QR',
+                                                'สแกนภาพนี้ ตรวจชื่อบัญชีร้านและยอดให้ตรงกัน',
+                                                'กดยืนยันในแอป แล้วกลับมากด “ยืนยันรับเงิน”',
+                                            ].map((text, index) => (
+                                                <li
+                                                    key={text}
+                                                    className="flex items-start gap-2.5 text-[11px] leading-relaxed text-stone-600"
+                                                >
+                                                    <span className="mt-px flex h-4 w-4 shrink-0 items-center justify-center rounded-full bg-[#EFE8DC] text-[10px] font-semibold text-[#8C6D58]">
+                                                        {index + 1}
+                                                    </span>
+                                                    <span>{text}</span>
+                                                </li>
+                                            ))}
+                                        </ol>
+                                    </div>
+
+                                    <div className="mt-3 flex items-start gap-2 rounded-xl border border-amber-200/80 bg-amber-50 px-3 py-2">
+                                        <Info className="mt-px h-3.5 w-3.5 shrink-0 text-amber-600" aria-hidden="true" />
+                                        <p className="text-[11px] leading-relaxed text-amber-800">
+                                            ยอดใน QR ถูกกำหนดจากเซิร์ฟเวอร์แล้ว ตรวจว่าเงินเข้าแอปธนาคารของร้านก่อนกดยืนยัน
+                                        </p>
+                                    </div>
                                 </div>
                             )}
                         </>
