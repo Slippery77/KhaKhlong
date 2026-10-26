@@ -39,6 +39,16 @@ export class PaymentRepository{
         return result.rows;
     }
 
+    async findPromptpayId(){
+        const sql = `
+            SELECT promptpay_id
+            FROM tenants
+            WHERE tenant_id = app_tenant_id()
+        `;
+        const result = await this.db.query(sql)
+        return result.rows[0]?.promptpay_id??null;
+    }
+
     async createPaymentAttempt(paymentMethod:string,amount:number,userId:string){
         const sql =`
             INSERT INTO payment_attempts(tenant_id,payment_method, amount, initiated_by)
@@ -65,7 +75,10 @@ export class PaymentRepository{
             where order_id = any($1::uuid[]) and status<>'voided'
         `;
         const result = await this.db.query(sql,[orderId])
-        return Number(result.rows[0].gross) , Number(result.rows[0].item_count)
+        return {
+            gross: Number(result.rows[0].gross),
+            itemCount: Number(result.rows[0].item_count),
+        }
     }
 
     async lockAttempt(id:string){

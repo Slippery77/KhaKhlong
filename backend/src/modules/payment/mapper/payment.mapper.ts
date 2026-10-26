@@ -9,7 +9,8 @@ export interface PaymentAttemptResponse{
     failureReason:string|null;
     initiatedBy:string;
     createdAt:Date;
-    updatedAt:Date|null
+    updatedAt:Date|null;
+    qrPayload:string|null;
 }
 
 export function toPaymentAttemptResponse(rows:any):PaymentAttemptResponse{
@@ -22,7 +23,8 @@ export function toPaymentAttemptResponse(rows:any):PaymentAttemptResponse{
         failureReason:rows.failure_reason,
         initiatedBy:rows.initiated_by,
         createdAt:rows.created_at,
-        updatedAt:rows.updated_at
+        updatedAt:rows.updated_at,
+        qrPayload:rows.qrPayload,
     }
 }
 

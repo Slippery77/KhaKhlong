@@ -3,10 +3,11 @@
 export type PaymentMethod = 'cash' | 'qr_code'
 
 export interface PaymentAttempt {
-  paymentAttemptId: string
-  paymentMethod: PaymentMethod
-  amount: number
-  status: 'pending' | 'success' | 'failed' | 'timeout'
+  paymentAttemptId: string;
+  paymentMethod: PaymentMethod;
+  amount: number;
+  status: 'pending' | 'success' | 'failed' | 'timeout';
+  qrPayload:string|null;
 }
 
 export interface PaymentResult {

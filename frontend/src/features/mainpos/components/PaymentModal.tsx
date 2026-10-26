@@ -3,6 +3,8 @@ import { X, Banknote, QrCode, CheckCircle2, Loader2 } from 'lucide-react';
 import { usePayment } from '../hooks/usePayment';
 import { ApiError } from '../../../libs/appClient';
 import type { PaymentAttempt, PaymentMethod, PaymentResult } from '../types/payment.type';
+import { QRCodeSVG } from 'qrcode.react';
+
 
 interface PaymentModalProps {
     table: string;
@@ -190,7 +192,7 @@ export default function PaymentModal({ table, orderId, onClose, onPaymentSuccess
                             ) : (
                                 <div className="p-4 bg-stone-50/70 rounded-2xl border border-stone-200/60 flex flex-col items-center text-center">
                                     {/* ยังไม่มี promptpay_id ของร้าน ขั้นถัดไปค่อยสร้าง QR จริง */}
-                                    <QrCode className="w-24 h-24 text-[#2D241E] mb-2" />
+                                    {attempt?.qrPayload && <QRCodeSVG value={attempt.qrPayload} size={192}/>}
                                     <span className="text-xs text-stone-600">
                                         ตรวจว่าเงินเข้าแอปธนาคารของร้านแล้ว ค่อยกดยืนยัน
                                     </span>

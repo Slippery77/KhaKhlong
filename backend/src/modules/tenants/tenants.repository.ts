@@ -4,9 +4,9 @@ import { UpdateTenantDTO } from './dto/update-tenant.dto';
 
 // คอลัมน์ที่ PATCH /store แก้ได้ ใช้เป็น whitelist กันชื่อคอลัมน์แปลกปลอมเข้าไปใน SQL
 // เพิ่ม field ใน UpdateTenantDTO เมื่อไหร่ ต้องเพิ่มที่นี่ด้วย
-const UPDATE_TENANTS = ['restaurant_name','tax_id','phone','house_number','moo','soi','road','subdistrict','district','province','postal_code']
+const UPDATE_TENANTS = ['restaurant_name','tax_id','phone','house_number','moo','soi','road','subdistrict','district','province','postal_code','promptpay_id']
 // คอลัมน์ที่คืนให้ client (ไม่คืน tenant_id, tenant_slug, is_active)
-const TENANTS_COLS = `restaurant_name,tax_id,phone,house_number,moo,soi,road,subdistrict,district,province,postal_code,updated_at`;
+const TENANTS_COLS = `restaurant_name,tax_id,phone,house_number,moo,soi,road,subdistrict,district,province,postal_code,updated_at,promptpay_id`;
 
 @Injectable()
 export class TenantsRepository{
