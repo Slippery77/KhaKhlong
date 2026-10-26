@@ -1,6 +1,8 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { X } from 'lucide-react';
-import type { SaleTransaction } from '../types/sales.types';
+import type { SaleTransaction, BillItem } from '../types/sales.types';
+import { reportsApi } from '../api/reports.api';
+import { useAuth } from '../../auth/context/AuthContext';
 
 interface BillDetailModalProps {
     bill: SaleTransaction | null;
@@ -8,6 +10,34 @@ interface BillDetailModalProps {
 }
 
 export default function BillDetailModal({ bill, onClose }: BillDetailModalProps) {
+    const { accessToken } = useAuth();
+    const [fetchedItems, setFetchedItems] = useState<BillItem[] | null>(null);
+
+    // Fetch items from backend if not embedded
+    useEffect(() => {
+        if (!bill) {
+            setFetchedItems(null);
+            return;
+        }
+        if (bill.items && bill.items.length > 0) {
+            setFetchedItems(bill.items);
+            return;
+        }
+        let cancelled = false;
+        (async () => {
+            try {
+                const res = await reportsApi.getReceiptLines(accessToken, bill.id);
+                if (!cancelled && res.data) {
+                    setFetchedItems(res.data);
+                }
+            } catch {
+                if (!cancelled) setFetchedItems([]);
+            }
+        })();
+        return () => {
+            cancelled = true;
+        };
+    }, [bill, accessToken]);
     // Close on Escape key press
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
@@ -132,8 +162,16 @@ export default function BillDetailModal({ bill, onClose }: BillDetailModalProps)
 
                 {/* Bill Items List (Scrollable) */}
                 <div className="flex-1 overflow-y-auto px-6 py-2 space-y-4">
-                    {bill.items && bill.items.length > 0 ? (
-                        bill.items.map((item, idx) => {
+                    {(() => {
+                        const itemsToRender = fetchedItems ?? bill.items ?? [];
+                        if (itemsToRender.length === 0) {
+                            return (
+                                <p className="text-sm text-stone-400 py-6 text-center">
+                                    ไม่มีรายการอาหาร
+                                </p>
+                            );
+                        }
+                        return itemsToRender.map((item, idx) => {
                             const itemTotal = (item.price || 0) * (item.quantity || 1);
                             const hasSpiciness = Boolean(item.selectedSpiciness);
                             const hasAddons = Boolean(
@@ -208,12 +246,8 @@ export default function BillDetailModal({ bill, onClose }: BillDetailModalProps)
                                     )}
                                 </div>
                             );
-                        })
-                    ) : (
-                        <p className="text-sm text-stone-400 py-6 text-center">
-                            ไม่มีรายการอาหาร
-                        </p>
-                    )}
+                        });
+                    })()}
                 </div>
 
                 {/* Financial Summary (matching Image 1) */}

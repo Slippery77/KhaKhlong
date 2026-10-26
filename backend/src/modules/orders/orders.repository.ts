@@ -33,17 +33,60 @@ export class OrdersRepository {
 
   /**
    * ค้นหาบิลตาม order_id พร้อมรายการอาหารและตัวเลือก
+   * - 1 จาน = 1 แถว จึงคืน items เป็นรายการต่อจาน (ให้ client aggregate เอง)
+   * - ไม่คืนรายการที่ voided เพราะไม่ใช่ยอดที่ต้องชำระ
+   * - modifier ใช้ snapshot ใน order_item_modifiers (ไม่ join ตาราง modifiers
+   *   เพราะราคาอาจเปลี่ยนภายหลัง)
    */
   async findOrderById(orderId: string) {
-    const sql = `
+    const orderSql = `
       SELECT
         ${ORDERS_COL}
       FROM orders
-      WHERE order_id = $1;
+      WHERE order_id = $1
+        AND tenant_id = app_tenant_id();
     `;
-    
-    const result = await this.db.query(sql,[orderId])
-    return result.rows[0] ?? null;
+
+    const orderResult = await this.db.query(orderSql, [orderId]);
+    const order = orderResult.rows[0];
+    if (!order) return null;
+
+    const itemsSql = `
+      SELECT
+        oi.order_item_id,
+        oi.menu_item_id,
+        oi.unit_price_snapshot,
+        oi.item_name_snapshot,
+        oi.status,
+        oi.special_request,
+        oi.is_comped,
+        oi.kitchen_ticket_id,
+        oi.created_at,
+        COALESCE(
+          json_agg(
+            json_build_object(
+              'modifierId', oim.modifier_id,
+              'name', oim.modifier_name_snapshot,
+              'priceDelta', oim.price_delta_snapshot
+            )
+            ORDER BY oim.modifier_name_snapshot
+          ) FILTER (WHERE oim.modifier_id IS NOT NULL),
+          '[]'::json
+        ) AS modifiers
+      FROM order_items oi
+      LEFT JOIN order_item_modifiers oim
+        ON oim.order_item_id = oi.order_item_id
+       AND oim.tenant_id = oi.tenant_id
+      WHERE oi.order_id = $1
+        AND oi.tenant_id = app_tenant_id()
+        AND oi.status <> 'voided'
+      GROUP BY oi.order_item_id
+      ORDER BY oi.created_at, oi.order_item_id;
+    `;
+
+    const itemsResult = await this.db.query(itemsSql, [orderId]);
+
+    return { ...order, items: itemsResult.rows };
   }
 
   /**

@@ -20,6 +20,22 @@ export class PaymentService {
         return {status:'success', data:toPaymentAttemptResponse(result)};
     }
 
+    async getOrderSummary(orderId:string){
+        const orders = await this.paymentRepository.findOrders([orderId])
+        if(orders.length === 0){
+            throw new NotFoundException('ไม่พบบิลนี้')
+        }
+        if(orders[0].closed_at !== null){
+            throw new ConflictException('บิลนี้ถูกปิดไปแล้ว')
+        }
+
+        const summary = await this.paymentRepository.computeOrderSummary(orderId)
+        return {
+            status:'success',
+            data: { orderId, amount: summary.amount, itemCount: summary.itemCount },
+        }
+    }
+
     async createPaymentAttempt(dto:CreatePaymentAttemptDTO,userId:string){
         let promptpayId: string | null = null;
 

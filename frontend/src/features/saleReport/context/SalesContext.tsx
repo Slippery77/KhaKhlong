@@ -1,14 +1,16 @@
 /* eslint-disable react-refresh/only-export-components */
-import { createContext, useContext, useState, useEffect, type ReactNode, useMemo } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback, type ReactNode, useMemo } from 'react';
 import type { 
     SaleTransaction, 
     PaymentMethod, 
     TimeFilter, 
     ChartDataPoint,
     DailySalesData, 
-    BestSellingItem,
+    BestSellingCategory,
     BillItem
 } from '../types/sales.types';
+import { reportsApi, type TopSellingCategoryRes } from '../api/reports.api';
+import { useAuth } from '../../auth/context/AuthContext';
 
 interface SalesContextType {
     transactions: SaleTransaction[];
@@ -32,7 +34,7 @@ interface SalesContextType {
         amount: number,
         description: string,
         performedBy?: string
-    ) => SaleTransaction;
+    ) => Promise<void>;
     metrics: {
         cashOnHand: number;
         totalIncome: number;
@@ -44,159 +46,90 @@ interface SalesContextType {
     chartTitle: string;
     chartData: ChartDataPoint[];
     dailySalesData: DailySalesData[];
-    topSellingItems: BestSellingItem[];
+    topSellingCategories: BestSellingCategory[];
+    refreshSales: () => Promise<void>;
+    isLoading: boolean;
 }
-
-const STORAGE_KEY = 'pos_sales_transactions';
-const BILL_COUNTER_KEY = 'pos_sales_bill_counter';
-
-// Initial data mirroring the user's mockup exactly
-const getInitialTransactions = (): SaleTransaction[] => {
-    const now = new Date();
-    const pad = (n: number) => n.toString().padStart(2, '0');
-    const dateStr = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
-
-    return [
-        {
-            id: 'tx-mock-1',
-            type: 'CASH_OUT',
-            time: '00:18',
-            date: dateStr,
-            timestamp: new Date().setHours(0, 18, 0, 0) - 120000,
-            description: 'ซื้อวัตถุดิบ',
-            cashAmount: -70,
-            transferAmount: 0,
-            performedBy: 'วิชัย ใจดี',
-        },
-        {
-            id: 'tx-mock-2',
-            type: 'SALE',
-            time: '00:18',
-            date: dateStr,
-            timestamp: new Date().setHours(0, 18, 45, 0),
-            billNumber: 1,
-            description: 'บิล #1',
-            cashAmount: 187,
-            transferAmount: 0,
-            paymentMethod: 'CASH',
-            performedBy: 'วิชัย ใจดี',
-            table: 'โต๊ะ 1',
-            items: [
-                { name: 'ผัดซีอิ๊วหมู', quantity: 1, price: 85 },
-                { name: 'ลาบหมู', quantity: 1, price: 90 },
-            ],
-            subtotal: 175,
-            vat: 12,
-            total: 187,
-            received: 200,
-            change: 13,
-        },
-        {
-            id: 'tx-mock-3',
-            type: 'SALE',
-            time: '00:20',
-            date: dateStr,
-            timestamp: new Date().setHours(0, 20, 10, 0),
-            billNumber: 2,
-            description: 'บิล #2',
-            cashAmount: 161,
-            transferAmount: 0,
-            paymentMethod: 'CASH',
-            performedBy: 'วิชัย ใจดี',
-            table: 'โต๊ะ 2',
-            items: [
-                {
-                    name: 'ผัดกะเพราหมูสับ',
-                    quantity: 1,
-                    price: 95,
-                    selectedSpiciness: 'เผ็ดปกติ',
-                    selectedAddons: [{ name: 'เพิ่มไข่ดาว', price: 10 }],
-                },
-                { name: 'ชาไทยเย็น', quantity: 2, price: 33 },
-            ],
-            subtotal: 150.47,
-            vat: 10.53,
-            total: 161,
-            received: 500,
-            change: 339,
-        },
-    ];
-};
 
 export const SalesContext = createContext<SalesContextType | undefined>(undefined);
 
 export function SalesProvider({ children }: { children: ReactNode }) {
-    const [transactions, setTransactions] = useState<SaleTransaction[]>(() => {
-        try {
-            const saved = localStorage.getItem(STORAGE_KEY);
-            if (saved) {
-                return JSON.parse(saved);
-            }
-            const initial = getInitialTransactions();
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(initial));
-            localStorage.setItem(BILL_COUNTER_KEY, '2');
-            return initial;
-        } catch {
-            return getInitialTransactions();
-        }
-    });
-
+    const { accessToken } = useAuth();
+    const [transactions, setTransactions] = useState<SaleTransaction[]>([]);
+    const [remoteSummary, setRemoteSummary] = useState<any>(null);
+    const [remoteChart, setRemoteChart] = useState<any[]>([]);
+    const [remoteTop, setRemoteTop] = useState<TopSellingCategoryRes[]>([]);
+    const [isLoading, setIsLoading] = useState(false);
     const [filter, setFilter] = useState<TimeFilter>('WEEK');
 
-    // Sync to localStorage
-    useEffect(() => {
-        try {
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(transactions));
-        } catch (e) {
-            console.error('Failed to save sales transactions to localStorage', e);
+    const fetchData = useCallback(async () => {
+        if (!accessToken) {
+            setTransactions([]);
+            setRemoteSummary(null);
+            setRemoteChart([]);
+            setRemoteTop([]);
+            return;
         }
-    }, [transactions]);
+        setIsLoading(true);
+        try {
+            const period = filter;
+            const [summaryRes, byPeriodRes, topRes, txRes] = await Promise.all([
+                reportsApi.getSummary(accessToken, period).catch(() => ({ data: null })),
+                reportsApi.getByPeriod(accessToken, period).catch(() => ({ data: [] })),
+                reportsApi.getTopItems(accessToken, period).catch(() => ({ data: [] })),
+                reportsApi.getTransactions(accessToken, period).catch(() => ({ data: [] })),
+            ]);
 
-    // Real-time multi-tab sync
+            setRemoteSummary(summaryRes?.data || null);
+            setRemoteChart(byPeriodRes?.data || []);
+            setRemoteTop(topRes?.data || []);
+
+            const txs = (txRes?.data || []).map((t: any) => ({
+                id: t.id,
+                type: t.type,
+                time: t.time,
+                date: t.date,
+                timestamp: t.timestamp,
+                billNumber: t.billNumber,
+                description: t.description,
+                cashAmount: t.cashAmount || 0,
+                transferAmount: t.transferAmount || 0,
+                paymentMethod: t.paymentMethod,
+                performedBy: t.performedBy || 'พนักงาน',
+                table: t.table,
+                subtotal: t.subtotal,
+                vat: t.vat,
+                total: t.total,
+                received: t.received,
+                change: t.change,
+            })) as SaleTransaction[];
+
+            setTransactions(txs);
+        } catch (e) {
+            console.error('Failed to load sales report', e);
+        } finally {
+            setIsLoading(false);
+        }
+    }, [accessToken, filter]);
+
     useEffect(() => {
-        const handleStorageChange = (e: StorageEvent) => {
-            if (e.key === STORAGE_KEY && e.newValue) {
-                try {
-                    setTransactions(JSON.parse(e.newValue));
-                } catch (err) {
-                    console.error('Error parsing synced sales transactions', err);
-                }
-            }
-        };
+        fetchData();
+    }, [fetchData]);
 
-        window.addEventListener('storage', handleStorageChange);
-        return () => window.removeEventListener('storage', handleStorageChange);
-    }, []);
+    const filteredTransactions = transactions;
 
-    // Filter transactions based on active period
-    const filteredTransactions = useMemo(() => {
-        const now = new Date();
-        const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
-        
-        // start of week (Sunday)
-        const currentDay = now.getDay();
-        const startOfWeek = new Date(now.getFullYear(), now.getMonth(), now.getDate() - currentDay).getTime();
-        
-        // start of month
-        const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
-
-        return transactions.filter((tx) => {
-            const txTime = tx.timestamp || new Date(tx.date).getTime();
-            if (filter === 'TODAY') {
-                return txTime >= startOfDay;
-            }
-            if (filter === 'WEEK') {
-                return txTime >= startOfWeek;
-            }
-            if (filter === 'MONTH') {
-                return txTime >= startOfMonth;
-            }
-            return true;
-        });
-    }, [transactions, filter]);
-
-    // Calculate metrics
+    // Metrics calculation
     const metrics = useMemo(() => {
+        if (remoteSummary) {
+            return {
+                cashOnHand: Number(remoteSummary.cashOnHand || 0),
+                totalIncome: Number(remoteSummary.totalIncome || 0),
+                totalExpense: Number(remoteSummary.totalExpense || 0),
+                cashSales: Number(remoteSummary.cashSales || 0),
+                transferSales: Number(remoteSummary.transferSales || 0),
+                totalBillsCount: Number(remoteSummary.totalBillsCount || 0),
+            };
+        }
         let totalIncome = 0;
         let totalExpense = 0;
         let cashSales = 0;
@@ -221,7 +154,6 @@ export function SalesProvider({ children }: { children: ReactNode }) {
             }
         });
 
-        // Cash on hand: total cash in drawer across all transactions
         const cashOnHand = transactions.reduce((acc, tx) => {
             return acc + (tx.cashAmount || 0);
         }, 0);
@@ -234,7 +166,7 @@ export function SalesProvider({ children }: { children: ReactNode }) {
             transferSales,
             totalBillsCount,
         };
-    }, [filteredTransactions, transactions]);
+    }, [filteredTransactions, transactions, remoteSummary]);
 
     // Chart title based on filter
     const chartTitle = useMemo(() => {
@@ -243,15 +175,12 @@ export function SalesProvider({ children }: { children: ReactNode }) {
         return 'ยอดขายรายสัปดาห์';
     }, [filter]);
 
-    // Chart Data Points based on filter:
-    // - TODAY: Hourly buckets
-    // - WEEK: Days of week (Sunday - Saturday)
-    // - MONTH: Weeks of month (สัปดาห์ที่ 1 - 5)
+    // Chart Data Points
     const chartData = useMemo((): ChartDataPoint[] => {
+        const now = new Date();
         if (filter === 'TODAY') {
-            // รายวัน แกน x เป็นชั่วโมง
             const hourLabels = ['09:00', '11:00', '13:00', '15:00', '17:00', '19:00', '21:00', '23:00'];
-            const currentHour = new Date().getHours();
+            const currentHour = now.getHours();
 
             const data: ChartDataPoint[] = hourLabels.map((label) => {
                 const bucketH = parseInt(label.split(':')[0], 10);
@@ -263,10 +192,9 @@ export function SalesProvider({ children }: { children: ReactNode }) {
                 };
             });
 
-            filteredTransactions.forEach((tx) => {
-                if (tx.type === 'SALE') {
-                    const txDate = new Date(tx.timestamp || tx.date);
-                    const h = txDate.getHours();
+            if (remoteChart && remoteChart.length > 0) {
+                remoteChart.forEach((r: any) => {
+                    const h = parseInt(r.label?.split(':')[0] || '0', 10);
                     let idx = 0;
                     if (h < 10) idx = 0;
                     else if (h < 12) idx = 1;
@@ -277,43 +205,64 @@ export function SalesProvider({ children }: { children: ReactNode }) {
                     else if (h < 22) idx = 6;
                     else idx = 7;
 
-                    const amount = (tx.cashAmount || 0) + (tx.transferAmount || 0);
-                    data[idx].totalSales += amount;
-                    data[idx].billCount += 1;
-                }
-            });
+                    data[idx].totalSales += Number(r.totalSales || r.total_sales || 0);
+                    data[idx].billCount += Number(r.billCount || r.bill_count || 0);
+                });
+            } else {
+                filteredTransactions.forEach((tx) => {
+                    if (tx.type === 'SALE') {
+                        const txDate = new Date(tx.timestamp || tx.date);
+                        const h = txDate.getHours();
+                        let idx = 0;
+                        if (h < 10) idx = 0;
+                        else if (h < 12) idx = 1;
+                        else if (h < 14) idx = 2;
+                        else if (h < 16) idx = 3;
+                        else if (h < 18) idx = 4;
+                        else if (h < 20) idx = 5;
+                        else if (h < 22) idx = 6;
+                        else idx = 7;
 
+                        const amount = (tx.cashAmount || 0) + (tx.transferAmount || 0);
+                        data[idx].totalSales += amount;
+                        data[idx].billCount += 1;
+                    }
+                });
+            }
             return data;
         }
 
         if (filter === 'WEEK') {
-            // รายสัปดาห์ แกน x เป็นวัน
             const dayNames = ['อาทิตย์', 'จันทร์', 'อังคาร', 'พุธ', 'พฤหัส', 'ศุกร์', 'เสาร์'];
-            const todayIndex = new Date().getDay();
+            const todayIndex = now.getDay();
 
-            const data: ChartDataPoint[] = dayNames.map((name, index) => ({
-                label: name,
-                totalSales: 0,
-                billCount: 0,
-                isHighlight: index === todayIndex,
-            }));
-
-            filteredTransactions.forEach((tx) => {
-                if (tx.type === 'SALE') {
-                    const date = new Date(tx.timestamp || tx.date);
-                    const dayIndex = date.getDay();
-                    const amount = (tx.cashAmount || 0) + (tx.transferAmount || 0);
-                    data[dayIndex].totalSales += amount;
-                    data[dayIndex].billCount += 1;
-                }
+            const data: ChartDataPoint[] = dayNames.map((name, index) => {
+                const found = remoteChart.find((r: any) => r.label === name || r.dayIndex === index);
+                return {
+                    label: name,
+                    totalSales: found ? Number(found.totalSales || found.total_sales || 0) : 0,
+                    billCount: found ? Number(found.billCount || found.bill_count || 0) : 0,
+                    isHighlight: index === todayIndex,
+                };
             });
 
+            if ((!remoteChart || remoteChart.length === 0) && filteredTransactions.length > 0) {
+                filteredTransactions.forEach((tx) => {
+                    if (tx.type === 'SALE') {
+                        const date = new Date(tx.timestamp || tx.date);
+                        const dayIndex = date.getDay();
+                        const amount = (tx.cashAmount || 0) + (tx.transferAmount || 0);
+                        data[dayIndex].totalSales += amount;
+                        data[dayIndex].billCount += 1;
+                    }
+                });
+            }
             return data;
         }
 
-        // MONTH: รายเดือน แกน x เป็น สัปดาห์ที่
+        // MONTH
         const weekLabels = ['สัปดาห์ที่ 1', 'สัปดาห์ที่ 2', 'สัปดาห์ที่ 3', 'สัปดาห์ที่ 4', 'สัปดาห์ที่ 5'];
-        const todayDate = new Date().getDate();
+        const todayDate = now.getDate();
         let curWeek = 0;
         if (todayDate <= 7) curWeek = 0;
         else if (todayDate <= 14) curWeek = 1;
@@ -321,82 +270,109 @@ export function SalesProvider({ children }: { children: ReactNode }) {
         else if (todayDate <= 28) curWeek = 3;
         else curWeek = 4;
 
-        const data: ChartDataPoint[] = weekLabels.map((name, index) => ({
-            label: name,
-            totalSales: 0,
-            billCount: 0,
-            isHighlight: index === curWeek,
-        }));
-
-        filteredTransactions.forEach((tx) => {
-            if (tx.type === 'SALE') {
-                const date = new Date(tx.timestamp || tx.date);
-                const dayOfMonth = date.getDate();
-                let weekIdx = 0;
-                if (dayOfMonth <= 7) weekIdx = 0;
-                else if (dayOfMonth <= 14) weekIdx = 1;
-                else if (dayOfMonth <= 21) weekIdx = 2;
-                else if (dayOfMonth <= 28) weekIdx = 3;
-                else weekIdx = 4;
-
-                const amount = (tx.cashAmount || 0) + (tx.transferAmount || 0);
-                data[weekIdx].totalSales += amount;
-                data[weekIdx].billCount += 1;
-            }
+        const data: ChartDataPoint[] = weekLabels.map((name, index) => {
+            const found = remoteChart.find((r: any) => r.label === name || r.w === index + 1);
+            return {
+                label: name,
+                totalSales: found ? Number(found.totalSales || found.total_sales || 0) : 0,
+                billCount: found ? Number(found.billCount || found.bill_count || 0) : 0,
+                isHighlight: index === curWeek,
+            };
         });
 
+        if ((!remoteChart || remoteChart.length === 0) && filteredTransactions.length > 0) {
+            filteredTransactions.forEach((tx) => {
+                if (tx.type === 'SALE') {
+                    const date = new Date(tx.timestamp || tx.date);
+                    const dayOfMonth = date.getDate();
+                    let weekIdx = 0;
+                    if (dayOfMonth <= 7) weekIdx = 0;
+                    else if (dayOfMonth <= 14) weekIdx = 1;
+                    else if (dayOfMonth <= 21) weekIdx = 2;
+                    else if (dayOfMonth <= 28) weekIdx = 3;
+                    else weekIdx = 4;
+
+                    const amount = (tx.cashAmount || 0) + (tx.transferAmount || 0);
+                    data[weekIdx].totalSales += amount;
+                    data[weekIdx].billCount += 1;
+                }
+            });
+        }
         return data;
-    }, [filter, filteredTransactions]);
+    }, [filter, filteredTransactions, remoteChart]);
 
     // Backwards-compatible dailySalesData
     const dailySalesData: DailySalesData[] = useMemo(() => {
         const dayNames = ['อาทิตย์', 'จันทร์', 'อังคาร', 'พุธ', 'พฤหัส', 'ศุกร์', 'เสาร์'];
         const todayIndex = new Date().getDay();
 
-        const weekData: DailySalesData[] = dayNames.map((name, index) => ({
-            dayName: name,
-            dayIndex: index,
-            totalSales: 0,
-            billCount: 0,
-            isCurrentDay: index === todayIndex,
-        }));
-
-        transactions.forEach((tx) => {
-            if (tx.type === 'SALE') {
-                const date = new Date(tx.timestamp || tx.date);
-                const dayIndex = date.getDay();
-                const amount = (tx.cashAmount || 0) + (tx.transferAmount || 0);
-                weekData[dayIndex].totalSales += amount;
-                weekData[dayIndex].billCount += 1;
-            }
+        return dayNames.map((name, index) => {
+            const chartPoint = chartData.find((d) => d.label === name);
+            return {
+                dayName: name,
+                dayIndex: index,
+                totalSales: chartPoint?.totalSales || 0,
+                billCount: chartPoint?.billCount || 0,
+                isCurrentDay: index === todayIndex,
+            };
         });
+    }, [chartData]);
 
-        return weekData;
-    }, [transactions]);
+    // Top selling items แยกตามหมวดหมู่ (top 3 ต่อหมวด)
+    const topSellingCategories = useMemo((): BestSellingCategory[] => {
+        const PER_CATEGORY = 3;
 
-    // Calculate best selling items
-    const topSellingItems = useMemo(() => {
+        const withPercentages = (items: BestSellingCategory['items']) => {
+            if (items.every((i) => i.percentage === 0)) {
+                const maxAmount = items.length ? Math.max(...items.map((i) => i.totalAmount)) : 0;
+                items.forEach((item) => {
+                    item.percentage = maxAmount > 0 ? Math.round((item.totalAmount / maxAmount) * 100) : 0;
+                });
+            }
+            return items;
+        };
+
+        if (remoteTop && remoteTop.length > 0) {
+            // response จาก server: [{ categoryId, categoryName, categoryTotal, items: [...] }]
+            return remoteTop
+                .filter((c) => Array.isArray(c?.items) && c.items.length > 0)
+                .map((c) => {
+                    const items = c.items.slice(0, PER_CATEGORY).map((r) => ({
+                        name: r.name,
+                        quantity: Number(r.quantity || 0),
+                        totalAmount: Number(r.totalAmount ?? 0),
+                        percentage: Number(r.percentage || 0),
+                    }));
+
+                    return {
+                        categoryId: String(c.categoryId ?? ''),
+                        categoryName: String(c.categoryName || 'ไม่ระบุหมวดหมู่'),
+                        categoryTotal: Number(c.categoryTotal ?? 0),
+                        items: withPercentages(items),
+                    };
+                });
+        }
+
+        // fallback: คำนวณจาก transactions (ไม่มีข้อมูลหมวดหมู่ จึงรวมเป็นหมวดเดียว)
         const itemMap = new Map<string, { quantity: number; totalAmount: number }>();
-
         filteredTransactions.forEach((tx) => {
             if (tx.type === 'SALE' && tx.items) {
                 tx.items.forEach((item) => {
-                    const current = itemMap.get(item.name) || { quantity: 0, totalAmount: 0 };
+                    const existing = itemMap.get(item.name) || { quantity: 0, totalAmount: 0 };
                     itemMap.set(item.name, {
-                        quantity: current.quantity + item.quantity,
-                        totalAmount: current.totalAmount + item.price * item.quantity,
+                        quantity: existing.quantity + item.quantity,
+                        totalAmount: existing.totalAmount + item.price * item.quantity,
                     });
                 });
             }
         });
 
-        const items: BestSellingItem[] = [];
-        let maxAmount = 0;
+        if (itemMap.size === 0) return [];
 
+        const items: BestSellingCategory['items'] = [];
+        let categoryTotal = 0;
         itemMap.forEach((val, name) => {
-            if (val.totalAmount > maxAmount) {
-                maxAmount = val.totalAmount;
-            }
+            categoryTotal += val.totalAmount;
             items.push({
                 name,
                 quantity: val.quantity,
@@ -405,18 +381,40 @@ export function SalesProvider({ children }: { children: ReactNode }) {
             });
         });
 
-        // Sort descending by totalAmount
-        items.sort((a, b) => b.totalAmount - a.totalAmount);
+        items.sort((a, b) => b.totalAmount - a.totalAmount || b.quantity - a.quantity);
 
-        // Calculate percentage for progress bars
-        items.forEach((item) => {
-            item.percentage = maxAmount > 0 ? Math.round((item.totalAmount / maxAmount) * 100) : 0;
-        });
+        return [
+            {
+                categoryId: 'uncategorized',
+                categoryName: 'ไม่ระบุหมวดหมู่',
+                categoryTotal,
+                items: withPercentages(items.slice(0, PER_CATEGORY)),
+            },
+        ];
+    }, [filteredTransactions, remoteTop]);
 
-        return items.slice(0, 5);
-    }, [filteredTransactions]);
+    // Add cash movement (in / out) to backend
+    const addCashMovement = async (
+        type: 'CASH_IN' | 'CASH_OUT',
+        amount: number,
+        description: string,
+        _performedBy = 'พนักงาน'
+    ) => {
+        const direction = type === 'CASH_OUT' ? 'out' : 'in';
+        try {
+            await reportsApi.createCashMovement(accessToken, {
+                direction,
+                amount: Math.abs(amount),
+                reason: description.trim() || (direction === 'out' ? 'นำเงินออก' : 'นำเงินเข้า'),
+            });
+            await fetchData();
+        } catch (err) {
+            console.error('Failed to create cash movement', err);
+            throw err;
+        }
+    };
 
-    // Add new sale from POS
+    // Add sale transaction fallback
     const addSaleTransaction = ({
         billNumber: customBillNumber,
         items,
@@ -427,7 +425,7 @@ export function SalesProvider({ children }: { children: ReactNode }) {
         received,
         change,
         table,
-        performedBy = 'วิชัย ใจดี',
+        performedBy = 'พนักงาน',
     }: {
         billNumber?: number;
         items: BillItem[];
@@ -445,23 +443,15 @@ export function SalesProvider({ children }: { children: ReactNode }) {
         const timeStr = `${pad(now.getHours())}:${pad(now.getMinutes())}`;
         const dateStr = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
 
-        let billNumber = customBillNumber;
-        if (!billNumber) {
-            const currentCounter = parseInt(localStorage.getItem(BILL_COUNTER_KEY) || '0', 10) + 1;
-            localStorage.setItem(BILL_COUNTER_KEY, currentCounter.toString());
-            billNumber = currentCounter;
-        }
-
         const isCash = paymentMethod === 'CASH';
-
         const newTx: SaleTransaction = {
             id: `tx-sale-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
             type: 'SALE',
             time: timeStr,
             date: dateStr,
             timestamp: now.getTime(),
-            billNumber,
-            description: `บิล #${billNumber}`,
+            billNumber: customBillNumber || 1,
+            description: `บิล #${customBillNumber || 1}`,
             cashAmount: isCash ? total : 0,
             transferAmount: !isCash ? total : 0,
             paymentMethod,
@@ -476,37 +466,7 @@ export function SalesProvider({ children }: { children: ReactNode }) {
         };
 
         setTransactions((prev) => [newTx, ...prev]);
-        return newTx;
-    };
-
-    // Add cash movement (in / out)
-    const addCashMovement = (
-        type: 'CASH_IN' | 'CASH_OUT',
-        amount: number,
-        description: string,
-        performedBy = 'วิชัย ใจดี'
-    ): SaleTransaction => {
-        const now = new Date();
-        const pad = (n: number) => n.toString().padStart(2, '0');
-        const timeStr = `${pad(now.getHours())}:${pad(now.getMinutes())}`;
-        const dateStr = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
-
-        const isCashOut = type === 'CASH_OUT';
-        const finalCashAmount = isCashOut ? -Math.abs(amount) : Math.abs(amount);
-
-        const newTx: SaleTransaction = {
-            id: `tx-cash-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
-            type,
-            time: timeStr,
-            date: dateStr,
-            timestamp: now.getTime(),
-            description: description.trim() || (isCashOut ? 'นำเงินออก' : 'นำเงินเข้า'),
-            cashAmount: finalCashAmount,
-            transferAmount: 0,
-            performedBy,
-        };
-
-        setTransactions((prev) => [newTx, ...prev]);
+        fetchData();
         return newTx;
     };
 
@@ -523,7 +483,9 @@ export function SalesProvider({ children }: { children: ReactNode }) {
                 chartTitle,
                 chartData,
                 dailySalesData,
-                topSellingItems,
+                topSellingCategories,
+                refreshSales: fetchData,
+                isLoading,
             }}
         >
             {children}
