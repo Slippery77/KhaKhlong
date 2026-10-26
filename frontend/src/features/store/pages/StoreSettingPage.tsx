@@ -1,10 +1,12 @@
-﻿import { useCallback, useEffect, useState } from 'react';
+﻿import { useCallback, useEffect, useState, useMemo } from 'react';
 import { ArrowLeft, Save, Store } from 'lucide-react';
 import Header from '../../../components/Header';
 import SettingNavBar from '../../../components/settingNavBar';
 import { useAuth } from '../../auth/context/AuthContext';
 import { apiFetch } from '../../../libs/appClient';
 import { getDistricts, getProvinces, getSubdistricts, getZipCode } from '../../../data/thailandAddress';
+import { QRCodeSVG } from 'qrcode.react';
+import generatePayload from 'promptpay-qr';
 
 interface StoreInfo {
   tenant_id: string;
@@ -18,6 +20,8 @@ interface StoreInfo {
   district: string | null;
   province: string | null;
   postal_code: string | null;
+  tax_id:string|null
+  promptpay_id:string|null;
 }
 
 interface StoreResponse {
@@ -36,6 +40,8 @@ interface FormState {
   district: string;
   province: string;
   postal_code: string;
+  tax_id:string;
+  promptpay_id:string;
 }
 
 const initialForm: FormState = {
@@ -49,6 +55,8 @@ const initialForm: FormState = {
   district: '',
   province: '',
   postal_code: '',
+  promptpay_id:'',
+  tax_id:'',
 };
 
 const provinces = getProvinces();
@@ -66,6 +74,11 @@ export default function StoreSettingPage() {
   const districts = form.province ? getDistricts(form.province) : [];
   const subdistricts = form.province && form.district ? getSubdistricts(form.province, form.district) : [];
 
+  const ppDigits = form.promptpay_id.replace(/\D/g, '');
+  const ppPayload = useMemo(
+    () => (/^0\d{9}$/.test(ppDigits) ? generatePayload(ppDigits, {}) : null),
+    [ppDigits],
+  );
   const loadStore = useCallback(async () => {
     setIsLoading(true);
     setError(null);
@@ -83,6 +96,8 @@ export default function StoreSettingPage() {
         district: data.district ?? '',
         province: data.province ?? '',
         postal_code: data.postal_code ?? '',
+        tax_id:data.tax_id ?? '',
+        promptpay_id:data.promptpay_id ?? '',
       });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'โหลดข้อมูลร้านไม่สำเร็จ');
@@ -139,6 +154,8 @@ export default function StoreSettingPage() {
         district: form.district.trim() || undefined,
         province: form.province.trim() || undefined,
         postal_code: form.postal_code.trim() || undefined,
+        tax_id: form.tax_id.trim() || undefined,
+        promptpay_id: form.promptpay_id.trim().replace(/\D/g, '') || undefined,
       };
 
       await apiFetch('/store', accessToken, 'PATCH', payload);
@@ -211,7 +228,28 @@ export default function StoreSettingPage() {
               </div>
             </div>
           </section>
-
+          <section className='bg-white border border-[#E8DFD5] rounded-2xl shadow-sm overflow-hidden'>
+            <div className='px-6 py-4 border-b border-[#E8DFD5] bg-[#FBF9F6]'>
+              <h2 className='text-base font-medium text-[#2D241E]'>ข้อมูลผู้เสียภาษี</h2>
+              <p className='text-sm text-stone-500 mt-0.5'></p>
+            </div>
+            <div className='p-6'>
+              <div className='grid grid-cols-1 md:grid-cols-6 gap-4'>
+                <div className='md:col-span-2'>
+                  <label className='block text-sm font-medium text-[#2D241E] mb-1.5'>
+                      เลชประจำตัวผู้เสียภาษี
+                  </label>
+                  <input
+                    type="text"
+                    value={form.tax_id}
+                    onChange={handleChange('tax_id')}
+                    className='w-full px-3 py-2 border border-[#d9c6b0] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#8C6D58]/20 focus:border-[#8C6D58] transition-colors'
+                    placeholder=''
+                  />
+                </div>
+              </div>
+            </div>
+          </section>
           <section className="bg-white border border-[#E8DFD5] rounded-2xl shadow-sm overflow-hidden">
             <div className="px-6 py-4 border-b border-[#E8DFD5] bg-[#FBF9F6]">
               <h2 className="text-base font-medium text-[#2D241E]">ที่อยู่ร้าน</h2>
@@ -338,6 +376,41 @@ export default function StoreSettingPage() {
                     disabled={isLoading || isSaving || !canConfigure}
                   />
                 </div>
+              </div>
+            </div>
+          </section>
+          <section className='bg-white border border-[#E8DFD5] rounded-2xl shadow-sm overflow-hidden'>
+            <div className='px-6 py-4 border-b border-[#E8DFD5] bg-[#FBF9F6]'>
+              <h2 className='text-base font-medium text-[#2D241E]'>ข้อมูลเลขพร้อมเพย์</h2>
+              <p className='text-sm text-stone-500 mt-0.5'></p>
+            </div>
+            <div className='p-6'>
+              <div className='grid grid-cols-1 md:grid-cols-6 gap-4'>
+                <div className='md:col-span-2'>
+                  <label className='block text-sm font-medium text-[#2D241E] mb-1.5'>
+                      เลขพร้อมเพย์
+                  </label>
+                  <input
+                    type="text"
+                    value={form.promptpay_id}
+                    onChange={handleChange('promptpay_id')}
+                    maxLength={10}
+                    inputMode='numeric'
+                    className='w-full px-3 py-2 border border-[#d9c6b0] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#8C6D58]/20 focus:border-[#8C6D58] transition-colors'
+                    placeholder='083-xxx-xxxx'
+                  />
+                </div>
+                {ppPayload?(
+                  <div className="md:col-span-4 flex items-center gap-4">
+                    <QRCodeSVG value={ppPayload} size={144}/>
+                     <p className='text-sm text-stone-500'>
+                        สแกนด้วยแอปธนาคารเพื่อตรวจว่าชื่อบัญชีถูกต้อง แล้วกดยกเลิก ไม่ต้องโอน
+                    </p>
+                  </div>
+                ):(
+                  <p className='text-sm text-stone-400'>กรอกเบอร์ 10 หลักเพื่อดูตัวอย่าง QR</p>
+                )}
+                
               </div>
             </div>
           </section>

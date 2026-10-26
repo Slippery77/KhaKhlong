@@ -43,4 +43,6 @@ export interface CartMenu {
     selectedSpiciness?: string
     selectedAddons?: ModifierOption[]
     note?: string
+    /** จำนวนที่ส่งเข้าครัวสำเร็จแล้ว — รายการยังคงแสดงใน Sidebar จนกว่าจะชำระเงิน */
+    sentQuantity?: number
 }

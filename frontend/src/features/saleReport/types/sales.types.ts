@@ -55,3 +55,11 @@ export interface BestSellingItem {
     totalAmount: number;
     percentage: number;
 }
+
+/** เมนูขายดีจัดกลุ่มตามหมวดหมู่ (แสดงเฉพาะ top 3 ของแต่ละหมวด) */
+export interface BestSellingCategory {
+    categoryId: string;
+    categoryName: string;
+    categoryTotal: number;
+    items: BestSellingItem[];
+}

@@ -62,4 +62,8 @@ export class UpdateTenantDTO{
         @IsOptional() 
         @Matches(/^\d{13}$/, { message: 'tax_id ต้องเป็นตัวเลข 13 หลัก' })
         tax_id?: string | null;
+
+        @IsOptional()
+        @Matches(/^0\d{9}$/,{message:'เบอร์พร้อมเพย์ต้องเป็นตัวเลข 10 หลักขึ้นต้นด้วย 0'})
+        promptpay_id?:string|null
 }

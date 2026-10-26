@@ -10,6 +10,7 @@ import { ArrowLeft, Search, ChefHat, CheckCircle2, X } from "lucide-react"
 import { useKDS } from "../../kds/context/KDSContext"
 import { useNavigate, useSearchParams } from "react-router-dom"
 import { useFullMenu } from "../hooks/useFullMenu"
+import { useOrderCartHydration } from "../hooks/useOrderCartHydration"
 import type { Menu, CartMenu, ModifierOption } from "../types/pos.types"
 import { useAuth } from "../../auth/context/AuthContext"
 import { apiFetch,ApiError } from "../../../libs/appClient"
@@ -24,6 +25,8 @@ export default function MainPOS() {
 
     // รับ tableId, tableName, orderId จาก URL (มาจากหน้าโต๊ะ)
     const tableIdFromUrl = searchParams.get('tableId')
+    // ใช้เฉพาะ orderId ที่ส่งมาตอนกดโต๊ะ (ไม่ใช่ orderId ที่สร้างระหว่างใช้งาน) สำหรับ hydrate ตะกร้า
+    const initialOrderId = searchParams.get('orderId')
     const tableNameFromUrl = searchParams.get('tableName')
         ? decodeURIComponent(searchParams.get('tableName')!)
         : null
@@ -37,7 +40,7 @@ export default function MainPOS() {
     const [currentTable] = useState<string>(tableNameFromUrl ?? "โต๊ะ 1")
     const [currentText, setcurrentText] = useState<string>("")
     // แทนที่จะให้ orderId หายไปหลัง handleSendToKitchen จบ
-    const [orderId, setOrderId] = useState<string | null>(searchParams.get('orderId'))
+    const [orderId, setOrderId] = useState<string | null>(initialOrderId)
     // แจ้งเตือนเมื่อส่งเข้าครัวสำเร็จ
     const [sentToast, setSentToast] = useState<{
         show: boolean
@@ -51,11 +54,28 @@ export default function MainPOS() {
 
     // State สำหรับเปิดหน้าต่างชำระเงิน
     const [isPaymentOpen, setIsPaymentOpen] = useState<boolean>(false)
+    // กันแก้ตะกร้าระหว่างกำลังส่งครัว (กันจำนวนที่ส่งกับที่แสดงไม่ตรงกัน)
+    const [isSending, setIsSending] = useState<boolean>(false)
+
+    // เปิดโต๊ะที่มีบิลค้าง → ดึงรายการในบิลกลับมาแสดงใน Sidebar
+    // รายการที่ส่งครัว/เสิร์ฟแล้วจะถูกทำเครื่องหมาย sentQuantity และคงอยู่ใน Sidebar จนชำระเงิน
+    useOrderCartHydration({
+        orderId: initialOrderId,
+        accessToken,
+        onHydrate: (items) => {
+            setcartMenu((prev) => (prev.length > 0 ? prev : items))
+            setOrder(true)
+        },
+    })
 
     function handlePaymentSuccess() {
+        // ชำระเงินสำเร็จ = จบออเดอร์ → เคลียร์ Sidebar และกลับไปหน้าโต๊ะ
+        // สถานะโต๊ะเป็นว่างแล้วจาก DB trigger ตอน INSERT payments
+        setcartMenu([])
         setOrder(false)
         setIsPaymentOpen(false)
         setOrderId(null)
+        setSentToast((prev) => ({ ...prev, show: false }))
         navigate(`/${user?.tenantSlug}/tables`)
     }
 
@@ -91,6 +111,7 @@ export default function MainPOS() {
     }
 
     function onAddToCart(menuToAdd: Menu) {
+        if (isSending) return
         setcartMenu((prev) => {
             const isExist = prev.find(
                 (item) =>
@@ -128,6 +149,7 @@ export default function MainPOS() {
         quantity: number
         totalUnitPrice: number
     }) {
+        if (isSending) return
         const newItem: CartMenu = {
             cartItemId: `${data.menu.id}-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
             id: data.menu.id,
@@ -146,7 +168,22 @@ export default function MainPOS() {
     }
 
     function onDeleteFromCart(item: CartMenu) {
+        if (isSending) return
         setcartMenu((prev) => {
+            const target = prev.find((m) =>
+                item.cartItemId ? m.cartItemId === item.cartItemId : m.id === item.id
+            )
+            if (!target) return prev
+
+            const sent = target.sentQuantity ?? 0
+            if (sent > 0) {
+                // รายการที่ส่งครัวแล้วลบไม่ได้ — ลบได้เฉพาะจำนวนที่ยังไม่ส่ง
+                if (target.quantity <= sent) return prev
+                return prev.map((m) =>
+                    m.cartItemId === target.cartItemId ? { ...m, quantity: sent } : m
+                )
+            }
+
             const updated = prev.filter((m) =>
                 item.cartItemId ? m.cartItemId !== item.cartItemId : m.id !== item.id
             )
@@ -158,13 +195,18 @@ export default function MainPOS() {
     }
 
     function onReduceValue(item: CartMenu) {
+        if (isSending) return
         setcartMenu((prev) => {
             const target = prev.find((m) =>
                 item.cartItemId ? m.cartItemId === item.cartItemId : m.id === item.id
             )
             if (!target) return prev
 
-            if (target.quantity <= 1) {
+            const sent = target.sentQuantity ?? 0
+            // ลดต่ำกว่าจำนวนที่ส่งครัวไปแล้วไม่ได้
+            if (target.quantity - 1 < sent) return prev
+
+            if (target.quantity - 1 <= 0) {
                 const updated = prev.filter((m) =>
                     item.cartItemId ? m.cartItemId !== item.cartItemId : m.id !== item.id
                 )
@@ -183,6 +225,7 @@ export default function MainPOS() {
     }
 
     function onIncreaseValue(item: CartMenu) {
+        if (isSending) return
         setcartMenu((prev) =>
             prev.map((m) =>
                 (item.cartItemId ? m.cartItemId === item.cartItemId : m.id === item.id)
@@ -199,16 +242,53 @@ export default function MainPOS() {
 
     // เมื่อกดปุ่ม "ส่งครัว" จาก OrderSidebar
     async function handleSendToKitchen() {
-        if (cartMenu.length === 0) return
+        if (isSending) return
+
+        // ส่งเฉพาะจำนวนที่ยังไม่เคยส่งครัว — รายการที่ส่งแล้วยังคงอยู่ใน Sidebar
+        const pendingEntries = cartMenu
+            .map((item) => ({
+                item,
+                quantity: item.quantity - (item.sentQuantity ?? 0),
+            }))
+            .filter((entry) => entry.quantity > 0)
+
+        const pendingCount = pendingEntries.reduce((sum, entry) => sum + entry.quantity, 0)
+        if (pendingCount === 0) return
+
+        // ทำเครื่องหมายว่าส่งแล้ว โดยไม่ลบรายการออกจาก Sidebar
+        const markAsSent = () => {
+            const sentNow = new Map(
+                pendingEntries.map((entry) => [entry.item.cartItemId, entry.quantity]),
+            )
+            setcartMenu((prev) =>
+                prev.map((item) => {
+                    const quantity = sentNow.get(item.cartItemId)
+                    if (!quantity) return item
+                    return {
+                        ...item,
+                        sentQuantity: (item.sentQuantity ?? 0) + quantity,
+                    }
+                }),
+            )
+        }
+
+        const showSentToast = () => {
+            setSentToast({ show: true, tableName: currentTable, itemCount: pendingCount })
+            setTimeout(() => setSentToast((prev) => ({ ...prev, show: false })), 4500)
+        }
 
         if (!tableIdFromUrl || !accessToken) {
-            // fallback: ไม่มี tableId → push localStorage อย่างเดียว
-            sendOrderToKitchen(currentTable, cartMenu)
-            setcartMenu([])
-            setOrder(false)
+            // fallback: ไม่มี tableId → push localStorage อย่างเดียว (เฉพาะรายการใหม่)
+            sendOrderToKitchen(
+                currentTable,
+                pendingEntries.map((entry) => ({ ...entry.item, quantity: entry.quantity })),
+            )
+            markAsSent()
+            showSentToast()
             return
         }
 
+        setIsSending(true)
         setSendError(null)
         try {
             const kitchenTicketId = crypto.randomUUID() // 1 ค่าต่อการกดส่งครัว 1 รอบ
@@ -243,7 +323,7 @@ export default function MainPOS() {
             }
             setOrderId(resolvedOrderId);
 
-            // ── 2. แปลง cartMenu → items (1 จาน = 1 แถว) ────────────
+            // ── 2. แปลงเฉพาะรายการที่ยังไม่ส่ง → items (1 จาน = 1 แถว) ──
             const itemsToSend: {
                 orderItemId: string
                 menuItemId: string
@@ -251,13 +331,13 @@ export default function MainPOS() {
                 modifierIds?: string[]
             }[] = []
 
-            for (const cartItem of cartMenu) {
+            for (const { item: cartItem, quantity } of pendingEntries) {
                 const modifierIds = cartItem.selectedAddons?.map((a) => a.id) ?? []
                 const specialRequest = [cartItem.selectedSpiciness, cartItem.note]
                     .filter(Boolean)
                     .join(", ") || undefined
 
-                for (let i = 0; i < cartItem.quantity; i++) {
+                for (let i = 0; i < quantity; i++) {
                     itemsToSend.push({
                         orderItemId: crypto.randomUUID(),
                         menuItemId: cartItem.id,
@@ -275,16 +355,14 @@ export default function MainPOS() {
                 'POST',
                 { items: itemsToSend, kitchenTicketId },
             )
-            // ── 4. ล้างตะกร้า + toast ──────────────────────────────────
-            // หมายเหตุ: ไม่ต้องเรียก sendOrderToKitchen อีกต่อไป — รายการอยู่ใน backend แล้ว
-            // และ badge บน Header ดึงจาก /kds/queue (ตัวเดียวกับหน้า KDS)
-            const count = cartMenu.reduce((sum, item) => sum + item.quantity, 0)
-            setcartMenu([])
-            setOrder(false)
-            setSentToast({ show: true, tableName: currentTable, itemCount: count })
-            setTimeout(() => setSentToast((prev) => ({ ...prev, show: false })), 4500)
+
+            // ── 4. คงตะกร้าไว้ (ล้างตอนชำระเงินเท่านั้น) + toast ─────
+            markAsSent()
+            showSentToast()
         } catch (err) {
             setSendError(err instanceof ApiError ? err.message : 'ส่งครัวไม่สำเร็จ เชื่อมต่อเซิร์ฟเวอร์ไม่ได้')
+        } finally {
+            setIsSending(false)
         }
     }
 
@@ -373,7 +451,8 @@ export default function MainPOS() {
                         <OrderSidebar
                             isOrdered={isOrdered}
                             cartMenu={cartMenu}
-                            canPay={!!orderId}
+                            canPay={!!orderId && !isSending}
+                            isSending={isSending}
                             onDeleteFromCart={onDeleteFromCart}
                             onReduceValue={onReduceValue}
                             onIncreaseValue={onIncreaseValue}
@@ -411,7 +490,7 @@ export default function MainPOS() {
                         <div className="flex flex-col">
                             <span className="text-sm font-semibold">ส่งออเดอร์เข้าครัวสำเร็จ!</span>
                             <span className="text-xs text-stone-300">
-                                {sentToast.tableName} ({sentToast.itemCount} รายการ) สร้างสถานะ 'รอทำ' ใน KDS แล้ว
+                                {sentToast.tableName} ({sentToast.itemCount} รายการใหม่) สร้างสถานะ 'รอทำ' ใน KDS แล้ว
                             </span>
                         </div>
                         <div className="flex items-center gap-2 ml-2">

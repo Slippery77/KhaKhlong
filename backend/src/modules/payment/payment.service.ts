@@ -4,6 +4,7 @@ import { CreatePaymentAttemptDTO } from './dto/attempt.dto';
 import { ShiftsService } from '../shifts/shifts.service';
 import { PayAttemptDTO} from './dto/pay-attempt.dto';
 import { toPaymentAttemptResponse, toPaymentResponse, toReceiptResponse } from './mapper/payment.mapper';
+import generatePayload from 'promptpay-qr';
 
 @Injectable()
 export class PaymentService {
@@ -19,10 +20,35 @@ export class PaymentService {
         return {status:'success', data:toPaymentAttemptResponse(result)};
     }
 
+    async getOrderSummary(orderId:string){
+        const orders = await this.paymentRepository.findOrders([orderId])
+        if(orders.length === 0){
+            throw new NotFoundException('ไม่พบบิลนี้')
+        }
+        if(orders[0].closed_at !== null){
+            throw new ConflictException('บิลนี้ถูกปิดไปแล้ว')
+        }
+
+        const summary = await this.paymentRepository.computeOrderSummary(orderId)
+        return {
+            status:'success',
+            data: { orderId, amount: summary.amount, itemCount: summary.itemCount },
+        }
+    }
+
     async createPaymentAttempt(dto:CreatePaymentAttemptDTO,userId:string){
+        let promptpayId: string | null = null;
+
         const shift = await this.shiftService.getCurrentShift()
         if(shift.data?.status !== 'open'){
             throw new ConflictException('ไม่มีกะถูกเปิด')
+        }
+
+        if (dto.paymentMethod === 'qr_code') {
+            promptpayId = await this.paymentRepository.findPromptpayId();
+            if (!promptpayId) {
+                throw new ConflictException({ code: 'PROMPTPAY_NOT_SET', message: 'ร้านยังไม่ได้ตั้งค่าพร้อมเพย์' });
+            }
         }
 
         const orders = await this.paymentRepository.findOrders(dto.orderIds)
@@ -42,10 +68,16 @@ export class PaymentService {
             })
         }
 
-        const amount = await this.paymentRepository.computeAmount(dto.orderIds)        
+        const {gross,itemCount} = await this.paymentRepository.computeAmount(dto.orderIds)
+        if(itemCount === 0){
+            throw new ConflictException({
+                code:'ORDER_EMPTY',
+                message:'บิลไม่มีรายการอาหาร ใช้ปิดบิลโดยไม่เก็บเงิน',
+            })
+        }        
         let create;
         try {
-            create = await this.paymentRepository.createPaymentAttempt(dto.paymentMethod,amount,userId)
+            create = await this.paymentRepository.createPaymentAttempt(dto.paymentMethod,gross,userId)
             await this.paymentRepository.linkOrders(create.payment_attempt_id,dto.orderIds);
         } catch (error:any) {
             if(error.code==='P0001'){
@@ -61,7 +93,8 @@ export class PaymentService {
             }
             throw error;
         }
-        return {status:'success' , data:toPaymentAttemptResponse(create)}
+        const qrPayload = promptpayId ? generatePayload(promptpayId, {amount: Number(create.amount)}) : null;
+        return {status:'success' , data:{...toPaymentAttemptResponse(create), qrPayload}}
     }
 
     async payAttempt(payment_attempt_id:string,dto:PayAttemptDTO,userId:string){

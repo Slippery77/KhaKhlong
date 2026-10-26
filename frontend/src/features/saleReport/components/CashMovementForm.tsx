@@ -8,8 +8,10 @@ export default function CashMovementForm() {
     const [amountText, setAmountText] = useState<string>('');
     const [description, setDescription] = useState<string>('');
     const [showSuccess, setShowSuccess] = useState<boolean>(false);
+    const [isSubmitting, setIsSubmitting] = useState<boolean>(false);
+    const [errorMessage, setErrorMessage] = useState<string>('');
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         const numericAmount = parseFloat(amountText);
         if (isNaN(numericAmount) || numericAmount <= 0) {
@@ -17,16 +19,26 @@ export default function CashMovementForm() {
             return;
         }
 
-        addCashMovement(
-            actionType,
-            numericAmount,
-            description.trim() || (actionType === 'CASH_OUT' ? 'นำเงินออก' : 'นำเงินเข้า')
-        );
+        setIsSubmitting(true);
+        setErrorMessage('');
+        try {
+            await addCashMovement(
+                actionType,
+                numericAmount,
+                description.trim() || (actionType === 'CASH_OUT' ? 'นำเงินออก' : 'นำเงินเข้า')
+            );
 
-        setAmountText('');
-        setDescription('');
-        setShowSuccess(true);
-        setTimeout(() => setShowSuccess(false), 2500);
+            setAmountText('');
+            setDescription('');
+            setShowSuccess(true);
+            setTimeout(() => setShowSuccess(false), 2500);
+        } catch (err: any) {
+            const msg = err?.message || 'เกิดข้อผิดพลาดในการบันทึกรายการ';
+            setErrorMessage(msg);
+            setTimeout(() => setErrorMessage(''), 4000);
+        } finally {
+            setIsSubmitting(false);
+        }
     };
 
     return (
@@ -90,17 +102,24 @@ export default function CashMovementForm() {
             {/* Submit Button */}
             <button
                 type="submit"
-                disabled={!amountText || parseFloat(amountText) <= 0}
+                disabled={!amountText || parseFloat(amountText) <= 0 || isSubmitting}
                 className="px-6 py-2 bg-[#C4B29E] hover:bg-[#AA947E] active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed text-white font-medium text-xs lg:text-sm rounded-xl transition cursor-pointer shadow-2xs shrink-0"
             >
-                บันทึก
+                {isSubmitting ? 'กำลังบันทึก...' : 'บันทึก'}
             </button>
 
-            {/* Mini Toast */}
+            {/* Mini Success Toast */}
             {showSuccess && (
                 <div className="absolute right-4 -top-10 bg-[#2D241E] text-white px-3.5 py-1.5 rounded-xl text-xs flex items-center gap-1.5 shadow-md animate-in fade-in slide-in-from-bottom-2 duration-200">
                     <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400" />
                     <span>บันทึกรายการสำเร็จ</span>
+                </div>
+            )}
+
+            {/* Error Toast */}
+            {errorMessage && (
+                <div className="absolute right-4 -top-10 bg-[#C53030] text-white px-3.5 py-1.5 rounded-xl text-xs flex items-center gap-1.5 shadow-md animate-in fade-in slide-in-from-bottom-2 duration-200">
+                    <span>{errorMessage}</span>
                 </div>
             )}
         </form>
