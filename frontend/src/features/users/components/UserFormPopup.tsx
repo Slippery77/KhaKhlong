@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Eye, EyeOff } from 'lucide-react';
 import type { AppUser, AssignableRole, UserFormValues } from '../types/user.types';
 import { ASSIGNABLE_ROLES, ROLE_LABEL } from '../types/user.types';
+import { PinInput } from '../../registerOwner/components/PinInput';
 
 interface Props {
     user?: AppUser;                                              // มี = โหมดแก้ไข, ไม่มี = โหมดเพิ่ม
@@ -24,6 +25,7 @@ export default function UserFormPopup({ user, onSubmit, onClose, isSubmitting, e
     const [role, setRole] = useState<AssignableRole>(
         user && user.role_name !== 'owner' ? user.role_name : 'employee',
     );
+    const [pin, setPin] = useState('');
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
     const [showPassword, setShowPassword] = useState(false);
@@ -33,6 +35,8 @@ export default function UserFormPopup({ user, onSubmit, onClose, isSubmitting, e
 
     const displayNameError = displayName.trim() === '' ? 'กรุณากรอกชื่อ-นามสกุล' : null;
     const usernameError = username.trim() === '' ? 'กรุณากรอกชื่อผู้ใช้' : null;
+    // PIN ไม่บังคับ แต่ถ้ากรอกต้องครบ 6 หลัก
+    const pinError = pin !== '' && !/^\d{6}$/.test(pin) ? 'กรุณากรอก PIN ให้ครบ 6 หลัก' : null;
     const passwordError = isEdit && password === ''
         ? null
         : password.length < MIN_PASSWORD_LENGTH
@@ -42,7 +46,7 @@ export default function UserFormPopup({ user, onSubmit, onClose, isSubmitting, e
         ? 'รหัสผ่านทั้งสองช่องไม่ตรงกัน'
         : null;
 
-    const canSubmit = !displayNameError && !usernameError && !passwordError && !confirmError && !isSubmitting;
+    const canSubmit = !displayNameError && !usernameError && !pinError && !passwordError && !confirmError && !isSubmitting;
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -54,6 +58,7 @@ export default function UserFormPopup({ user, onSubmit, onClose, isSubmitting, e
             username: username.trim(),
             // บัญชีเจ้าของร้านไม่ส่ง role_name ไป (backend ไม่ให้เปลี่ยนตำแหน่งของ owner)
             role_name: isOwner ? undefined : role,
+            pin,
             password,
             confirm_password: confirmPassword,
         });
@@ -135,6 +140,26 @@ export default function UserFormPopup({ user, onSubmit, onClose, isSubmitting, e
                             </select>
                         )}
                     </label>
+
+                    <div className="flex flex-col gap-1 text-sm text-stone-600">
+                        <label htmlFor="user-pin">
+                            PIN 6 หลัก (ไม่บังคับ)
+                        </label>
+                        <PinInput
+                            id="user-pin"
+                            value={pin}
+                            onChange={setPin}
+                            hasError={!!showError(pinError)}
+                            disabled={isSubmitting}
+                        />
+                        {showError(pinError) ? (
+                            <span className="text-xs text-red-600">{pinError}</span>
+                        ) : (
+                            <span className="text-xs text-stone-400">
+                                {isEdit ? 'เว้นว่าง = ไม่เปลี่ยน PIN เดิม' : 'ใช้สลับผู้ใช้ที่หน้าร้าน'}
+                            </span>
+                        )}
+                    </div>
 
                     <label className="flex flex-col gap-1 text-sm text-stone-600">
                         รหัสผ่าน{isEdit && ' (ไม่บังคับ)'}

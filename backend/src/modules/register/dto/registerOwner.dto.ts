@@ -1,4 +1,4 @@
-import { IsString, IsNotEmpty, IsEmail, IsOptional, MaxLength} from 'class-validator';
+import { IsString, IsNotEmpty, IsEmail, IsOptional, MaxLength, Matches} from 'class-validator';
 
 export class RegisterOwnerDto {
     @IsString()
@@ -61,4 +61,9 @@ export class RegisterOwnerDto {
     @IsNotEmpty()
     @MaxLength(100)
     display_name!:string;
+
+    @IsString()
+    @IsNotEmpty()
+    @Matches(/^\d{6}$/, { message: 'PIN ต้องเป็นตัวเลข 6 หลัก' })
+    pin!:string;
 }

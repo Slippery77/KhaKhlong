@@ -23,6 +23,7 @@ export class RegisterService {
 
         // แปลงรหัสผ่านเป็น hash เพื่อความปลอดภัยก่อนเก็บในฐานข้อมูล
         const hash_password = await bcrypt.hash(dto.password, 10);
+        const hash_pin = await bcrypt.hash(dto.pin,10)
         const tenantID = randomUUID();
         try{
             return await this.db.runInTransaction({
@@ -68,6 +69,7 @@ export class RegisterService {
                     dto.username,
                     dto.email,
                     hash_password,
+                    hash_pin,
                     dto.display_name
                 );
                 return { 

@@ -2,14 +2,15 @@ import Header from '../../../components/Header';
 import SettingNavBar from '../../../components/settingNavBar';
 import ListMenuEdit from '../components/listMenu';
 import SidebarCategory from '../components/sidebarCategory';
-import { useAdminMenu, useCreateCategory, useEditMenu, useMenuItemStatus, useCreateMenu, useEditCategory } from '../hooks/useAdminMenu';
+import { useAdminMenu, useCreateCategory, useEditMenu, useMenuItemStatus, useCreateMenu, useEditCategory, uselinkModifier } from '../hooks/useAdminMenu';
 import type { Category, MenuItem } from '../types/menu.types';
 import { useState } from 'react';
 import { Plus } from 'lucide-react';
 import MenuFormPopup, { type MenuFormValues } from '../components/menuFormPopup';
+import LinkModifierPopup from '../components/linkModifier';
 
 export function MenuEdit() {
-    const { categories,isLoading, error, reload } = useAdminMenu();
+    const { categories,modifier,isLoading, error, reload } = useAdminMenu();
     const [ selectedId, setSelectedId] = useState<string | null>(null);
     const [ showInactive, setShowInactive ] = useState(true);
     const [ search, setSearch ] = useState('');
@@ -18,6 +19,8 @@ export function MenuEdit() {
     const { editMenuItem, isSubmitting:submitEdit, error:editMenuError } = useEditMenu();
     const { createMenuItem , isSubmitting:submitCreate, error:createMenuError } = useCreateMenu();
     const { editCategoryName, disable: disableCategory, enable: enableCategory,isSubmitting: submitCategory, error: editCategoryError } = useEditCategory();
+    const [ linkItem, setLinkItem ] = useState<MenuItem|null>(null);
+    const { link, isSubmitting:submitLink, error:linkError } = uselinkModifier();
 
     const [ formItem, setFormItem ] = useState<MenuItem|undefined>();
     const [ showForm, setShowForm ] = useState(false);
@@ -108,6 +111,14 @@ export function MenuEdit() {
       return ok;
     }
 
+    const handleLinkModifiers = async (ids:string[]) =>{
+      if(!linkItem) 
+        return false;
+      const ok = await link(linkItem.menu_item_id,ids);
+      if(ok) 
+        await reload();
+      return ok;
+    }
   return (
     <div className="flex h-dvh flex-col font-kanit">
       <Header />
@@ -173,7 +184,18 @@ export function MenuEdit() {
             onDisable={handleDisable}
             onEnable={handleEnable}
             onEdit={handleEditMenu}
+            onLinkModifiers={setLinkItem}
           />
+          {linkItem && (
+          <LinkModifierPopup
+              item={linkItem}
+              modifierGroups={modifier}
+              onSubmit={handleLinkModifiers}
+              onClose={() => setLinkItem(null)}
+              isSubmitting={submitLink}
+              error={linkError}
+            />
+          )}     
         </main>
       </div>
     </div>

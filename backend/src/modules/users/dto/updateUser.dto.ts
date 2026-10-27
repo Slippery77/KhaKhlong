@@ -5,6 +5,7 @@ import {
   MaxLength,
   IsIn,
   IsOptional,
+  Matches,
 } from 'class-validator';
 
 /**
@@ -35,4 +36,8 @@ export class UpdateUserDTO {
   @MinLength(8, { message: 'รหัสผ่านต้องมีอย่างน้อย 8 ตัวอักษร' })
   @MaxLength(72, { message: 'รหัสผ่านต้องไม่เกิน 72 ตัวอักษร' })
   password?: string;
+
+  @IsOptional()
+  @Matches(/^\d{6}$/, { message: 'PIN ต้องเป็นตัวเลข 6 หลัก' })
+  pin?:string;
 }

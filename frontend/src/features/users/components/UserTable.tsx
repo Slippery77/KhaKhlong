@@ -46,6 +46,7 @@ export default function UserTable({ users, currentUserId, onEdit, onToggleActive
                         <th className="px-4 py-3 font-medium">ชื่อผู้ใช้</th>
                         <th className="px-4 py-3 font-medium">ตำแหน่ง</th>
                         <th className="px-4 py-3 font-medium">สถานะ</th>
+                        <th className="px-4 py-3 font-medium">สถานะ Pin</th>
                         <th className="px-4 py-3 font-medium">เข้าสู่ระบบล่าสุด</th>
                         <th className="px-4 py-3 text-right font-medium">จัดการ</th>
                     </tr>
@@ -83,6 +84,13 @@ export default function UserTable({ users, currentUserId, onEdit, onToggleActive
                                         <span className="rounded-full bg-stone-200 px-2.5 py-1 text-xs font-medium text-stone-600">
                                             ปิดใช้งาน
                                         </span>
+                                    )}
+                                </td>
+                                <td className="px-4 py-3">
+                                    {user.has_pin ? (
+                                        <span className="rounded-full bg-emerald-100 px-2.5 py-1 text-xs font-medium text-emerald-800">ตั้งแล้ว</span>
+                                    ) : (
+                                        <span className="rounded-full bg-stone-100 px-2.5 py-1 text-xs font-medium text-stone-500">ยังไม่ตั้ง</span>
                                     )}
                                 </td>
                                 <td className="px-4 py-3 text-stone-500">{formatDate(user.last_login_at)}</td>

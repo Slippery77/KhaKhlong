@@ -59,6 +59,7 @@ export function useUserActions() {
                 password: values.password,
                 display_name: values.display_name,
                 role_name: values.role_name,
+                pin: values.pin || undefined,
             });
             return true;
         } catch (err) {
@@ -80,6 +81,7 @@ export function useUserActions() {
             if (values.role_name) body.role_name = values.role_name;
             // ว่าง = ไม่เปลี่ยนรหัสผ่าน (ไม่ต้องส่งไป)
             if (values.password) body.password = values.password;
+            if (values.pin) body.pin = values.pin;
 
             if (Object.keys(body).length === 0) {
                 setError('ไม่มีข้อมูลที่เปลี่ยน');
