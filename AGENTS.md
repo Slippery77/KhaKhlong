@@ -3,9 +3,10 @@
 ## เริ่มงานทุกครั้ง
 
 1. อ่าน `docs/HANDOFF.md` — สรุปสถานะล่าสุด + งานค้าง P0/P1/P2 + decision สำคัญ
-2. เช็ค `git status` — ปัจจุบันมีงาน **ใบเสร็จ (FE) + store finder (Phase 1) ค้างไม่ commit** (untracked: `frontend/src/features/receipt/`, `frontend/src/features/auth/pages/store_finder_page.tsx`, `frontend/src/features/auth/api/`, `frontend/src/features/auth/tenantStorage.ts`, `backend/src/modules/tenants/public-tenants.controller.ts`, `backend/test/e2e/e2e-receipt.mjs`, `backend/test/e2e/e2e-public-tenant.mjs`) ห้าม `git clean` / checkout ทับ
+2. เช็ค `git status` — ต้องเป็น **clean working tree** บน `main` ที่ `git pull` แล้ว. หากมีไฟล์ค้างให้ตรวจสอบก่อนเริ่มงาน
 3. `docs/backend-todo.md` และ `docs/daily-update-2026-10-21.md` **ล้าสมัยแล้ว** อย่าใช้เป็นแหล่งอ้างอิง
-4. Branch หลัก: `main` · Remote: `Slippery77/KhaKhlong` (branch เก่า `feat-aod`, `feat-benz`)
+4. Branch หลัก: `main` (`origin/main` = `78d3c8e`, 2026-10-27) · Remote: `https://github.com/Slippery77/PWA-POS.git` (branch เก่า `feat-aod`, `feat-benz`)
+5. ติดตั้ง dependency ด้วย `npm ci` ที่ **root** (npm workspaces) — รันในโฟลเดอร์ย่อยอย่างเดียว dependency ไม่ครบ
 
 ## Stack
 
@@ -13,13 +14,15 @@
 |---|---|
 | Frontend | React + TypeScript + Vite + Tailwind v4 · port 5173 · proxy `/api` → 3000 |
 | Backend | NestJS 11 · port 3000 · prefix `/api` |
-| Database | PostgreSQL 18 · db `pwa_pos` · user `pos_app` |
+| Database | PostgreSQL 18 · db `pwa_pos` · user `pos_app` · รหัสผ่านอยู่ใน `.env` |
 
 ## งานด่วนปัจจุบัน (P0)
 
-1. Commit งานใบเสร็จที่ค้างใน working tree (`features/receipt/` + snapshot fields ฝั่ง backend + `e2e-receipt.mjs`)
-2. PIN ผู้จัดการ: เพิ่ม `pin` ใน `UpdateUserDTO` + hash ใน service + ช่อง PIN ใน `UserFormPopup`
-3. ~~หน้าพิมพ์ใบเสร็จ/พิมพ์ซ้ำฝั่ง FE~~ ✅ เสร็จแล้ว — `frontend/src/features/receipt/` + ปุ่มใน `PaymentModal` / `BillDetailModal`; เหลือ P1: route `/receipt/:id`, auto-print, โลโก้/ข้อความหัว-ท้ายใบเสร็จ (ต้อง `ALTER TABLE tenants`)
+**ไม่มี P0 ค้าง** — ทั้ง 3 ข้อด้านล่างอยู่ใน `main` แล้ว งานถัดไปคือ P1 / P2 ใน `docs/HANDOFF.md` หัวข้อ 5
+
+1. ~~หน้าพิมพ์ใบเสร็จ/พิมพ์ซ้ำฝั่ง FE~~ ✅ เสร็จแล้ว (`69ffbb2`) — `frontend/src/features/receipt/` + ปุ่มใน `PaymentModal` / `BillDetailModal`
+2. ~~Store finder + จำรหัสร้าน~~ ✅ เสร็จแล้ว (`50657d4`) — route `/`, `/login`, `GET /api/public/tenants/:slug`, จำใน `localStorage`, catch-all route
+3. ~~PIN ผู้ใช้งาน (สร้าง/แก้ไข)~~ ✅ เสร็จแล้ว (`bd022fe`) — มีช่อง PIN ใน `UserFormPopup`, รองรับทั้งสร้างและแก้ไข, แสดง badge `has_pin` ใน `UserTable`, backend รองรับครบถ้วน · ยังไม่มี E2E ของ PIN
 
 ## กติกาที่ห้ามพลาด
 
@@ -29,16 +32,17 @@
 - Reports: อ่านจาก `payments` / `cash_movements` / `shifts` และกรอง `app_tenant_id()` เสมอ; `cashOnHand = opening_cash + cash_sales + cash_in − cash_out`
 - ทุก endpoint ต้องมี permission guard และพึ่ง RLS ผ่าน `app_tenant_id()`; ใช้ `@RequireAnyPermission(...)` เมื่อต้องมีสิทธิ์อย่างใดอย่างหนึ่ง
 - Backend โครงสร้าง 3 ชั้น: controller → service → repository (ดู `docs/backend-dev-guide.md`)
+- ห้ามเขียนรหัสผ่าน DB หรือ secret จริงลงเอกสาร/โค้ด — อ้าง `.env` แทน
 - UI: bg `#FAF7F2`, accent `#8C6D58`, hover `#7a5c45`, text `#2D241E`, border `#d9c6b0` / `#E8DFD5`, font Kanit, `rounded-xl` / `rounded-2xl`
 - ห้ามใช้ emoji เป็นไอคอน → ใช้ `lucide-react`
 - ทุกจุดคลิกต้องมี `cursor-pointer`, hover transition 150–300 ms, focus state, label/aria ครบ
 
 ## เทสต์และตรวจสอบ
 
-- E2E เขียนเป็น **Node `.mjs` เท่านั้น** (PowerShell ทำให้ UTF-8 เพี้ยน) → `backend/test/e2e/`
+- E2E เขียนเป็น **Node `.mjs` เท่านั้น** (PowerShell ทำให้ UTF-8 เพี้ยน) → `backend/test/e2e/` (ใน repo ตอนนี้: `e2e-reports.mjs`, `e2e-receipt.mjs`, `e2e-public-tenant.mjs`)
 - `npx tsc --noEmit` (backend) และ `npx tsc -b` (frontend) **ผ่านอยู่** ต้องรักษาให้ผ่านก่อน commit
-- `npx jest` (backend) ยังแดง **9 suites / 9 tests** จาก spec boilerplate ขาด DI mock — ดู `docs/HANDOFF.md` หัวข้อ 6
-- `npx eslint` ยังแดงทั้งสองฝั่ง (backend ~4.6k problems ส่วนใหญ่ prettier, frontend 39 problems) — อย่าเพิ่ง auto-fix ปนกับ feature commit
+- `npx jest` (backend) ยังแดง **9 suites / 9 tests** (ผ่าน 6 suites / 16 tests) จาก spec boilerplate ขาด DI mock — ดู `docs/HANDOFF.md` หัวข้อ 6
+- `npx eslint` ยังแดงทั้งสองฝั่ง (backend 4,782 problems ส่วนใหญ่ prettier, frontend 40 problems — นับ 2026-10-27) — อย่าเพิ่ง auto-fix ปนกับ feature commit
 - `node backend/test/e2e/e2e-reports.mjs` ต้องมี backend + DB จริงรันอยู่
 
 ## เอกสารสำคัญ
