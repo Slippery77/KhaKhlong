@@ -22,13 +22,14 @@ export class UsersRepository {
         username: string,
         email: string,
         password: string,
-        display_name: string
+        display_name: string,
+        pin:string
     ) {
-        const sql = `INSERT INTO users (tenant_id, role_id, username, email, password_hash, display_name)
+        const sql = `INSERT INTO users (tenant_id, role_id, username, email, password_hash, pin_hash, display_name)
                     VALUES ($1,$2,$3,$4,$5,$6)
                     RETURNING users_id, username, display_name;
         `;
-        const result = await this.db.query(sql, [tenant_id, role_id, username, email, password, display_name]);
+        const result = await this.db.query(sql, [tenant_id, role_id, username, email, password,pin, display_name]);
         return result.rows[0];
     }
 
@@ -54,7 +55,7 @@ export class UsersRepository {
     async createUser(tenantID: string, roleID: string, username: string, password: string, pin?: string | null, displayName?: string) {
         const sql = `
             INSERT INTO users(tenant_id, role_id, username, password_hash, pin_hash, display_name) 
-            VALUES($1,$2,$3,$4,$5,$6)
+            VALUES(app_tenant_id(),$1,$2,$3,$4,$5)
             RETURNING *;
         `;
         const result = await this.db.query(sql, [tenantID, roleID, username, password, pin, displayName]);
@@ -76,7 +77,8 @@ export class UsersRepository {
                 u.is_active,
                 u.created_at,
                 u.last_login_at,
-                u.deactivated_at
+                u.deactivated_at,
+                (u.pin_hash IS NOT NULL ) as has_pin
             FROM users u
             JOIN roles r ON r.role_id = u.role_id
             WHERE u.tenant_id = app_tenant_id()
@@ -120,6 +122,7 @@ export class UsersRepository {
         username?: string | null;
         role_id?: string | null;
         password_hash?: string | null;
+        pin_hash?:string|null;
     }) {
         const sql = `
             UPDATE users
@@ -127,11 +130,13 @@ export class UsersRepository {
                 username      = COALESCE($3::varchar, username),
                 role_id       = COALESCE($4::uuid,    role_id),
                 password_hash = COALESCE($5::varchar, password_hash),
+                pin_hash = COALESCE($6::varchar, pin_hash),
                 token_version = CASE WHEN $5::varchar IS NULL
                                      THEN token_version
                                      ELSE token_version + 1 END
             WHERE users_id = $1 AND tenant_id = app_tenant_id()
-            RETURNING users_id, username, display_name, is_active, created_at, last_login_at, deactivated_at;
+            RETURNING users_id, username, display_name, is_active, created_at, last_login_at, deactivated_at,
+                      (pin_hash IS NOT NULL) AS has_pin;
         `;
         const result = await this.db.query(sql, [
             id,
@@ -139,6 +144,7 @@ export class UsersRepository {
             data.username ?? null,
             data.role_id ?? null,
             data.password_hash ?? null,
+            data.pin_hash ?? null,
         ]);
         return result.rows[0] ?? null;
     }
@@ -154,7 +160,8 @@ export class UsersRepository {
                 deactivated_at  = now(),
                 deactivated_by  = app_user_id()
             WHERE users_id = $1 AND tenant_id = app_tenant_id() AND is_active = true
-            RETURNING users_id, username, display_name, is_active, deactivated_at;
+            RETURNING users_id, username, display_name, is_active, deactivated_at,
+                      (pin_hash IS NOT NULL) AS has_pin;
         `;
         const result = await this.db.query(sql, [id]);
         return result.rows[0] ?? null;
@@ -170,7 +177,8 @@ export class UsersRepository {
                 deactivated_at = NULL,
                 deactivated_by = NULL
             WHERE users_id = $1 AND tenant_id = app_tenant_id() AND is_active = false
-            RETURNING users_id, username, display_name, is_active, deactivated_at;
+            RETURNING users_id, username, display_name, is_active, deactivated_at,
+                      (pin_hash IS NOT NULL) AS has_pin;
         `;
         const result = await this.db.query(sql, [id]);
         return result.rows[0] ?? null;

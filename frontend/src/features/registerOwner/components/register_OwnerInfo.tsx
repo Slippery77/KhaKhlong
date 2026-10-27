@@ -9,12 +9,14 @@ import {
     EyeOff,
     IdCard,
 } from "lucide-react";
+import { PinInput } from "./PinInput";
 
 export interface RegisterOwnerInfo {
     username: string;
     email: string;
     password: string;
     confirm_password: string;
+    pin:string;
     display_name?: string;
 }
 
@@ -41,6 +43,7 @@ export function Register_OwnerForm({
         email: "",
         password: "",
         confirm_password: "",
+        pin:"",
         display_name: "",
         ...initialValues,
     });
@@ -151,7 +154,15 @@ export function Register_OwnerForm({
                 </div>
                 {errors.email && <p className={errorClass}>{errors.email}</p>}
             </div>
-
+            <div>
+                <label className={labelClass} htmlFor="owner-pin">
+                    PIN 
+                </label>
+                <div className='relative'>
+                    <PinInput id='owner-pin' value={fromState.pin} onChange={(v)=> handleChange("pin",v)} hasError={!!errors.pin}/>
+                {errors.pin && <p className={errorClass}>{errors.pin}</p>}
+                </div>
+            </div>
             <div>
                 <label className={labelClass} htmlFor="owner-password">
                     รหัสผ่าน

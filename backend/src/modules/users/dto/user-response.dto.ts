@@ -24,4 +24,7 @@ export class UserResponseDto {
 
   @ApiProperty({ example: null, nullable: true })
   deactivated_at!: string | null;
+
+  @ApiProperty({ example: true, description: 'ตั้ง PIN แล้วหรือยัง' })
+  has_pin!: boolean;
 }

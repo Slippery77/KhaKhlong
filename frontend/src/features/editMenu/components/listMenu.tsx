@@ -9,9 +9,10 @@ interface Props{
     onDisable: (item: MenuItem) => void;           // ปุ่มตาขีดฆ่า = เลิกขาย (is_active = false)
     onEnable: (item: MenuItem) => void;            // ปุ่มเปิดขายอีกครั้ง (is_active = true)
     onEdit: (item: MenuItem) => void;              // ปุ่มดินสอ
+    onLinkModifiers: (item: MenuItem) => void;
 }
 
-export default function ListMenuEdit ({menuItem, showInactive, search, onToggleAvailable, onDisable, onEnable, onEdit}:Props){
+export default function ListMenuEdit ({menuItem,showInactive, search, onToggleAvailable, onDisable, onEnable, onEdit, onLinkModifiers}:Props){
     const keyword = search.trim().toLowerCase();
     const filterMenu = menuItem
         .filter(menu => showInactive || menu.is_active)
@@ -63,11 +64,21 @@ export default function ListMenuEdit ({menuItem, showInactive, search, onToggleA
                         {/* ตัวเลือก */}
                         <td className="px-4 py-3 text-stone-500">
                             {m.modifier_group_ids.length > 0
-                                ? `ตัวเลือก ${m.modifier_group_ids.length} กลุ่ม`
-                                : 'ยังไม่มีตัวเลือก'}
+                                ? <button 
+                                    type='button'
+                                    onClick={()=>onLinkModifiers(m)}
+                                    >ตัวเลือก {m.modifier_group_ids.length} กลุ่ม
+                                    </button>
+                                : <button 
+                                type='button' 
+                                onClick={()=>onLinkModifiers(m)}
+                                >
+                                    ยังไม่มีตัวเลือก
+                                </button>
+                            }
                         </td>
 
-                        {/* สถานะวันนี้ */}
+                        {/* สถานะวันนี้ */} 
                         <td className="px-4 py-3">
                             {m.is_active ? (
                                 <label className="flex cursor-pointer items-center gap-2">

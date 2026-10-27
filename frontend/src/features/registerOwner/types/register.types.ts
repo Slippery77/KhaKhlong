@@ -3,6 +3,7 @@ export interface RegisterOwner{
     email : string;
     password : string;
     confirmPassword : string;
+    pin:string;
     /** ชื่อแสดง (display_name ใน backend) — เว้นว่างหน้าบ้านได้ ระบบจะใช้ username แทน */
     display_name?: string;
 } 

@@ -28,6 +28,7 @@ export class UsersService {
         username: string,
         email: string,
         password: string,
+        pin:string,
         display_name: string
     ) {
         return this.usersRepository.createOwner(
@@ -36,6 +37,7 @@ export class UsersService {
             username,
             email,
             password,
+            pin,
             display_name
         );
     }
@@ -145,12 +147,14 @@ export class UsersService {
             ? await bcrypt.hash(dto.password, 10)
             : null;
 
+        const pin_hash = dto.pin ? await bcrypt.hash(dto.pin, 10) : null;    
         try {
             const updated = await this.usersRepository.updateUser(userId, {
                 display_name: dto.display_name ?? null,
                 username: dto.username ?? null,
                 role_id,
                 password_hash,
+                pin_hash
             });
 
             if (!updated) {
@@ -229,6 +233,8 @@ export class UsersService {
             created_at: row.created_at,
             last_login_at: row.last_login_at ?? null,
             deactivated_at: row.deactivated_at ?? null,
+            // ส่งแค่ว่าตั้ง PIN แล้วหรือยัง ห้ามส่ง pin_hash ออกไป
+            has_pin: row.has_pin === true,
         };
     }
 }

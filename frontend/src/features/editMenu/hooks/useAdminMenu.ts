@@ -2,10 +2,12 @@ import { useCallback, useEffect, useState } from "react";
 import { apiFetch } from "../../../libs/appClient";
 import { useAuth } from "../../auth/context/AuthContext";
 import type { Category } from "../types/menu.types";
+import type { ModifierGroup } from "../../editModifer/types/modifier.types";
 
 export function useAdminMenu(){
     const {accessToken} = useAuth();
     const [categories, setCategories] = useState<Category[]>([]);
+    const [modifier, setModifier] = useState<ModifierGroup[]>([]);
     const [error, setError] = useState<string|null>(null);
     const [isLoading, setIsLoading] = useState<boolean>(true);
 
@@ -14,8 +16,9 @@ export function useAdminMenu(){
             setIsLoading(true);
         setError(null);
         try{
-            const res = await apiFetch<{data: {categories:Category[]}}>('/menu/admin',accessToken);
-            setCategories(res.data.categories)
+            const res = await apiFetch<{data: {categories:Category[], modifier_groups:ModifierGroup[]}}>('/menu/admin',accessToken);
+            setCategories(res.data.categories);
+            setModifier(res.data.modifier_groups);
         }catch(err){
             setError(err instanceof Error ? err.message : 'โหลดเมนูไม่สำเร็จ');
         }finally{
@@ -25,7 +28,7 @@ export function useAdminMenu(){
 
     useEffect(() => {load();},[load]);
 
-    return {categories,isLoading, error, reload:()=>load(true)};
+    return {categories,modifier,isLoading, error, reload:()=>load(true)};
     //reload คือปุ่มโหลดใหม่ refresh ถ้าโหลดใหม่จะเอาข้อมูลมาแสดง
 }
 
@@ -223,4 +226,27 @@ export function useEditMenu(){
     // body: { modifier_group_ids: string[] }   ← เรียงตามลำดับที่แสดง, [] = ถอดทั้งหมด, สูงสุด 20
 
     return { editMenuItem, isSubmitting, error};
+}
+
+export function uselinkModifier(){
+    const {accessToken} = useAuth();
+    const [error, setError] = useState<string|null>(null);
+    const [isSubmitting, setIsSubmitting] = useState(false);
+
+    // modifier_group_ids เรียงตามลำดับที่แสดง, [] = ถอดทั้งหมด, สูงสุด 20
+    const link = async (menu_item_id:string,modifier_group_ids:string[]) => {
+        setError(null);
+        setIsSubmitting(true);
+        try {
+            await apiFetch(`/menu/items/${menu_item_id}/modifier-groups`,accessToken,'PUT',{modifier_group_ids})
+            return true;
+        } catch (error) {
+            setError(error instanceof Error ? error.message:'บันทึกไม่สำเร็จ')
+        }
+        finally{
+            setIsSubmitting(false);
+        }
+        return false;
+    }
+    return {link,error,isSubmitting}
 }

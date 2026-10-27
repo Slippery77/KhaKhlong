@@ -42,7 +42,14 @@ export default function ModifierPopup({ menu, onClose, onConfirm }: ModifierPopu
     const totalPrice = totalUnitPrice * quantity
 
     const handleRadio = (group: ModifierGroup, option: ModifierOption) => {
-        setSingleChoices((prev) => ({ ...prev, [group.id]: option }))
+        setSingleChoices((prev) => {
+            // กลุ่มไม่บังคับ: กดตัวเดิมซ้ำ = ยกเลิกการเลือก
+            if (!group.isRequired && prev[group.id]?.id === option.id) {
+                const { [group.id]: _removed, ...rest } = prev
+                return rest
+            }
+            return { ...prev, [group.id]: option }
+        })
     }
 
     const handleCheckbox = (option: ModifierOption) => {

@@ -13,6 +13,7 @@ export interface AppUser {
     created_at: string;
     last_login_at: string | null;
     deactivated_at: string | null;
+    has_pin: boolean;
 }
 
 // ค่าที่ฟอร์มส่งออกไปให้หน้า page
@@ -20,6 +21,7 @@ export interface UserFormValues {
     display_name: string;   // ชื่อ-นามสกุล
     username: string;       // ชื่อผู้ใช้สำหรับเข้าสู่ระบบ
     role_name?: AssignableRole;  // ไม่ส่งตอนแก้ไขบัญชีเจ้าของร้าน (เปลี่ยนตำแหน่งไม่ได้)
+    pin: string;            // PIN 6 หลัก ว่าง = ไม่ตั้ง/ไม่เปลี่ยน
     password: string;       // ตอนแก้ไข: ว่าง = ไม่เปลี่ยนรหัสผ่าน
     confirm_password: string;
 }
