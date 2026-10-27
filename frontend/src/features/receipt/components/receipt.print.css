@@ -1,0 +1,48 @@
+/*
+ * กฎการพิมพ์ใบเสร็จ (ความร้อน 80mm)
+ * ใช้ร่วมกับ ReceiptModal ซึ่ง portal แผ่นใบเสร็จไว้ใต้ <body> โดยตรง
+ */
+
+@media print {
+  @page {
+    size: 80mm auto;
+    margin: 4mm 2mm;
+  }
+
+  html,
+  body {
+    margin: 0 !important;
+    padding: 0 !important;
+    background: #ffffff !important;
+  }
+
+  /* ซ่อนทั้งแอป เหลือเฉพาะแผ่นใบเสร็จที่เตรียมไว้ */
+  body > *:not(.receipt-print-area) {
+    display: none !important;
+  }
+
+  .receipt-print-area {
+    display: block !important;
+    width: 72mm;
+    margin: 0;
+    padding: 0;
+  }
+
+  .receipt-print-area .receipt-paper {
+    width: 72mm !important;
+    margin: 0 !important;
+    padding: 0 0 2mm 0 !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    color: #000000 !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  /* กันหน้าว่างที่เกิดจาก element ที่ซ่อนไปแล้ว */
+  .receipt-print-area * {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+}

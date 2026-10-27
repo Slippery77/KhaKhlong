@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
-import { X, Banknote, QrCode, CheckCircle2, Loader2, Info } from 'lucide-react';
+import { X, Banknote, QrCode, CheckCircle2, Loader2, Info, Printer } from 'lucide-react';
 import { usePayment } from '../hooks/usePayment';
 import { ApiError } from '../../../libs/appClient';
+import { ReceiptModal } from '../../receipt';
 import type { OrderPaymentSummary } from '../hooks/usePayment';
 import type { PaymentAttempt, PaymentMethod, PaymentResult } from '../types/payment.type';
 import { QRCodeSVG } from 'qrcode.react';
@@ -35,6 +36,8 @@ export default function PaymentModal({ table, orderId, onClose, onPaymentSuccess
     const [summaryLoading, setSummaryLoading] = useState(true);
     // เพิ่มค่าเพื่อสั่งโหลดยอดใหม่จาก event handler (ไม่ setState ใน effect โดยตรง)
     const [summaryReloadKey, setSummaryReloadKey] = useState(0);
+    // เปิดหน้าต่างใบเสร็จหลังจ่ายเงินสำเร็จ (ยังไม่ปิดหน้าชำระเงิน)
+    const [receiptOpen, setReceiptOpen] = useState(false);
 
     // ยอดมาจาก server เท่านั้น หน้าจอไม่คำนวณยอดเอง
     const amount = attempt?.amount ?? 0;
@@ -388,13 +391,28 @@ export default function PaymentModal({ table, orderId, onClose, onPaymentSuccess
                         </>
                     )}
                     {step === 'done' && (
-                        <button type="button" onClick={handleClose}
-                            className="flex-1 py-2.5 bg-[#A68874] hover:bg-[#967763] text-white font-medium text-sm rounded-xl transition cursor-pointer">
-                            เสร็จสิ้น
-                        </button>
+                        <>
+                            <button type="button" onClick={handleClose}
+                                className="flex-1 py-2.5 border border-stone-200 hover:bg-stone-100 text-stone-600 font-medium text-sm rounded-xl transition cursor-pointer">
+                                เสร็จสิ้น
+                            </button>
+                            <button type="button" onClick={() => setReceiptOpen(true)}
+                                className="flex-1 py-2.5 bg-[#A68874] hover:bg-[#967763] text-white font-medium text-sm rounded-xl transition cursor-pointer flex items-center justify-center gap-1.5">
+                                <Printer className="w-4 h-4" />
+                                พิมพ์ใบเสร็จ
+                            </button>
+                        </>
                     )}
                 </div>
             </div>
+
+            {/* เปิดซ้อนเหนือหน้าชำระเงิน (portal ไปที่ body) — ปิดแล้วยังกด "เสร็จสิ้น" ได้ */}
+            {receiptOpen && result && (
+                <ReceiptModal
+                    paymentId={result.paymentId}
+                    onClose={() => setReceiptOpen(false)}
+                />
+            )}
         </div>
     );
 }

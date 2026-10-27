@@ -1,7 +1,17 @@
 import { useState } from "react";
 import { useLogin } from "../hooks/useLogin";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { User, Lock, Eye, EyeOff, LogIn, UserPlus } from "lucide-react";
+import {
+  User,
+  Lock,
+  Eye,
+  EyeOff,
+  LogIn,
+  UserPlus,
+  Store,
+  Pencil,
+  ArrowLeftRight,
+} from "lucide-react";
 
 {
   /*สร้างโครงสร้าง object*/
@@ -22,6 +32,10 @@ export default function LoginForm() {
   });
   // แสดง/ซ่อนรหัสผ่าน (ใช้ไอคอน lucide ไม่ใช่ emoji)
   const [showPassword, setShowPassword] = useState(false);
+  // ช่องแก้รหัสร้านแบบพับเก็บ — เปิดไว้ก่อนถ้า URL ไม่ได้ระบุร้านมา
+  const [slugEditorOpen, setSlugEditorOpen] = useState(!tenantSlug);
+  // error ของช่องรหัสร้าน (แยกจาก error ที่ backend ตอบกลับมา)
+  const [slugError, setSlugError] = useState<string | null>(null);
 
   // อัปเดตค่าในฟอร์มตาม field ที่ผู้ใช้พิมพ์เข้าไป
   const handleChange = (field: keyof loginFormState, value: string) => {
@@ -38,21 +52,91 @@ export default function LoginForm() {
   // เมื่อกด submit จะป้องกันการ refresh หน้า และเรียก login ด้วยข้อมูลจากฟอร์ม
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    const result = await login(formState);
+    // normalize รหัสร้านให้ตรงกับที่ระบบเก็บ (a-z 0-9 -) ก่อนส่งไป backend
+    const slug = formState.tenantSlug.trim().toLowerCase();
+
+    if (!slug) {
+      setSlugError("กรอกรหัสร้านก่อนครับ");
+      setSlugEditorOpen(true);
+      return;
+    }
+    setSlugError(null);
+
+    const result = await login({ ...formState, tenantSlug: slug });
 
     if (result) {
-      navigate(`/${formState.tenantSlug}/tables`); // ถ้า login สำเร็จให้ไปหน้า homepage
+      navigate(`/${slug}/tables`); // ถ้า login สำเร็จให้ไปหน้าผังโต๊ะของร้านนั้น
     }
   };
 
   const inputClass =
     "h-12 w-full rounded-xl border border-[#d9c6b0] bg-white pl-11 pr-4 text-[#2D241E] placeholder:text-[#9B8E82] transition-colors duration-200 focus:border-[#8C6D58] focus:outline-none focus:ring-2 focus:ring-[#8C6D58]/20";
+  const plainInputClass =
+    "h-11 w-full rounded-xl border border-[#d9c6b0] bg-white px-3.5 text-sm text-[#2D241E] placeholder:text-[#9B8E82] transition-colors duration-200 focus:border-[#8C6D58] focus:outline-none focus:ring-2 focus:ring-[#8C6D58]/20";
   const iconClass =
     "pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[#9B8E82]";
 
   return (
     <div className="w-full">
       <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+        {/* ── ร้านที่กำลังจะเข้าสู่ระบบ + ช่องแก้รหัสร้านแบบพับเก็บ ── */}
+        <div className="rounded-xl border border-[#E8DFD5] bg-[#FAF7F2] px-3 py-2.5">
+          <div className="flex items-center gap-2">
+            <Store className="h-4 w-4 shrink-0 text-[#8C6D58]" aria-hidden="true" />
+            <div className="min-w-0 flex-1">
+              <p className="text-[11px] font-medium leading-none text-[#8A7A6B]">
+                รหัสร้าน
+              </p>
+              <p className="mt-1 truncate text-sm font-semibold text-[#2D241E]">
+                {formState.tenantSlug || "ยังไม่ได้ระบุ"}
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => setSlugEditorOpen((open) => !open)}
+              aria-expanded={slugEditorOpen}
+              aria-controls="tenant-slug-editor"
+              className="flex shrink-0 cursor-pointer items-center gap-1 rounded-lg px-2 py-1.5 text-xs font-medium text-[#8C6D58] transition-colors duration-200 hover:bg-[#EFE8DC] hover:text-[#7a5c45] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#8C6D58]/30"
+            >
+              <Pencil className="h-3.5 w-3.5" aria-hidden="true" />
+              {slugEditorOpen ? "ปิด" : "แก้ไข"}
+            </button>
+          </div>
+
+          {slugEditorOpen ? (
+            <div id="tenant-slug-editor" className="mt-3">
+              <label
+                className="mb-1.5 block text-xs font-medium text-[#4A4038]"
+                htmlFor="tenantSlug"
+              >
+                รหัสร้านของฉัน
+              </label>
+              <input
+                className={plainInputClass}
+                id="tenantSlug"
+                name="tenantSlug"
+                type="text"
+                placeholder="เช่น krua-ban"
+                autoComplete="organization"
+                autoCapitalize="none"
+                autoCorrect="off"
+                spellCheck={false}
+                value={formState.tenantSlug}
+                onChange={(e) => handleChange("tenantSlug", e.target.value)}
+                aria-invalid={Boolean(slugError)}
+              />
+              <p className="mt-1.5 text-[11px] leading-relaxed text-[#8A7A6B]">
+                ภาษาอังกฤษตัวเล็ก ตัวเลข และ - เช่น krua-ban
+              </p>
+              {slugError ? (
+                <p role="alert" className="mt-1.5 text-[11px] font-medium text-[#A33B2A]">
+                  {slugError}
+                </p>
+              ) : null}
+            </div>
+          ) : null}
+        </div>
+
         <div>
           <label
             className="mb-2 block text-sm font-medium text-[#2D241E]"
@@ -110,6 +194,14 @@ export default function LoginForm() {
         </div>
 
         <div className="mt-2">
+          {slugError && !slugEditorOpen ? (
+            <p
+              role="alert"
+              className="mb-3 rounded-xl border border-[#E8B4A8] bg-[#FBEAE6] px-4 py-3 text-sm text-[#A33B2A]"
+            >
+              {slugError}
+            </p>
+          ) : null}
           {error ? (
             <p
               role="alert"
@@ -128,6 +220,17 @@ export default function LoginForm() {
           </button>
         </div>
       </form>
+
+      {/* ── ทางออกถ้าเข้าผิดร้าน ───────────────────────────────── */}
+      <div className="mt-4 flex justify-center">
+        <Link
+          to="/?switch=1"
+          className="inline-flex cursor-pointer items-center gap-1.5 rounded-lg px-2 py-1 text-xs font-medium text-[#8C6D58] transition-colors duration-200 hover:text-[#7a5c45] hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-[#8C6D58]/30"
+        >
+          <ArrowLeftRight className="h-3.5 w-3.5" aria-hidden="true" />
+          ไม่ใช่ร้านนี้? เปลี่ยนร้าน
+        </Link>
+      </div>
 
       {/* ── ปุ่มไปหน้าสมัครสมาชิก ─────────────────────────────── */}
       <div className="mt-6 border-t border-[#E8DFD5] pt-5 text-center">

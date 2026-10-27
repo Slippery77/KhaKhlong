@@ -381,6 +381,10 @@ ORDER BY l.item_name_snapshot;
   "status": "success",
   "data": {
     "paymentId": "...", "receiptNumber": "251026-0007", "totalAmount": 140, "...": "...",
+    "vatMode": "inclusive",
+    "vatRate": 7,
+    "serviceChargeRate": 0,
+    "roundingAdjustment": 0,
     "cashier": "สมชาย",
     "store": {
       "name": "ครัวบ้าน",
@@ -396,6 +400,8 @@ ORDER BY l.item_name_snapshot;
 }
 ```
 `taxId` เป็น `null` เมื่อ `vat_mode = none` (ร้านไม่ได้จด VAT ไม่ควรพิมพ์เลขผู้เสียภาษี) · ที่อยู่ประกอบจากคอลัมน์ที่มีค่า ตัดช่องว่างทิ้ง
+
+`vatRate` / `serviceChargeRate` / `roundingAdjustment` อ่านจากคอลัมน์ snapshot ในตาราง `payments` (`vat_rate_snapshot`, `service_charge_rate_snapshot`, `rounding_adjustment`) ซึ่ง **มีอยู่แล้วในสคีมา ไม่ต้อง ALTER TABLE** ใช้เป็นป้ายกำกับบนใบเสร็จเท่านั้น ("VAT 7% (รวมในราคา)") — client ห้ามนำอัตราไปคำนวณยอดเอง เพราะยอดจริงมาจาก trigger ตอนปิดบิล
 
 ### 5.6 `POST /payments/:id/print` — บันทึกการพิมพ์
 
@@ -463,6 +469,8 @@ frontend ใช้ `isCopy` พิมพ์คำว่า "สำเนา" บ
 | `features/mainpos/components/PaymentModal.tsx` | หน้าต่างชำระเงิน 3 หน้าจอ |
 | `features/mainpos/components/OrderSidebar.tsx` | ปุ่ม "ชำระเงิน" (`canPay`) |
 | `features/mainpos/pages/MainPOS.tsx` | เก็บ `orderId` ของบิลที่เปิดอยู่ ส่งให้ modal |
+| `features/receipt/*` | ฟีเจอร์ใบเสร็จ: `api`, `types`, `ReceiptPaper`, `ReceiptModal`, `useReceipt`, `receipt.print.css` |
+| `features/saleReport/components/BillDetailModal.tsx` | ปุ่ม "พิมพ์ใบเสร็จซ้ำ" เปิด `ReceiptModal` ด้วย `bill.id` (= `paymentId`) |
 | `libs/appClient.ts` | `apiFetch` · `ApiError` เก็บ `status`, `message`, `data` (body ของ error) |
 
 ### 7.2 `orderId` มาจากไหน (`MainPOS.tsx`)
@@ -508,7 +516,7 @@ state `step` บอกว่ากำลังแสดงหน้าไหน
 |---|---|---|---|
 | `choose` | ตัวเลือกเงินสด / QR | ถัดไป | `createAttempt([orderId], method)` เก็บ `attempt` ไว้ |
 | `confirm` | ยอดจาก `attempt.amount` · เงินสด: ปุ่มลัด "พอดี" / 100 / 500 / 1,000 ช่องกรอก เงินทอนตัวอย่าง · QR: ภาพ QR และข้อความให้ตรวจแอปธนาคาร | ย้อนกลับ · ยืนยันรับเงิน | `pay(attemptId, cashReceived?)` |
-| `done` | เลขใบเสร็จ · ยอด · เงินทอน (ถ้ามี) | เสร็จสิ้น | |
+| `done` | เลขใบเสร็จ · ยอด · เงินทอน (ถ้ามี) | เสร็จสิ้น · พิมพ์ใบเสร็จ | (ปุ่มพิมพ์เปิด `ReceiptModal` เท่านั้น ยังไม่ปิดหน้าชำระเงิน) |
 
 **กฎของปุ่มยืนยัน**
 ```tsx
@@ -525,6 +533,46 @@ const canConfirm    = method === 'qr_code' || isCashEnough;
 **`loading`** ปิดปุ่มทุกปุ่มระหว่างรอ server กันพนักงานกดซ้ำ (backend กันซ้ำได้อยู่แล้ว ข้อนี้เพื่อให้หน้าจอไม่สับสน)
 
 **error** แสดงข้อความจาก `ApiError.message` (ข้อความภาษาไทยจาก service) ถ้า `data.code === 'PAYMENT_ATTEMPT_PENDING'` แสดงปุ่ม "ยกเลิกรายการที่ค้างแล้วเริ่มใหม่" ซึ่งใช้ `data.paymentAttemptId`
+
+### 7.5 ใบเสร็จและการพิมพ์ (`features/receipt/`)
+
+```
+features/receipt/
+├── api/receipt.api.ts          get() / recordPrint()
+├── types/receipt.types.ts      ReceiptData, ReceiptLine, ReceiptPrintResult
+├── hooks/useReceipt.ts         โหลดใบเสร็จ + เรียกบันทึกการพิมพ์
+├── lib/receiptFormat.ts        เงิน/วันที่ พ.ศ./ป้าย VAT/แยก modifier
+├── components/ReceiptPaper.tsx กระดาษ 80mm (ใช้ทั้งพรีวิวและแผ่นพิมพ์จริง)
+├── components/ReceiptModal.tsx พรีวิว + ปุ่มพิมพ์ + จัดการ error 409
+├── components/receipt.print.css กฎ @media print + @page
+└── index.ts                    barrel export
+```
+
+**ลำดับการทำงานของปุ่มพิมพ์ (ห้ามสลับ)**
+```
+กด "พิมพ์ใบเสร็จ"
+  POST /payments/:id/print        ← ต้องบันทึกก่อน ระบบจึงรู้ว่าเป็นฉบับแรกหรือ "สำเนา"
+  flushSync(setPrintInfo)         ← commit ป้าย "สำเนา" ให้เสร็จก่อนเบราว์เซอร์ snapshot
+  window.print()                  ← เปิดหน้าต่างพิมพ์ของเบราว์เซอร์
+  409 → แสดง "พิมพ์ซ้ำครบจำนวนที่ร้านกำหนดแล้ว" และปิดปุ่มพิมพ์ถาวรในรอบนั้น
+```
+ถ้าพิมพ์ก่อนแล้วค่อยบันทึก ใบที่ออกมาจะไม่มีป้าย "สำเนา" และตัวนับ `max_reprints` คลาด · การอ่านใบเสร็จ (`GET /receipt`) ทำตอนเปิดหน้าต่างเท่านั้น ไม่นับเป็นการพิมพ์
+
+**ทำไมต้อง `flushSync`** `window.print()` อ่าน DOM ทันทีที่ถูกเรียก ถ้าปล่อยให้ React batch state ป้าย "สำเนา" จะยังไม่ถูกวาดลงกระดาษแผ่นที่พิมพ์
+
+**กระดาษ 80mm** พื้นที่พิมพ์ 72mm (`@page { size: 80mm auto; margin: 4mm 2mm }`) `ReceiptModal` portal แผ่นพิมพ์จริงไปใต้ `<body>` แล้วซ่อนทุกอย่างที่ไม่ใช่ `.receipt-print-area` ตอนพิมพ์ แผ่นพรีวิวในหน้าต่างและแผ่นพิมพ์ใช้ `ReceiptPaper` ตัวเดียวกัน จึงเห็นตรงกับที่จะออกเครื่องพิมพ์
+
+**ตัวเลขบนใบเสร็จมาจากไหน** ทั้งหมดมาจาก `GET /payments/:id/receipt` (ค่าใน `payments` ที่ trigger คำนวณไว้) หน้าจอไม่คำนวณ VAT/ยอดรวมใหม่ · `BillDetailModal` แสดงสรุปยอดฝั่ง client เพื่อความเร็วได้ แต่ปุ่มพิมพ์ซ้ำเปิด `ReceiptModal` ที่ดึงข้อมูลจาก server เสมอ
+
+**จุดที่เรียกใช้**
+| จุด | `paymentId` | สถานะ |
+|---|---|---|
+| `PaymentModal` step `done` | `result.paymentId` | เปิดซ้อนเหนือหน้าชำระเงิน ปิดแล้วกลับมากด "เสร็จสิ้น" ได้ |
+| `BillDetailModal` (รายงานยอดขาย) | `bill.id` (คือ `paymentId`) | เก็บเป็น `receiptFor` เพื่อให้ปิดเองเมื่อสลับบิล |
+
+**ยังไม่ทำ (P1):** หน้าพิมพ์ใบเสร็จแบบมี route ของตัวเอง (`/receipt/:id` เปิดในแท็บใหม่), พิมพ์อัตโนมัติหลังจ่าย, โลโก้/ข้อความหัว-ท้ายใบเสร็จจาก `tenants` (ต้องเพิ่มคอลัมน์ก่อน)
+
+**E2E:** `node backend/test/e2e/e2e-receipt.mjs` ตรวจ response ของใบเสร็จ, การนับ `printCount`, `isCopy`, เพดาน `max_reprints` (409) และการอ่านซ้ำที่ไม่นับเป็นการพิมพ์
 
 ---
 

@@ -1,7 +1,7 @@
 # HANDOFF — PWA-POS (ค้าคล่อง / KhaKhlong)
 
 > ไฟล์นี้คือสรุปสถานะล่าสุดสำหรับ **เปิดแชทใหม่แล้วทำงานต่อ** โดยไม่ต้องเล่าบริบทใหม่
-> อัปเดต: 2026-10-25 · ใช้แทน `docs/backend-todo.md` (ไฟล์นั้นล้าสมัยแล้ว)
+> อัปเดต: 2026-10-26 · ใช้แทน `docs/backend-todo.md` (ไฟล์นั้นล้าสมัยแล้ว)
 
 ## วิธีใช้ในแชทใหม่
 
@@ -21,9 +21,9 @@
 |---|---|
 | Path | `C:\Users\chira\OneDrive\เดสก์ท็อป\Final-Project\PWA-POS` |
 | Branch | `main` (branch เก่า `feat-aod`, `feat-benz` ยังอยู่) |
-| HEAD | `ef100bb` — Merge PR #12 from `feat-benz` (2026-10-25) |
+| HEAD | `33a86f2` — feat(payment): polish PromptPay QR panel (2026-10-26) |
 | Remote | `https://github.com/Slippery77/KhaKhlong.git` |
-| Working tree | **ยังไม่สะอาด** — มีงาน reports/payment ค้างไม่ commit (ดูหัวข้อ 3) |
+| Working tree | **ยังไม่สะอาด** — มีงานใบเสร็จ (FE) + backend receipt fields ค้างไม่ commit (ดูหัวข้อ 3.5) |
 | Frontend | React + TypeScript + Vite + Tailwind v4 · dev port **5173** · proxy `/api` → `http://localhost:3000` |
 | Backend | NestJS 11 · port **3000** · prefix `/api` · Swagger เปิด |
 | Database | PostgreSQL 18 · db `pwa_pos` · user `pos_app` / `123456` |
@@ -60,7 +60,7 @@ $env:PGPASSWORD='123456'
 
 ### เสร็จและใช้งานได้
 
-- **Auth** — login/logout/refresh token, JWT guard, permission guard, RLS + tenant isolation
+- **Auth** — login/logout/refresh token, JWT guard, permission guard, RLS + tenant isolation · **store finder ที่ `/`** (จำรหัสร้านใน `localStorage`, ตรวจ slug กับ server ก่อนพาไป login)
 - **Register** — สมัครร้านใหม่ (throttle 3 ครั้ง / 5 นาที / IP)
 - **Menu** — หมวด/เมนู/ modifiers ครบ endpoint
 - **Floors / Tables** — พื้นที่ โต๊ะ ผังร้าน
@@ -73,12 +73,12 @@ $env:PGPASSWORD='123456'
 - **Users** — list, create, update, deactivate, reactivate · **สร้างผู้ใช้ใส่ PIN ได้** แต่แก้ไข/รีเซ็ต PIN ยังไม่ได้ (ดู P0-2)
 - **Roles / Permissions** — seed ครบ, employee 9 สิทธิ์
 - **Payment** — `attempts` (จองบิล) → `pay` (เงินสด/QR) → `cancel`; ออกเลขใบเสร็จ, ดูใบเสร็จ, บันทึกการพิมพ์/พิมพ์ซ้ำ; UI `PaymentModal` 3 ขั้น ใช้ยอดจาก server เท่านั้น
+- **Receipt (FE)** — `features/receipt/` พรีวิวกระดาษ 80mm + พิมพ์จริงผ่าน `window.print()`, ป้าย "สำเนา" ตาม `isCopy`, เคารพ `max_reprints` (409); เปิดได้จาก `PaymentModal` (หลังจ่าย) และ `BillDetailModal` (พิมพ์ซ้ำในรายงาน)
 - **Reports** — `sales/summary`, `sales/by-period`, `sales/top-items`, `sales/transactions`, `sales/receipt/:id`; หน้า Sale Report ต่อ API จริงแล้ว (โค้ดยังไม่ commit)
 - **Store / VAT UI** — `StoreSettingPage` (GET/PATCH tenants) และหน้าแก้ VAT/service charge ผ่าน `/system-config`
 
 ### ยังไม่เริ่ม / ยังไม่ครบ
 
-- **Receipt printing (FE)** — backend มี `GET /payments/:id/receipt` + `POST /payments/:id/print` แต่หน้าจอพิมพ์ใบเสร็จ/พิมพ์ซ้ำยังไม่มี
 - **Audit Logs** — ไม่มี endpoint/UI (DB เขียน audit แค่ตอน logout)
 - **PWA/Offline** — ไม่มี manifest, service worker, Workbox, Dexie
 - **Dashboard** — `/:tenantSlug/homepage` ยังเป็น `<div>Dashboard (TODO)</div>`
@@ -101,7 +101,7 @@ $env:PGPASSWORD='123456'
 - Frontend: `hooks/usePayment.ts`, `components/PaymentModal.tsx`, `MainPOS.tsx` เปิด modal จากปุ่มชำระเงิน
 - แก้บั๊กค้างไม่ commit: `payment.repository.ts` — `computeGrossByAttempt()` เดิม return 2 ค่าแบบ tuple ทำให้ยอดเพี้ยน ตอนนี้คืนค่าเดียว
 
-### 3.2 Reports module (ยังไม่ commit)
+### 3.2 Reports module (commit แล้วใน `da56495`)
 
 - Backend ใหม่ทั้งโฟลเดอร์ `backend/src/modules/reports/` (controller/service/repository/dto) + ลงทะเบียนใน `app.module.ts`
 - สิทธิ์: `@RequireAnyPermission('report:view_all', 'report:view_own_shift')` (เพิ่ม `RequireAnyPermission` ใน guard แล้ว)
@@ -118,39 +118,66 @@ $env:PGPASSWORD='123456'
 ### 3.4 งานค้างใน working tree ณ ตอนอัปเดต
 
 ```text
-modified:   backend/src/app.module.ts
-modified:   backend/src/modules/auth/guards/permissions.decorator.ts
-modified:   backend/src/modules/auth/guards/permissions.guard.ts
-modified:   backend/src/modules/payment/payment.repository.ts
-modified:   frontend/src/features/saleReport/components/BillDetailModal.tsx
-modified:   frontend/src/features/saleReport/components/CashMovementForm.tsx
-modified:   frontend/src/features/saleReport/context/SalesContext.tsx
-untracked:  backend/src/modules/reports/
-untracked:  backend/test/e2e/
-untracked:  frontend/src/features/saleReport/api/
+modified:   backend/src/modules/payment/mapper/payment.mapper.ts      # เพิ่ม vatRate / serviceChargeRate / roundingAdjustment
+modified:   backend/src/modules/payment/payment.repository.ts          # payment_cols อ่าน snapshot 3 คอลัมน์
+modified:   frontend/src/features/mainpos/components/PaymentModal.tsx  # ปุ่ม "พิมพ์ใบเสร็จ" ใน step done
+modified:   frontend/src/features/saleReport/components/BillDetailModal.tsx  # ปุ่ม "พิมพ์ใบเสร็จซ้ำ"
+modified:   docs/payment-module-guide.md
+modified:   docs/HANDOFF.md
+untracked:  frontend/src/features/receipt/
+untracked:  backend/test/e2e/e2e-receipt.mjs
 ```
 
-> งาน reports ทั้งชุดยังไม่ถูก commit — **ห้ามลบทิ้ง/ห้าม checkout ทับ** ก่อน commit
+> งานใบเสร็จทั้งชุด (หัวข้อ 3.5) ยังไม่ถูก commit — **ห้ามลบทิ้ง/ห้าม checkout ทับ**
+
+### 3.5 ใบเสร็จ + พิมพ์ซ้ำ (FE) — 2026-10-26
+
+- Backend: `payment_cols` เพิ่ม `vat_rate_snapshot`, `service_charge_rate_snapshot`, `rounding_adjustment`; `toPaymentResponse` คืน `vatRate`, `serviceChargeRate`, `roundingAdjustment` (ใช้เป็น **ป้ายกำกับ** บนใบเสร็จเท่านั้น ไม่คำนวณซ้ำ) — คอลัมน์มีในสคีมาอยู่แล้ว **ไม่ต้อง ALTER TABLE**
+- Frontend ใหม่ `frontend/src/features/receipt/`:
+  - `ReceiptPaper` — กระดาษ 80mm (พื้นที่พิมพ์ 72mm) ใช้ตัวเดียวทั้งพรีวิวและแผ่นพิมพ์
+  - `ReceiptModal` — พรีวิว + ปุ่มพิมพ์, ป้าย "สำเนา" ตาม `isCopy`, จัดการ 409 (`max_reprints`)
+  - `useReceipt` / `receipt.api` — `GET /payments/:id/receipt` + `POST /payments/:id/print`
+  - `receipt.print.css` — `@page { size: 80mm auto; margin: 4mm 2mm }` + ซ่อนทุกอย่างที่ไม่ใช่ `.receipt-print-area` (portal ใต้ `<body>`)
+- ลำดับการพิมพ์: กดพิมพ์ → `POST /print` → `flushSync` ให้ป้าย "สำเนา" ลงกระดาษ → `window.print()`
+- จุดเรียกใช้: `PaymentModal` step `done` (พิมพ์หลังจ่าย) และ `BillDetailModal` (พิมพ์ซ้ำจากรายงานยอดขาย)
+- ทดสอบ: `npx tsc --noEmit` (backend) / `npx tsc -b` + `vite build` (frontend) ผ่าน; `node backend/test/e2e/e2e-receipt.mjs` ผ่านทุกข้อ (ใบเสร็จ, printCount/isCopy, max_reprints=2 → พิมพ์ได้ 3 ครั้ง ครั้งที่ 4 = 409, 404, 401, จ่ายซ้ำได้ใบเดิม)
+- รายละเอียดเชิงออกแบบ: `docs/payment-module-guide.md` หัวข้อ 7.5
+
+### 3.6 ทางเข้าเว็บ: store finder + จำรหัสร้านในเครื่อง (Phase 1) — 2026-10-27
+
+ปัญหาเดิม: ต้องพิมพ์ URL `/{slug}/login` เอง, path `/` เป็นจอขาว, ปิดแท็บแล้วต้องจำ URL ใหม่, ฟอร์ม login แก้รหัสร้านไม่ได้
+
+- Backend: `GET /api/public/tenants/:slug` (`modules/tenants/public-tenants.controller.ts`)
+  - `@Public()` + throttle 20 ครั้ง/นาที · ตอบ `200 { status, data:{ slug, exists, active } }` เสมอ (ไม่ 404)
+  - ไม่คืนชื่อร้าน/ข้อมูลอื่น → ลดการไล่เดารายชื่อร้าน; ตัวกันจริงยังเป็น RLS + `tenant_id` ใน token
+  - ตรวจรูปแบบ slug ด้วย regex เดียวกับ `chk_tenant_slug_format` ก่อนยิง DB
+- Frontend:
+  - `features/auth/pages/store_finder_page.tsx` — route `/` (และ `/login`): ถ้าเครื่องเคยล็อกอิน → เด้ง `/{slug}/login` ทันที; ถ้าไม่เคย/กด "เปลี่ยนร้าน" (`?switch=1`) → หน้ากรอกรหัสร้าน + การ์ด "ร้านที่ใช้ล่าสุด" + ปุ่ม "ลืมร้านนี้"
+  - `features/auth/tenantStorage.ts` — `saveLastTenantSlug` / `getLastTenantSlug` / `clearLastTenantSlug` (เก็บใน `localStorage` ไม่ใช่ session)
+  - `features/auth/api/publicTenant.api.ts` — เรียก endpoint ข้างบน
+  - `useLogin.ts` — บันทึก slug หลัง login สำเร็จ; logout กลับ `/` (ไม่พึ่ง `useParams`)
+  - `login_form.tsx` — แถบ "รหัสร้าน" พับเก็บ/แก้ไขได้ + ลิงก์ "ไม่ใช่ร้านนี้? เปลี่ยนร้าน"
+  - `AuthContext` — session หมดอายุแล้วไม่มี slug → กลับ `/` (เดิมเด้ง `/register` ซึ่งทำให้คนมีบัญชีแล้วหลง)
+  - `AppRouter` — เพิ่ม `/`, `/login`, และ catch-all `*` → store finder
+- ทดสอบ: `npx tsc --noEmit` / `npx tsc -b` + `vite build` ผ่าน · `node backend/test/e2e/e2e-public-tenant.mjs` ผ่านทุกข้อ (ร้านจริง = exists/active, ร้านมั่ว = false, slug ผิดรูปแบบ = false, ตัวพิมพ์ใหญ่ normalize ได้, ไม่ต้องมี token)
+- **Phase 2/3 ที่ยังไม่ทำ:** login ด้วยอีเมล (`resolve_user_by_email` + DTO พร้อมแล้ว), device pairing + PIN
 
 ---
 
 ## 4. งานค้าง P0 — ต้องทำก่อนเดโม
 
-### P0-1. Commit งาน Reports + Payment ที่ค้างอยู่
-- ความเสี่ยง: `backend/src/modules/reports/`, `frontend/src/features/saleReport/api/`, `backend/test/e2e/` เป็น untracked ทั้งหมด; ถ้าเครื่องหาย/สั่ง `git clean` งานหาย
-- ต้องทำ: ตรวจ typecheck + รัน `node backend/test/e2e/e2e-reports.mjs` ให้ผ่าน แล้ว commit แยกเป็น
-  1) `feat(payment): fix gross amount` 2) `feat(reports): backend` 3) `feat(reports): frontend` 4) `test(e2e): reports`
-- อย่า commit ปนกับไฟล์ที่คนอื่นกำลังแก้
+### P0-1. ✅ เสร็จแล้ว — Commit งาน Reports + Payment
+- reports ทั้งชุดถูก commit ใน `da56495` (backend + FE + `e2e-reports.mjs`) แล้ว
+- คงรายการนี้ไว้เป็นบันทึก: งานที่ค้างใน working tree ตอนนี้คือชุดใบเสร็จ (หัวข้อ 3.5) ซึ่งควร commit แยกเป็น `feat(receipt): backend fields` / `feat(receipt): frontend` / `test(e2e): receipt`
 
 ### P0-2. ช่อง PIN ผู้จัดการในหน้าผู้ใช้
 - ปัญหา: `backend/src/modules/users/dto/updateUser.dto.ts` ไม่มีฟิลด์ `pin`; `users.service.ts` hash PIN เฉพาะตอน create; `frontend/src/features/users/components/UserFormPopup.tsx` ไม่มีช่อง PIN
 - ผลกระทบ: สร้าง manager จาก UI → ไม่มี PIN → รับรองกะตอนยอดไม่ตรงไม่ได้
 - ต้องทำ: เพิ่ม `pin` (`/^\d{6}$/`) ใน `UpdateUserDTO` + hash bcrypt ใน `updateUser()` + ช่องตั้ง/รีเซ็ต PIN ใน UI + audit
 
-### P0-3. หน้าพิมพ์ใบเสร็จ / พิมพ์ซ้ำ (FE)
-- backend พร้อมแล้ว: `GET /payments/:id/receipt` คืนข้อมูลครบ (ร้าน/โต๊ะ/รายการ/ยอด/เงินทอน), `POST /payments/:id/print` คืน `printCount` + `isCopy`
-- ปัญหา: `PaymentModal` แสดงแค่เลขใบเสร็จ/ยอด/เงินทอน แล้วปิด — ไม่มีปุ่มพิมพ์หรือหน้าสำเนา
-- ต้องทำ: หน้า receipt + `window.print()` หรือ print stylesheet, ป้าย "สำเนา" เมื่อ `isCopy`, เคารพ `max_reprints` (409 เมื่อเกิน)
+### P0-3. ✅ เสร็จแล้ว — หน้าพิมพ์ใบเสร็จ / พิมพ์ซ้ำ (FE)
+- ทำเสร็จตามหัวข้อ 3.5: `features/receipt/` + ปุ่มใน `PaymentModal` / `BillDetailModal`, พรีวิว 80mm, ป้าย "สำเนา", เคารพ `max_reprints`
+- เหลือเป็น P1 (ไม่บล็อกเดโม): route `/receipt/:id` เปิดในแท็บใหม่, พิมพ์อัตโนมัติหลังจ่าย, โลโก้/ข้อความหัว-ท้ายใบเสร็จ (ต้อง `ALTER TABLE tenants` เพิ่ม `receipt_logo_url` / `receipt_header` / `receipt_footer`)
 
 ---
 
@@ -165,7 +192,7 @@ untracked:  frontend/src/features/saleReport/api/
 - **`POST /orders/sync` รับ `@Body() dto: any`** → ValidationPipe ไม่ตรวจ; ควรเพิ่ม DTO + จำกัด batch
 - **ไม่มี login lockout / audit login** — `password_locked_until` ไม่ถูกใช้, `login_success` / `login_failed` ไม่ถูกเขียน (มีแค่ `logout`)
 - **ไม่มี `GET /users/me`, `POST /auth/pin-login`**
-- **ไม่มี catch-all route** — path แปลกได้หน้าว่าง; `/:tenantSlug/homepage` ยังเป็น TODO
+- **`/:tenantSlug/homepage` ยังเป็น TODO** — catch-all มีแล้ว (path แปลกกลับไปหน้า store finder)
 
 ### P2 — ฟีเจอร์ตาม scope
 
