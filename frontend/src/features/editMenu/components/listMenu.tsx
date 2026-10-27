@@ -21,30 +21,30 @@ export default function ListMenuEdit ({menuItem,showInactive, search, onToggleAv
         .sort((a, b) => Number(b.is_active) - Number(a.is_active));
 
     return (
-        <div className="overflow-hidden rounded-2xl border border-[#e5d9c8] bg-white">
+        <div className="overflow-hidden rounded-2xl border border-[#e5d9c8] bg-white shadow-sm">
             <table className="w-full text-sm">
-                <thead className="bg-[#f3eadf] text-xs text-stone-500">
+                <thead className="bg-[#f7f3ee] text-xs text-stone-500">
                     <tr>
-                        <th className="px-4 py-3 text-left font-medium">ชื่อเมนู</th>
-                        <th className="px-4 py-3 text-right font-medium">ราคา</th>
-                        <th className="px-4 py-3 text-left font-medium">ตัวเลือก</th>
-                        <th className="px-4 py-3 text-left font-medium">สถานะวันนี้</th>
-                        <th className="px-4 py-3 text-right font-medium">จัดการ</th>
+                        <th className="px-5 py-3 text-left font-medium">ชื่อเมนู</th>
+                        <th className="px-5 py-3 text-right font-medium">ราคา</th>
+                        <th className="px-5 py-3 text-left font-medium">ตัวเลือก</th>
+                        <th className="px-5 py-3 text-left font-medium">สถานะวันนี้</th>
+                        <th className="px-5 py-3 text-right font-medium">จัดการ</th>
                     </tr>
                 </thead>
                 <tbody>
                 {filterMenu.length === 0 && (
                     <tr>
-                        <td colSpan={5} className="px-4 py-10 text-center text-stone-400">ไม่มีเมนู</td>
+                        <td colSpan={5} className="px-5 py-12 text-center text-stone-400">ไม่มีเมนู</td>
                     </tr>
                 )}
                 {filterMenu.map(m=>(
                     <tr
                         key={m.menu_item_id}
-                        className={`border-t border-[#efe6da] ${m.is_active ? '' : 'bg-[#f3eee7]'}`}
+                        className={`border-t border-[#efe6da] transition-colors hover:bg-[#FAF7F2]/60 ${m.is_active ? '' : 'bg-[#f3eee7]'}`}
                     >
                         {/* ชื่อเมนู + คำอธิบาย */}
-                        <td className="px-4 py-3">
+                        <td className="px-5 py-3.5">
                             <div className="flex items-center gap-2">
                                 <span className="font-semibold text-[#2D241E]">{m.name}</span>
                                 {!m.is_active && (
@@ -52,26 +52,28 @@ export default function ListMenuEdit ({menuItem,showInactive, search, onToggleAv
                                 )}
                             </div>
                             {m.description && (
-                                <p className="text-xs text-stone-500">{m.description}</p>
+                                <p className="mt-0.5 text-xs text-stone-500 line-clamp-1">{m.description}</p>
                             )}
                         </td>
 
                         {/* ราคา */}
-                        <td className="px-4 py-3 text-right font-semibold text-[#8C6D58]">
+                        <td className="px-5 py-3.5 text-right font-semibold text-[#8C6D58]">
                             ฿{m.price}
                         </td>
 
                         {/* ตัวเลือก */}
-                        <td className="px-4 py-3 text-stone-500">
+                        <td className="px-5 py-3.5 text-stone-600">
                             {m.modifier_group_ids.length > 0
                                 ? <button 
                                     type='button'
                                     onClick={()=>onLinkModifiers(m)}
+                                    className="rounded-lg px-2 py-1 text-sm transition-all duration-200 hover:bg-[#f0e6dc] hover:text-[#8C6D58] cursor-pointer"
                                     >ตัวเลือก {m.modifier_group_ids.length} กลุ่ม
                                     </button>
                                 : <button 
                                 type='button' 
                                 onClick={()=>onLinkModifiers(m)}
+                                className="rounded-lg px-2 py-1 text-sm text-stone-500 transition-all duration-200 hover:bg-[#f0e6dc] hover:text-[#2D241E] cursor-pointer"
                                 >
                                     ยังไม่มีตัวเลือก
                                 </button>
@@ -79,41 +81,41 @@ export default function ListMenuEdit ({menuItem,showInactive, search, onToggleAv
                         </td>
 
                         {/* สถานะวันนี้ */} 
-                        <td className="px-4 py-3">
+                        <td className="px-5 py-3.5">
                             {m.is_active ? (
-                                <label className="flex cursor-pointer items-center gap-2">
+                                <label className="flex cursor-pointer items-center gap-2.5">
                                     <button
                                         type="button"
                                         role="switch"
                                         aria-checked={m.is_available}
                                         onClick={() => onToggleAvailable(m)}
-                                        className={`relative h-6 w-11 rounded-full transition hover:opacity-90 ${
+                                        className={`relative h-6 w-11 rounded-full transition-all duration-200 hover:shadow-sm ${
                                             m.is_available ? 'bg-[#5f7a52]' : 'bg-[#8a7a6c]'
                                         }`}
                                     >
                                         <span
-                                            className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-all ${
+                                            className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-all duration-200 ${
                                                 m.is_available ? 'left-5.5' : 'left-0.5'
                                             }`}
                                         />
                                     </button>
-                                    <span className="text-[#2D241E]">{m.is_available ? 'พร้อมขาย' : 'หมดวันนี้'}</span>
+                                    <span className={`text-sm ${m.is_available ? 'text-[#2D241E]' : 'text-amber-700'}`}>{m.is_available ? 'พร้อมขาย' : 'หมดวันนี้'}</span>
                                 </label>
                             ) : (
-                                <span className="text-stone-500">ไม่แสดงตอนสั่งอาหาร</span>
+                                <span className="text-sm text-stone-500">ไม่แสดงตอนสั่งอาหาร</span>
                             )}
                         </td>
 
                         {/* จัดการ */}
-                        <td className="px-4 py-3">
-                            <div className="flex justify-end gap-2">
+                        <td className="px-5 py-3.5">
+                            <div className="flex justify-end gap-1.5">
                                 {m.is_active ? (
                                     <>
                                         <button
                                             type="button"
                                             title="แก้ไข"
                                             onClick={() => onEdit(m)}
-                                            className="flex h-9 w-9 items-center justify-center rounded-xl border border-[#d9c6b0] text-[#2D241E] transition hover:bg-[#FAF7F2] active:scale-95"
+                                            className="flex h-9 w-9 items-center justify-center rounded-xl border border-[#d9c6b0] text-[#2D241E] transition-all duration-200 hover:bg-white hover:shadow-sm active:scale-95 cursor-pointer"
                                         >
                                             <Pencil size={16} />
                                         </button>
@@ -121,7 +123,7 @@ export default function ListMenuEdit ({menuItem,showInactive, search, onToggleAv
                                             type="button"
                                             title="เลิกขาย"
                                             onClick={() => onDisable(m)}
-                                            className="flex h-9 w-9 items-center justify-center rounded-xl border border-[#d9c6b0] text-[#2D241E] transition hover:bg-[#FAF7F2] active:scale-95"
+                                            className="flex h-9 w-9 items-center justify-center rounded-xl border border-[#d9c6b0] text-[#2D241E] transition-all duration-200 hover:bg-white hover:shadow-sm active:scale-95 cursor-pointer"
                                         >
                                             <EyeOff size={16} />
                                         </button>
@@ -130,7 +132,7 @@ export default function ListMenuEdit ({menuItem,showInactive, search, onToggleAv
                                     <button
                                         type="button"
                                         onClick={() => onEnable(m)}
-                                        className="rounded-xl border border-[#b08968] bg-white px-3 py-1.5 text-[#2D241E] transition hover:bg-[#FAF7F2] active:scale-95"
+                                        className="rounded-xl border border-[#b08968]/70 bg-white px-3 py-1.5 text-sm text-[#2D241E] transition-all duration-200 hover:bg-[#FAF7F2] hover:shadow-sm active:scale-95 cursor-pointer"
                                     >
                                         เปิดขายอีกครั้ง
                                     </button>

@@ -136,38 +136,42 @@ export function MenuEdit() {
           editIsSubmitting={submitCategory}
           editError={editCategoryError}
          />
-        <main className="flex-1 overflow-y-auto bg-[#FAF7F2] p-6">
+        <main className="flex-1 overflow-y-auto bg-[#FAF7F2] p-6 lg:p-8">
 
-          <div className="mb-4 flex flex-wrap items-start justify-between gap-4">
+          <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
             <div>
-              <h1 className="text-2xl font-semibold text-[#2D241E]">{selected?.name ?? 'ยังไม่มีหมวด'}</h1>
-              <p className="text-sm text-stone-500">
-                {items.length} เมนู · หมดวันนี้ {soldOutCount} · เลิกขาย {inactiveCount}
+              <h1 className="text-2xl font-semibold text-[#2D241E]">{selected?.name ?? 'ยังไม่มีหมวดหมู่'}</h1>
+              <p className="mt-1 text-sm text-stone-500">
+                ทั้งหมด <span className="font-medium text-[#2D241E]">{items.length}</span> เมนู · 
+                พร้อมขาย <span className="font-medium text-emerald-700">{items.filter(m => m.is_active && m.is_available).length}</span> · 
+                หมดวันนี้ <span className="font-medium text-amber-700">{soldOutCount}</span> · 
+                เลิกขาย <span className="font-medium text-stone-600">{inactiveCount}</span>
               </p>
             </div>
 
-            <div className="flex items-center gap-3">
-              <label htmlFor="showdisable" className="flex cursor-pointer items-center gap-2 text-sm text-stone-600">
+            <div className="flex flex-wrap items-center gap-2.5">
+              <div className="relative">
+                <input
+                  value={search}
+                  onChange={e => setSearch(e.target.value)}
+                  placeholder="ค้นหาเมนู..."
+                  className="w-64 rounded-xl border border-[#d9c6b0]/80 bg-white px-3.5 py-2 text-sm text-[#2D241E] shadow-sm outline-none transition-all duration-200 focus:border-[#8C6D58] focus:ring-2 focus:ring-[#8C6D58]/10 hover:border-[#c4b09a]"
+                />
+              </div>
+              <label htmlFor="showdisable" className="flex cursor-pointer items-center gap-2 rounded-xl border border-[#d9c6b0]/80 bg-white px-3.5 py-2 text-sm text-stone-600 shadow-sm transition-all duration-200 hover:bg-[#FAF7F2] hover:border-[#c4b09a]">
                 <input
                   id="showdisable"
                   type="checkbox"
                   checked={showInactive}
                   onChange={e => setShowInactive(e.target.checked)}
-                  className="h-4 w-4 accent-[#8C6D58]"
+                  className="h-4 w-4 cursor-pointer accent-[#8C6D58]"
                 />
-                แสดงที่เลิกขาย
+                แสดงเมนูที่เลิกขาย
               </label>
-              <input
-                value={search}
-                onChange={e => setSearch(e.target.value)}
-                placeholder="ค้นหาเมนู"
-                className="w-40 rounded-xl border border-[#d9c6b0] bg-white px-3 py-2 text-sm outline-none focus:border-[#8C6D58]"
-              />
-
               <button
                 type="button"
                 onClick={()=> { setFormItem(undefined); setShowForm(true);}}
-                className="flex items-center gap-1 rounded-xl bg-[#8C6D58] px-4 py-2 font-semibold text-white transition hover:bg-[#7a5c45] active:scale-95"
+                className="flex items-center gap-1.5 rounded-xl bg-[#8C6D58] px-4 py-2 font-medium text-white shadow-sm transition-all duration-200 hover:bg-[#7a5c45] hover:shadow-md active:scale-[0.98] cursor-pointer"
               >
                 <Plus size={18}/>เพิ่มเมนู
               </button>
