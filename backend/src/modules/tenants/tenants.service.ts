@@ -52,6 +52,35 @@ export class TenantsService {
     }
 
     /**
+     * GET /public/tenants/:slug — ตรวจรหัสร้านจากหน้าแรก (ยังไม่ล็อกอิน)
+     *
+     * ตอบ 200 เสมอพร้อม { exists, active } ไม่ throw 404 เพราะ:
+     * - client แยกแยะง่าย (อ่านค่าปกติ ไม่ต้องดัก error)
+     * - ไม่เปิดช่องให้ไล่ยิงดูว่า slug ไหน "มีในระบบ" ผ่าน status code ที่ต่างกัน
+     *
+     * ไม่คืนชื่อร้านหรือข้อมูลอื่นของร้าน — ตัวกันการเข้าถึงข้อมูลจริงคือ RLS + tenant_id ใน token
+     */
+    async lookupPublicTenant(slug:string){
+        const normalized = String(slug ?? '').trim().toLowerCase();
+        // รูปแบบเดียวกับ CHECK constraint ของ tenants.chk_tenant_slug_format
+        const validFormat = /^[a-z0-9][a-z0-9-]{1,48}[a-z0-9]$/.test(normalized);
+
+        if(!validFormat){
+            return { status:'success', data:{ slug:normalized, exists:false, active:false } };
+        }
+
+        const tenant = await this.tenantsRepository.findTenantSlug(normalized);
+        return {
+            status:'success',
+            data:{
+                slug: normalized,
+                exists: Boolean(tenant),
+                active: Boolean(tenant?.is_active),
+            },
+        };
+    }
+
+    /**
      * GET /store — ดึงข้อมูลร้านของ user ที่ login อยู่
      * ร้านมาจาก tenant context ของ request ไม่ต้องส่ง id มา
      * ไม่พบร้าน = 404

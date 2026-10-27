@@ -1,5 +1,5 @@
 ﻿import { useCallback, useEffect, useState, useMemo } from 'react';
-import { ArrowLeft, Save, Store } from 'lucide-react';
+import { ArrowLeft, CheckCircle2, Info, QrCode, Save, Smartphone, Store } from 'lucide-react';
 import Header from '../../../components/Header';
 import SettingNavBar from '../../../components/settingNavBar';
 import { useAuth } from '../../auth/context/AuthContext';
@@ -61,6 +61,14 @@ const initialForm: FormState = {
 
 const provinces = getProvinces();
 
+/** จัดรูปแบบเบอร์พร้อมเพย์เป็น 0XX-XXX-XXXX เพื่อให้อ่านง่าย (เก็บจริงเป็นตัวเลขล้วน) */
+const formatPromptPay = (digits: string) => {
+  if (!digits) return '';
+  if (digits.length <= 3) return digits;
+  if (digits.length <= 6) return `${digits.slice(0, 3)}-${digits.slice(3)}`;
+  return `${digits.slice(0, 3)}-${digits.slice(3, 6)}-${digits.slice(6)}`;
+};
+
 export default function StoreSettingPage() {
   const { accessToken, user: currentUser } = useAuth();
   const [form, setForm] = useState<FormState>(initialForm);
@@ -68,16 +76,27 @@ export default function StoreSettingPage() {
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  // โฟกัสอยู่ = แสดงตัวเลขล้วน (ไม่แทรกขีด) เพื่อไม่ให้ caret กระโดดตอนพิมพ์
+  const [isPromptPayFocused, setIsPromptPayFocused] = useState(false);
 
   const canConfigure = currentUser?.role === 'owner' || currentUser?.role === 'manager';
 
   const districts = form.province ? getDistricts(form.province) : [];
   const subdistricts = form.province && form.district ? getSubdistricts(form.province, form.district) : [];
 
-  const ppDigits = form.promptpay_id.replace(/\D/g, '');
+  const ppDigits = form.promptpay_id.replace(/\D/g, '').slice(0, 10);
+  const isPromptPayValid = /^0\d{9}$/.test(ppDigits);
+  const promptPayError =
+    ppDigits.length === 10 && !isPromptPayValid
+      ? 'เบอร์พร้อมเพย์ต้องเริ่มต้นด้วย 0 และมี 10 หลัก'
+      : null;
+  const promptPayHint =
+    ppDigits.length > 0 && ppDigits.length < 10
+      ? `กรอกอีก ${10 - ppDigits.length} หลัก`
+      : 'ตัวเลข 10 หลัก ไม่ต้องใส่ขีด';
   const ppPayload = useMemo(
-    () => (/^0\d{9}$/.test(ppDigits) ? generatePayload(ppDigits, {}) : null),
-    [ppDigits],
+    () => (isPromptPayValid ? generatePayload(ppDigits, {}) : null),
+    [isPromptPayValid, ppDigits],
   );
   const loadStore = useCallback(async () => {
     setIsLoading(true);
@@ -115,6 +134,13 @@ export default function StoreSettingPage() {
     setSuccess(null);
   };
 
+  // รับเฉพาะตัวเลข 10 หลัก (รองรับการวางเบอร์ที่มีขีด/ช่องว่าง)
+  const handlePromptPayChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const digits = e.target.value.replace(/\D/g, '').slice(0, 10);
+    setForm((prev) => ({ ...prev, promptpay_id: digits }));
+    setSuccess(null);
+  };
+
   const handleProvinceChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
     setForm((prev) => ({ ...prev, province: e.target.value, district: '', subdistrict: '', postal_code: '' }));
     setSuccess(null);
@@ -136,6 +162,11 @@ export default function StoreSettingPage() {
     e.preventDefault();
     if (!canConfigure) {
       setError('คุณไม่มีสิทธิ์แก้ไขข้อมูลร้าน');
+      return;
+    }
+    // กันไม่ให้ยิง API ด้วยเบอร์ที่ผิดรูปแบบ (DB มี CHECK constraint อยู่แล้ว)
+    if (ppDigits.length > 0 && !isPromptPayValid) {
+      setError('เบอร์พร้อมเพย์ไม่ถูกต้อง ต้องเป็นตัวเลข 10 หลักและเริ่มต้นด้วย 0');
       return;
     }
     setIsSaving(true);
@@ -379,38 +410,120 @@ export default function StoreSettingPage() {
               </div>
             </div>
           </section>
-          <section className='bg-white border border-[#E8DFD5] rounded-2xl shadow-sm overflow-hidden'>
-            <div className='px-6 py-4 border-b border-[#E8DFD5] bg-[#FBF9F6]'>
-              <h2 className='text-base font-medium text-[#2D241E]'>ข้อมูลเลขพร้อมเพย์</h2>
-              <p className='text-sm text-stone-500 mt-0.5'></p>
+          <section className="bg-white border border-[#E8DFD5] rounded-2xl shadow-sm overflow-hidden">
+            <div className="px-6 py-4 border-b border-[#E8DFD5] bg-[#FBF9F6] flex items-center gap-3">
+              <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#EFE8DC] text-[#8C6D58]">
+                <QrCode className="h-4 w-4" />
+              </div>
+              <div>
+                <h2 className="text-base font-medium text-[#2D241E]">รับเงินผ่านพร้อมเพย์</h2>
+                <p className="text-sm text-stone-500 mt-0.5">
+                  ใช้สร้าง QR รับเงินในหน้าชำระเงิน
+                </p>
+              </div>
             </div>
-            <div className='p-6'>
-              <div className='grid grid-cols-1 md:grid-cols-6 gap-4'>
-                <div className='md:col-span-2'>
-                  <label className='block text-sm font-medium text-[#2D241E] mb-1.5'>
-                      เลขพร้อมเพย์
-                  </label>
-                  <input
-                    type="text"
-                    value={form.promptpay_id}
-                    onChange={handleChange('promptpay_id')}
-                    maxLength={10}
-                    inputMode='numeric'
-                    className='w-full px-3 py-2 border border-[#d9c6b0] rounded-xl focus:outline-none focus:ring-2 focus:ring-[#8C6D58]/20 focus:border-[#8C6D58] transition-colors'
-                    placeholder='083-xxx-xxxx'
-                  />
-                </div>
-                {ppPayload?(
-                  <div className="md:col-span-4 flex items-center gap-4">
-                    <QRCodeSVG value={ppPayload} size={144}/>
-                     <p className='text-sm text-stone-500'>
-                        สแกนด้วยแอปธนาคารเพื่อตรวจว่าชื่อบัญชีถูกต้อง แล้วกดยกเลิก ไม่ต้องโอน
+
+            <div className="p-6">
+              <div className="grid grid-cols-1 gap-6 md:grid-cols-5">
+                {/* ซ้าย: ช่องกรอก + คำแนะนำ */}
+                <div className="md:col-span-3 flex flex-col gap-4">
+                  <div>
+                    <div className="mb-1.5 flex items-baseline justify-between gap-2">
+                      <label htmlFor="promptpay-id" className="block text-sm font-medium text-[#2D241E]">
+                        เบอร์พร้อมเพย์
+                      </label>
+                      <span className="text-xs tabular-nums text-stone-400">
+                        {ppDigits.length}/10
+                      </span>
+                    </div>
+
+                    <div className="relative">
+                      <Smartphone className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-stone-400" />
+                      <input
+                        id="promptpay-id"
+                        type="tel"
+                        value={isPromptPayFocused ? ppDigits : formatPromptPay(ppDigits)}
+                        onChange={handlePromptPayChange}
+                        onFocus={() => setIsPromptPayFocused(true)}
+                        onBlur={() => setIsPromptPayFocused(false)}
+                        maxLength={10}
+                        inputMode="numeric"
+                        autoComplete="tel-national"
+                        aria-invalid={Boolean(promptPayError)}
+                        aria-describedby="promptpay-help"
+                        className={`w-full rounded-xl border bg-white py-2.5 pl-9 pr-10 text-sm tabular-nums text-[#2D241E] outline-none transition-colors duration-200 placeholder:text-stone-400 focus:ring-2 disabled:cursor-not-allowed disabled:bg-stone-50 disabled:text-stone-400 ${
+                          promptPayError
+                            ? 'border-red-300 focus:border-red-500 focus:ring-red-500/20'
+                            : isPromptPayValid
+                              ? 'border-emerald-300 focus:border-emerald-500 focus:ring-emerald-500/20'
+                              : 'border-[#d9c6b0] focus:border-[#8C6D58] focus:ring-[#8C6D58]/20'
+                        }`}
+                        placeholder="0812345678"
+                        disabled={isLoading || isSaving || !canConfigure}
+                      />
+                      {isPromptPayValid && (
+                        <CheckCircle2 className="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-emerald-600" />
+                      )}
+                    </div>
+
+                    <p
+                      id="promptpay-help"
+                      aria-live="polite"
+                      className={`mt-1.5 flex items-start gap-1.5 text-xs ${
+                        promptPayError
+                          ? 'text-red-600'
+                          : isPromptPayValid
+                            ? 'text-emerald-700'
+                            : 'text-stone-500'
+                      }`}
+                    >
+                      {promptPayError ? (
+                        <>
+                          <Info className="mt-px h-3.5 w-3.5 shrink-0" />
+                          {promptPayError}
+                        </>
+                      ) : isPromptPayValid ? (
+                        <>
+                          <CheckCircle2 className="mt-px h-3.5 w-3.5 shrink-0" />
+                          เบอร์พร้อมเพย์พร้อมใช้งาน
+                        </>
+                      ) : (
+                        promptPayHint
+                      )}
                     </p>
                   </div>
-                ):(
-                  <p className='text-sm text-stone-400'>กรอกเบอร์ 10 หลักเพื่อดูตัวอย่าง QR</p>
-                )}
-                
+
+                  <div className="flex gap-2.5 rounded-xl border border-[#E8DFD5] bg-[#FBF9F6] px-4 py-3">
+                    <Info className="mt-0.5 h-4 w-4 shrink-0 text-[#8C6D58]" />
+                    <p className="text-xs leading-relaxed text-stone-600">
+                      ใช้ได้เฉพาะเบอร์มือถือที่ผูกพร้อมเพย์แล้ว ระบบจะนำเลขนี้ไปสร้าง QR
+                      ในหน้าชำระเงินโดยอัตโนมัติ
+                    </p>
+                  </div>
+                </div>
+
+                {/* ขวา: ตัวอย่าง QR */}
+                <div className="md:col-span-2">
+                  <div className="flex h-full flex-col items-center justify-center rounded-2xl border border-dashed border-[#d9c6b0] bg-[#FBF9F6] px-4 py-5 text-center">
+                    <div
+                      role="img"
+                      aria-label="ตัวอย่าง QR พร้อมเพย์"
+                      className="flex h-[132px] w-[132px] items-center justify-center rounded-xl border border-[#E8DFD5] bg-white shadow-sm"
+                    >
+                      {ppPayload ? (
+                        <QRCodeSVG value={ppPayload} size={112} fgColor="#2D241E" bgColor="#FFFFFF" />
+                      ) : (
+                        <QrCode className="h-10 w-10 text-[#d9c6b0]" aria-hidden="true" />
+                      )}
+                    </div>
+                    <p className="mt-3 text-xs font-medium text-[#2D241E]">ตัวอย่าง QR พร้อมเพย์</p>
+                    <p className="mt-1 text-[11px] leading-relaxed text-stone-500">
+                      {ppPayload
+                        ? 'สแกนด้วยแอปธนาคารเพื่อตรวจชื่อบัญชี แล้วกดยกเลิก ไม่ต้องโอน'
+                        : 'กรอกเบอร์พร้อมเพย์ 10 หลัก เพื่อดูตัวอย่าง'}
+                    </p>
+                  </div>
+                </div>
               </div>
             </div>
           </section>

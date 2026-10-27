@@ -3,7 +3,7 @@
 ## เริ่มงานทุกครั้ง
 
 1. อ่าน `docs/HANDOFF.md` — สรุปสถานะล่าสุด + งานค้าง P0/P1/P2 + decision สำคัญ
-2. เช็ค `git status` — ปัจจุบันมีงาน **Reports/Payment ค้างไม่ commit** (untracked: `backend/src/modules/reports/`, `backend/test/e2e/`, `frontend/src/features/saleReport/api/`) ห้าม `git clean` / checkout ทับ
+2. เช็ค `git status` — ปัจจุบันมีงาน **ใบเสร็จ (FE) + store finder (Phase 1) ค้างไม่ commit** (untracked: `frontend/src/features/receipt/`, `frontend/src/features/auth/pages/store_finder_page.tsx`, `frontend/src/features/auth/api/`, `frontend/src/features/auth/tenantStorage.ts`, `backend/src/modules/tenants/public-tenants.controller.ts`, `backend/test/e2e/e2e-receipt.mjs`, `backend/test/e2e/e2e-public-tenant.mjs`) ห้าม `git clean` / checkout ทับ
 3. `docs/backend-todo.md` และ `docs/daily-update-2026-10-21.md` **ล้าสมัยแล้ว** อย่าใช้เป็นแหล่งอ้างอิง
 4. Branch หลัก: `main` · Remote: `Slippery77/KhaKhlong` (branch เก่า `feat-aod`, `feat-benz`)
 
@@ -17,9 +17,9 @@
 
 ## งานด่วนปัจจุบัน (P0)
 
-1. Commit งาน Reports + Payment fix + E2E ที่ค้างใน working tree
+1. Commit งานใบเสร็จที่ค้างใน working tree (`features/receipt/` + snapshot fields ฝั่ง backend + `e2e-receipt.mjs`)
 2. PIN ผู้จัดการ: เพิ่ม `pin` ใน `UpdateUserDTO` + hash ใน service + ช่อง PIN ใน `UserFormPopup`
-3. หน้าพิมพ์ใบเสร็จ/พิมพ์ซ้ำฝั่ง FE (backend `GET /payments/:id/receipt` + `POST /payments/:id/print` พร้อมแล้ว)
+3. ~~หน้าพิมพ์ใบเสร็จ/พิมพ์ซ้ำฝั่ง FE~~ ✅ เสร็จแล้ว — `frontend/src/features/receipt/` + ปุ่มใน `PaymentModal` / `BillDetailModal`; เหลือ P1: route `/receipt/:id`, auto-print, โลโก้/ข้อความหัว-ท้ายใบเสร็จ (ต้อง `ALTER TABLE tenants`)
 
 ## กติกาที่ห้ามพลาด
 

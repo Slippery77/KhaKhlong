@@ -2,6 +2,7 @@ import { createContext, useContext,useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { refreshOnce, setAuthHandlers } from '../../../libs/appClient';
 import { clearSession, getSavedUser } from '../authStorage';
+import { getLastTenantSlug } from '../tenantStorage';
 import type { AuthUser } from '../types/auth.types';
 
 
@@ -25,11 +26,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setAuthHandlers({
         onRefreshed: (token) => setAccessToken(token),
         onSessionExpired: () => {
-            const slug = getSavedUser()?.tenantSlug;
+            // จำร้านจาก user ที่เพิ่งหมดอายุ หรือร้านที่เครื่องเคยจำไว้
+            const slug = getSavedUser()?.tenantSlug ?? getLastTenantSlug();
             clearSession();
             setAccessToken(null);
             setUser(null);
-            navigate(slug ? `/${slug}/login` : '/register');
+            // ไม่มี slug ก็กลับหน้าแรก (store finder) ไม่ใช่เด้งไป /register
+            // เพราะคนที่เคยมีบัญชีแต่เครื่องลืมร้านต้องกรอกรหัสร้านเดิมได้
+            navigate(slug ? `/${slug}/login` : '/');
         },
     });
     const restore = async () =>{

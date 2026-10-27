@@ -3,7 +3,7 @@ import { DbContextService } from "../../database/db-context.service";
 
 const paymentAttempt_cols = `payment_attempt_id, payment_method, amount, status,
           qr_reference, failure_reason, initiated_by, created_at, updated_at`;
-const payment_cols = `payment_id, payment_attempt_id, receipt_number, business_date::text AS business_date, subtotal, vat_amount, service_charge_amount, total_amount, vat_mode, payment_method, cash_received,change_amount,paid_at`
+const payment_cols = `payment_id, payment_attempt_id, receipt_number, business_date::text AS business_date, subtotal, vat_amount, service_charge_amount, total_amount, vat_mode, vat_rate_snapshot, service_charge_rate_snapshot, rounding_adjustment, payment_method, cash_received,change_amount,paid_at`
 
 @Injectable()
 export class PaymentRepository{

@@ -38,6 +38,9 @@ export interface PaymentResponse{
     serviceChargeAmount:number;
     totalAmount:number; 
     vatMode:string; 
+    vatRate:number;
+    serviceChargeRate:number;
+    roundingAdjustment:number;
     paymentMethod:string;
     cashReceived:number|null; 
     changeAmount:number|null; 
@@ -55,6 +58,10 @@ export function toPaymentResponse(rows:any):PaymentResponse{
         serviceChargeAmount:Number(rows.service_charge_amount),
         totalAmount:Number(rows.total_amount),
         vatMode:rows.vat_mode,
+        // ค่า snapshot ตอนปิดบิล — ใบเสร็จแสดงเป็นป้ายกำกับเท่านั้น ไม่นำไปคำนวณซ้ำ
+        vatRate:Number(rows.vat_rate_snapshot ?? 0),
+        serviceChargeRate:Number(rows.service_charge_rate_snapshot ?? 0),
+        roundingAdjustment:Number(rows.rounding_adjustment ?? 0),
         paymentMethod:rows.payment_method,
         cashReceived:toNum(rows.cash_received),
         changeAmount:toNum(rows.change_amount),

@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
-import { X } from 'lucide-react';
+import { Printer, X } from 'lucide-react';
 import type { SaleTransaction, BillItem } from '../types/sales.types';
 import { reportsApi } from '../api/reports.api';
 import { useAuth } from '../../auth/context/AuthContext';
+import { ReceiptModal } from '../../receipt';
 
 interface BillDetailModalProps {
     bill: SaleTransaction | null;
@@ -12,6 +13,8 @@ interface BillDetailModalProps {
 export default function BillDetailModal({ bill, onClose }: BillDetailModalProps) {
     const { accessToken } = useAuth();
     const [fetchedItems, setFetchedItems] = useState<BillItem[] | null>(null);
+    // เก็บเป็น paymentId เพื่อให้หน้าต่างใบเสร็จปิดเองเมื่อผู้ใช้สลับไปดูบิลอื่น
+    const [receiptFor, setReceiptFor] = useState<string | null>(null);
 
     // Fetch items from backend if not embedded
     useEffect(() => {
@@ -296,8 +299,22 @@ export default function BillDetailModal({ bill, onClose }: BillDetailModalProps)
                             <span>฿{formatPrice(bill.change)}</span>
                         </div>
                     )}
+
+                    {/* พิมพ์ซ้ำ: ยอดและรายการบนใบเสร็จดึงจาก /payments/:id/receipt ไม่ใช่ค่าที่คำนวณในหน้านี้ */}
+                    <button
+                        type="button"
+                        onClick={() => setReceiptFor(bill.id)}
+                        className="mt-3 flex w-full items-center justify-center gap-1.5 rounded-xl bg-[#8C6D58] py-2.5 text-sm font-medium text-white transition-colors duration-200 hover:bg-[#7a5c45] focus-visible:ring-2 focus-visible:ring-[#A68874]/50 focus-visible:outline-none cursor-pointer"
+                    >
+                        <Printer className="h-4 w-4" aria-hidden="true" />
+                        พิมพ์ใบเสร็จซ้ำ
+                    </button>
                 </div>
             </div>
+
+            {receiptFor && (
+                <ReceiptModal paymentId={receiptFor} onClose={() => setReceiptFor(null)} />
+            )}
         </div>
     );
 }
