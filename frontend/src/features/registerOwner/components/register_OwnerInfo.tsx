@@ -156,12 +156,12 @@ export function Register_OwnerForm({
             </div>
             <div>
                 <label className={labelClass} htmlFor="owner-pin">
-                    PIN 
+                    PIN
                 </label>
-                <div className='relative'>
+                <div className='flex w-full justify-center'>
                     <PinInput id='owner-pin' value={fromState.pin} onChange={(v)=> handleChange("pin",v)} hasError={!!errors.pin}/>
-                {errors.pin && <p className={errorClass}>{errors.pin}</p>}
                 </div>
+                {errors.pin && <p className={errorClass}>{errors.pin}</p>}
             </div>
             <div>
                 <label className={labelClass} htmlFor="owner-password">

@@ -21,18 +21,18 @@ export class AuthRepository{
         return result.rows[0]??null;
     }
 
-    async insertRefreshToken(userId:string,hash:string,deviceInfo:string,expireAt:Date){
+    async insertRefreshToken(userId:string,hash:string,deviceInfo:string,expireAt:Date,tokenVersion = 0){
         const sql =`
-            INSERT INTO refresh_tokens(tenant_id,user_id,token_hash,device_info,expires_at)
-            VALUES (app_tenant_id(),$1,$2,$3,$4)
+            INSERT INTO refresh_tokens(tenant_id,user_id,token_hash,device_info,expires_at,token_version)
+            VALUES (app_tenant_id(),$1,$2,$3,$4,$5)
         `;
-        const result = await this.db.query(sql,[userId,hash,deviceInfo,expireAt])
+        const result = await this.db.query(sql,[userId,hash,deviceInfo,expireAt,tokenVersion])
         return result.rows[0]??null;
     }
 
     async lockRefreshToken(hash:string){
         const sql = `
-            SELECT token_id, user_id , expires_at, revoked_at
+            SELECT token_id, user_id , expires_at, revoked_at, token_version
             FROM refresh_tokens
             WHERE token_hash =$1
             FOR UPDATE

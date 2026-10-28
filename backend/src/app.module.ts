@@ -20,6 +20,7 @@ import { ShiftsModule } from './modules/shifts/shifts.module';
 import { SystemConfigModule } from './modules/system-config/system-config.module';
 import { PaymentModule } from './modules/payment/payment.module';
 import { ReportsModule } from './modules/reports/reports.module';
+import { ShiftEscalationService } from './common/shift-escalation.service';
 
 @Module({
   imports: [
@@ -63,6 +64,7 @@ import { ReportsModule } from './modules/reports/reports.module';
   controllers: [AppController],
   providers: [
     AppService,
+    ShiftEscalationService,
     { provide: APP_GUARD, useClass: ThrottlerGuard },
     { provide: APP_INTERCEPTOR, useClass: TenantContextInterceptor, },
   ],

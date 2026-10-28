@@ -145,17 +145,19 @@ export default function UserFormPopup({ user, onSubmit, onClose, isSubmitting, e
                         <label htmlFor="user-pin">
                             PIN 6 หลัก (ไม่บังคับ)
                         </label>
-                        <PinInput
-                            id="user-pin"
-                            value={pin}
-                            onChange={setPin}
-                            hasError={!!showError(pinError)}
-                            disabled={isSubmitting}
-                        />
+                        <div className="flex w-full justify-center">
+                            <PinInput
+                                id="user-pin"
+                                value={pin}
+                                onChange={setPin}
+                                hasError={!!showError(pinError)}
+                                disabled={isSubmitting}
+                            />
+                        </div>
                         {showError(pinError) ? (
-                            <span className="text-xs text-red-600">{pinError}</span>
+                            <span className="text-xs text-center text-red-600">{pinError}</span>
                         ) : (
-                            <span className="text-xs text-stone-400">
+                            <span className="text-xs text-center text-stone-400">
                                 {isEdit ? 'เว้นว่าง = ไม่เปลี่ยน PIN เดิม' : 'ใช้สลับผู้ใช้ที่หน้าร้าน'}
                             </span>
                         )}

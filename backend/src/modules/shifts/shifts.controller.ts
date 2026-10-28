@@ -1,5 +1,5 @@
 import { Body, Controller, Get, Param, Post, Req, ParseUUIDPipe, HttpStatus, HttpCode, Query } from '@nestjs/common';
-import { AnyAuthenticated, RequirePermissions } from '../auth/guards/permissions.decorator';
+import { AnyAuthenticated, RequirePermissions, RequireAnyPermission } from '../auth/guards/permissions.decorator';
 import { ApiBadRequestResponse, ApiBearerAuth, ApiConflictResponse, ApiForbiddenResponse, ApiNotFoundResponse, ApiOkResponse, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { ShiftsService } from './shifts.service';
 import { OpenShiftsDTO } from './dto/openShifts.dto';
@@ -111,10 +111,10 @@ export class ShiftsController {
     })
     @ApiOkResponse({ description: 'สำเร็จ' })
     @ApiBadRequestResponse({ description: 'รูปแบบวันที่, status หรือ page/limit ไม่ถูกต้อง' })
-    @ApiForbiddenResponse({ description: 'ไม่มีสิทธิ์ report:view_all (Manager/Owner เท่านั้น)' })
-    @RequirePermissions('report:view_all')
+    @ApiForbiddenResponse({ description: 'ไม่มีสิทธิ์ (ต้องมี report:view_all หรือ report:view_own_shift)' })
+    @RequireAnyPermission('report:view_all', 'report:view_own_shift')
     @Get()
-    async listShifts(@Query() query: ListShiftsQueryDto) {
-    return this.shiftsService.listShifts(query);
+    async listShifts(@Query() query: ListShiftsQueryDto, @Req() req) {
+        return this.shiftsService.listShifts(query, req.user);
     }
 }

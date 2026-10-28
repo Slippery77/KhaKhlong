@@ -1,7 +1,6 @@
 import { Controller, Get, Param, ParseUUIDPipe, Query, UseGuards } from '@nestjs/common';
 import { ReportsService } from './reports.service';
 import { SalesQueryDto } from './dto/sales-query.dto';
-import { JwtAuthGuard } from '../auth/guards/jwtAuth.guard';
 import { PermissionsGuard } from '../auth/guards/permissions.guard';
 import { RequireAnyPermission } from '../auth/guards/permissions.decorator';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
@@ -9,7 +8,7 @@ import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 @ApiBearerAuth()
 @ApiTags('Reports')
 @Controller('reports')
-@UseGuards(JwtAuthGuard, PermissionsGuard)
+@UseGuards(PermissionsGuard)
 export class ReportsController {
   constructor(private readonly service: ReportsService) {}
 
@@ -48,3 +47,5 @@ export class ReportsController {
     return this.service.getReceiptLines(id);
   }
 }
+
+
