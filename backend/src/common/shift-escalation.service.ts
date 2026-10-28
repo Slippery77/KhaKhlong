@@ -25,13 +25,14 @@ export class ShiftEscalationService implements OnModuleInit {
 
   async run() {
     try {
+      // timer ไม่มี request → ไม่มี tenant context; ฟังก์ชันเป็น SECURITY DEFINER ไล่ทุก tenant เอง
       const res = await this.db.query('SELECT escalate_overdue_shifts() AS n');
       const n = res.rows[0]?.n ?? 0;
       if (n > 0) {
         this.logger.log(`escalated ${n} shift(s)`);
       }
     } catch (err: any) {
-      this.logger.debug(err?.message ?? err);
+      this.logger.error('shift escalation failed', err?.message ?? err);
     }
   }
 }

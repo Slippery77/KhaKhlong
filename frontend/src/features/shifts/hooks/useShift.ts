@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { ApiError } from '../../../libs/appClient';
 import { useAuth } from '../../auth/context/AuthContext';
+import { fetchWithSnapshot, saveSnapshot } from '../../offline/snapshotCache';
 import { shiftsApi } from '../api/shifts.api';
 import type {
   BlockedOrder,
@@ -12,8 +13,11 @@ const getErrorMessage = (error: unknown, fallback: string) =>
   error instanceof Error ? error.message : fallback;
 
 export function useShift() {
-  const { accessToken } = useAuth();
+  const { accessToken, user } = useAuth();
+  const tenantSlug = user?.tenantSlug;
   const [shift, setShift] = useState<Shift | null>(null);
+  // null = ข้อมูลกะสดจาก server · ตัวเลข = แสดง snapshot ที่บันทึกเมื่อเวลานั้น (ออฟไลน์)
+  const [staleSince, setStaleSince] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -25,16 +29,28 @@ export function useShift() {
       if (!silent) setIsLoading(true);
       setError(null);
       try {
-        const response = await shiftsApi.getCurrent(accessToken);
-        setShift(response.data);
+        // เก็บกะปัจจุบันไว้ในเครื่อง — ตอนออฟไลน์ยังรู้ว่ากะไหนเปิดอยู่ (ใช้ผูกออเดอร์ออฟไลน์ภายหลัง)
+        const result = await fetchWithSnapshot(tenantSlug, 'currentShift', async () => {
+          const response = await shiftsApi.getCurrent(accessToken);
+          return response.data;
+        });
+        setShift(result.data);
+        setStaleSince(result.isStale ? result.savedAt : null);
       } catch (requestError) {
         setError(getErrorMessage(requestError, 'ไม่สามารถโหลดข้อมูลกะได้'));
       } finally {
         if (!silent) setIsLoading(false);
       }
     },
-    [accessToken],
+    [accessToken, tenantSlug],
   );
+
+  /** อัปเดตกะบนหน้าจอ + snapshot ในเครื่องพร้อมกัน หลังเปิด/ปิด/รับรองกะสำเร็จ */
+  const applyShift = (next: Shift | null) => {
+    setShift(next);
+    setStaleSince(null);
+    if (tenantSlug) void saveSnapshot(tenantSlug, 'currentShift', next);
+  };
 
   useEffect(() => {
     // Fetching after mount necessarily updates local request state.
@@ -48,7 +64,7 @@ export function useShift() {
     setBlockedOrders([]);
     try {
       const response = await shiftsApi.open(accessToken, openingCash);
-      setShift(response.data);
+      applyShift(response.data);
       return true;
     } catch (requestError) {
       setError(getErrorMessage(requestError, 'ไม่สามารถเปิดกะได้'));
@@ -66,7 +82,7 @@ export function useShift() {
     setBlockedOrders([]);
     try {
       const response = await shiftsApi.close(accessToken, shift.shiftId, actualClosingCash);
-      setShift(response.data);
+      applyShift(response.data);
       return response.data;
     } catch (requestError) {
       if (requestError instanceof ApiError && requestError.status === 409) {
@@ -90,7 +106,7 @@ export function useShift() {
     setPinError(null);
     try {
       const response = await shiftsApi.verify(accessToken, shift.shiftId, pin);
-      setShift(response.data);
+      applyShift(response.data);
       return true;
     } catch (requestError) {
       if (requestError instanceof ApiError && requestError.status === 429) {
@@ -113,6 +129,7 @@ export function useShift() {
     error,
     pinError,
     blockedOrders,
+    staleSince,
     reload: () => load(true),
     openShift,
     closeShift,

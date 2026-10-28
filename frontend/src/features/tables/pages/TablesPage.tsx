@@ -8,6 +8,7 @@ import { useAuth } from '../../auth/context/AuthContext'
 import { RefreshCw } from 'lucide-react'
 import OpenShiftCard from '../../shifts/components/OpenShiftCard'
 import { useShift } from '../../shifts/hooks/useShift'
+import StaleDataBanner from '../../offline/components/StaleDataBanner'
 
 // จัดกลุ่มโต๊ะตามชั้น (floor_no มาจาการ JOIN floors — null แปลว่าชั้นถูกลบไปแล้ว ให้ไป"group อื่น")
 function groupByFloor(tables: DiningTable[]): Map<number, DiningTable[]> {
@@ -21,7 +22,7 @@ function groupByFloor(tables: DiningTable[]): Map<number, DiningTable[]> {
 }
 
 export default function TablesPage() {
-    const { tables, isLoading, error, reload } = useTables()
+    const { tables, isLoading, error, staleSince, reload } = useTables()
     const navigate = useNavigate()
     const { user } = useAuth()
     // null = แสดงทุกชั้น, ตัวเลข = แสดงเฉพาะชั้นที่เลือกจาก sidebar
@@ -35,8 +36,9 @@ export default function TablesPage() {
         : Array.from(floors.entries()).filter(([floor]) => floor === selectedFloor)
     const visibleTables = visibleFloors.flatMap(([, floorTables]) => floorTables)
     const visibleOccupied = visibleTables.filter((t) => t.status === 'occupied').length
-    const { shift, isLoading:isShiftLoading, isSubmitting, error:shiftError, openShift} = useShift()
-    const needOpenShift = !isShiftLoading && !shiftError && shift === null
+    const { shift, isLoading:isShiftLoading, isSubmitting, error:shiftError, staleSince: shiftStaleSince, openShift} = useShift()
+    // ออฟไลน์ (ข้อมูลกะมาจาก cache) ห้ามเด้งให้เปิดกะ — เปิดกะต้องใช้ server เสมอ
+    const needOpenShift = !isShiftLoading && !shiftError && shiftStaleSince === null && shift === null
 
     function handleTableClick(table: DiningTable) {
         // ส่ง tableId และ tableName ไปหน้า POS ผ่าน URL query params
@@ -127,6 +129,13 @@ export default function TablesPage() {
                             <span>รีเฟรช</span>
                         </button>
                     </div>
+
+                    {/* ติดต่อ server ไม่ได้ — กำลังแสดงผังโต๊ะล่าสุดที่บันทึกไว้ในเครื่อง */}
+                    {!isLoading && !error && staleSince !== null && (
+                        <div className="mb-4 font-kanit">
+                            <StaleDataBanner label="ข้อมูลโต๊ะ" savedAt={staleSince} onRetry={reload} />
+                        </div>
+                    )}
 
                     {isLoading ? (
                         <div className="flex items-center justify-center py-20">

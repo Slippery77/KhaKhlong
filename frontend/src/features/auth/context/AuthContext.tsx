@@ -44,8 +44,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }else{
           clearSession();
         }
-      }catch(err){
+      }catch{
             // เน็ตหลุด / server ล่ม: เก็บ session ไว้ request ถัดไปจะ refresh ให้เอง
+            // ใช้ user ที่บันทึกไว้ทำงานต่อแบบออฟไลน์ (ยังไม่มี access token)
+            // - หน้าจอรู้ว่าเป็นร้านไหน จึงอ่านข้อมูลที่แคชไว้ของร้านนั้นได้
+            // - พอเน็ตกลับมา request แรกจะได้ 401 แล้ว appClient refresh token ให้เอง
+            // - ข้อมูลจริงยังผ่านการตรวจสิทธิ์ที่ server เสมอ ไม่ได้ข้ามความปลอดภัย
+            setUser(getSavedUser());
       }finally{
         setIsRestoring(false);
       }
