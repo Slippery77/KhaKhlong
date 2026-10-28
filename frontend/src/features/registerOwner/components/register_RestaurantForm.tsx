@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { ArrowRight, Store, Phone, MapPin } from "lucide-react";
+import { getDistricts, getProvinces, getSubdistricts, getZipCode } from "../../../data/thailandAddress";
 
 interface restaurant_formstate {
     restaurant_name: string;
@@ -14,6 +15,8 @@ interface restaurant_formstate {
     province: string;
     postal_code: string;
 }
+
+const provinces = getProvinces();
 
 //สร้าง props เพื่อให้ต้องรับ function ชื่อ onNext จาก component แม่ (Register_page) เพื่อให้สามารถเรียกใช้งานได้เมื่อ form ถูก submit สำเร็จ
 type Props = {
@@ -40,6 +43,37 @@ export function Register_RestaurantForm({ initialValues, onNext }: Props) {
         setFormState((prevState) => ({
             ...prevState,
             [field]: value,
+        }));
+    };
+
+    const districts = formState.province ? getDistricts(formState.province) : [];
+    const subdistricts = formState.province && formState.district ? getSubdistricts(formState.province, formState.district) : [];
+
+    const handleProvinceChange = (value: string) => {
+        setFormState((prevState) => ({
+            ...prevState,
+            province: value,
+            district: "",
+            subdistrict: "",
+            postal_code: "",
+        }));
+    };
+
+    const handleDistrictChange = (value: string) => {
+        setFormState((prevState) => ({
+            ...prevState,
+            district: value,
+            subdistrict: "",
+            postal_code: "",
+        }));
+    };
+
+    const handleSubdistrictChange = (value: string) => {
+        const zip = formState.province && formState.district ? getZipCode(formState.province, formState.district, value) : "";
+        setFormState((prevState) => ({
+            ...prevState,
+            subdistrict: value,
+            postal_code: zip,
         }));
     };
 
@@ -206,51 +240,68 @@ export function Register_RestaurantForm({ initialValues, onNext }: Props) {
 
             <div className="grid grid-cols-2 gap-3">
                 <div>
-                    <label className={labelClass} htmlFor="subdistrict">
-                        ตำบล
+                    <label className={labelClass} htmlFor="province">
+                        จังหวัด
                     </label>
-                    <input
-                        id="subdistrict"
-                        type="text"
-                        placeholder="ตำบล"
-                        value={formState.subdistrict}
-                        onChange={(e) => handleChange("subdistrict", e.target.value)}
-                        className={inputClass("subdistrict")}
-                    />
-                    {errors.subdistrict && (
-                        <p className={errorClass}>{errors.subdistrict}</p>
-                    )}
+                    <select
+                        id="province"
+                        value={formState.province}
+                        onChange={(e) => handleProvinceChange(e.target.value)}
+                        className={inputClass("province")}
+                    >
+                        <option value="">-- เลือกจังหวัด --</option>
+                        {provinces.map((province) => (
+                            <option key={province.id} value={province.name_th}>
+                                {province.name_th}
+                            </option>
+                        ))}
+                    </select>
+                    {errors.province && <p className={errorClass}>{errors.province}</p>}
                 </div>
                 <div>
                     <label className={labelClass} htmlFor="district">
-                        อำเภอ
+                        อำเภอ/เขต
                     </label>
-                    <input
+                    <select
                         id="district"
-                        type="text"
-                        placeholder="อำเภอ"
                         value={formState.district}
-                        onChange={(e) => handleChange("district", e.target.value)}
+                        onChange={(e) => handleDistrictChange(e.target.value)}
                         className={inputClass("district")}
-                    />
+                        disabled={!formState.province}
+                    >
+                        <option value="">-- เลือกอำเภอ/เขต --</option>
+                        {districts.map((district) => (
+                            <option key={district.id} value={district.name_th}>
+                                {district.name_th}
+                            </option>
+                        ))}
+                    </select>
                     {errors.district && <p className={errorClass}>{errors.district}</p>}
                 </div>
             </div>
 
             <div className="grid grid-cols-2 gap-3">
                 <div>
-                    <label className={labelClass} htmlFor="province">
-                        จังหวัด
+                    <label className={labelClass} htmlFor="subdistrict">
+                        ตำบล/แขวง
                     </label>
-                    <input
-                        id="province"
-                        type="text"
-                        placeholder="จังหวัด"
-                        value={formState.province}
-                        onChange={(e) => handleChange("province", e.target.value)}
-                        className={inputClass("province")}
-                    />
-                    {errors.province && <p className={errorClass}>{errors.province}</p>}
+                    <select
+                        id="subdistrict"
+                        value={formState.subdistrict}
+                        onChange={(e) => handleSubdistrictChange(e.target.value)}
+                        className={inputClass("subdistrict")}
+                        disabled={!formState.district}
+                    >
+                        <option value="">-- เลือกตำบล/แขวง --</option>
+                        {subdistricts.map((subdistrict) => (
+                            <option key={subdistrict.id} value={subdistrict.name_th}>
+                                {subdistrict.name_th}
+                            </option>
+                        ))}
+                    </select>
+                    {errors.subdistrict && (
+                        <p className={errorClass}>{errors.subdistrict}</p>
+                    )}
                 </div>
                 <div>
                     <label className={labelClass} htmlFor="postal_code">
@@ -262,8 +313,8 @@ export function Register_RestaurantForm({ initialValues, onNext }: Props) {
                         inputMode="numeric"
                         placeholder="เช่น 12345"
                         value={formState.postal_code}
-                        onChange={(e) => handleChange("postal_code", e.target.value)}
-                        className={inputClass("postal_code")}
+                        readOnly
+                        className={inputClass("postal_code") + " bg-[#FBF9F6]"}
                     />
                     {errors.postal_code && (
                         <p className={errorClass}>{errors.postal_code}</p>

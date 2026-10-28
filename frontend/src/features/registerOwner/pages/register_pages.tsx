@@ -5,6 +5,7 @@ import { Register_RestaurantForm } from "../components/register_RestaurantForm";
 import { Register_OwnerForm, type RegisterOwnerInfo } from "../components/register_OwnerInfo";
 import useRegister from "../hooks/register";
 import type { registerRequest } from "../types/register.types";
+import logoWhite from "../../../assets/logo-lockup-white.svg";
 
 // ข้อมูลที่กรอกในทุกขั้นตอนของการสมัคร รวมถึงช่องยืนยันรหัสผ่าน
 // ใช้ Partial เพราะในแต่ละขั้นตอนอาจมีข้อมูลเพียงบางส่วนเท่านั้น
@@ -60,16 +61,14 @@ export default function Register_page() {
                 <div className="pointer-events-none absolute -right-24 -top-24 h-72 w-72 rounded-full bg-white/10" />
                 <div className="pointer-events-none absolute -bottom-32 -left-20 h-80 w-80 rounded-full bg-white/5" />
 
-                <div className="relative flex items-center gap-3">
-                    <span className="flex h-11 w-11 items-center justify-center rounded-2xl bg-white/15">
-                        <UtensilsCrossed className="h-6 w-6" aria-hidden="true" />
-                    </span>
-                    <span className="text-xl font-semibold tracking-wide">
-                        ค้าคล่อง
-                        <span className="ml-2 text-sm font-normal text-white/60">
-                            KhaKhlong
-                        </span>
-                    </span>
+                <div className="relative flex items-center">
+                    <img
+                        src={logoWhite}
+                        alt="ค้าคล่อง KhaKhlong"
+                        className="h-20 w-auto"
+                        width={623}
+                        height={256}
+                    />
                 </div>
 
                 <div className="relative space-y-6">

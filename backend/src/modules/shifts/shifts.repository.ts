@@ -157,17 +157,18 @@ export class ShiftsRepository{
         const result = await this.db.query(sql,[shiftId,userId]);
         return result.rows[0]??null;
     }
-    async listShift(from: string | null, to: string | null, status: string | null, limit: number, offset: number){
+    async listShift(from: string | null, to: string | null, status: string | null, limit: number, offset: number, openedBy?: string | null){
         const sql =`
             SELECT ${SHIFT_COLS}
             FROM shifts
             WHERE ($1::date IS NULL OR business_date >= $1::date)
             AND ($2::date IS NULL OR business_date <= $2::date)
             AND ($3::text IS NULL OR status = $3)
+            AND ($6::uuid IS NULL OR opened_by = $6)
             ORDER BY business_date DESC
             LIMIT $4 OFFSET $5;
         `;
-        const result = await this.db.query(sql,[from,to,status,limit,offset]);
+        const result = await this.db.query(sql,[from,to,status,limit,offset,openedBy ?? null]);
         return result.rows;
     }
 }

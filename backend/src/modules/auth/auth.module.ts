@@ -1,4 +1,4 @@
-import { Module , Global} from '@nestjs/common';
+﻿import { Module , Global} from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { AuthController} from './auth.controller';
 import { UsersModule } from '../users/users.module';
@@ -28,14 +28,16 @@ import { ConfigService } from '@nestjs/config';
         }),
     ],
     providers: [AuthService, PermissionCacheService,
-        /*ทุก Controller ในระบบถูก Guard คลุมอัตโนมัติ โดยไม่ต้องเขียน 
-         @UseGuards(...) ซ้ำทุกไฟล์ — Controller ไหนต้องการเปิดสาธารณะจริงๆ (เช่น POST /auth/login) 
-         ค่อยแปะ @Public() เอา ตรงนี้คือจุดที่ทำให้ระบบ "ปลอดภัยเป็นค่าเริ่มต้น" (Secure by Default) แทนที่จะหวังพึ่งความจำ Dev ทุกคนทุกไฟล์*/
+        /*เธ—เธธเธ Controller เนเธเธฃเธฐเธเธเธ–เธนเธ Guard เธเธฅเธธเธกเธญเธฑเธ•เนเธเธกเธฑเธ•เธด เนเธ”เธขเนเธกเนเธ•เนเธญเธเน€เธเธตเธขเธ 
+         @UseGuards(...) เธเนเธณเธ—เธธเธเนเธเธฅเน โ€” Controller เนเธซเธเธ•เนเธญเธเธเธฒเธฃเน€เธเธดเธ”เธชเธฒเธเธฒเธฃเธ“เธฐเธเธฃเธดเธเน (เน€เธเนเธ POST /auth/login) 
+         เธเนเธญเธขเนเธเธฐ @Public() เน€เธญเธฒ เธ•เธฃเธเธเธตเนเธเธทเธญเธเธธเธ”เธ—เธตเนเธ—เธณเนเธซเนเธฃเธฐเธเธ "เธเธฅเธญเธ”เธ เธฑเธขเน€เธเนเธเธเนเธฒเน€เธฃเธดเนเธกเธ•เนเธ" (Secure by Default) เนเธ—เธเธ—เธตเนเธเธฐเธซเธงเธฑเธเธเธถเนเธเธเธงเธฒเธกเธเธณ Dev เธ—เธธเธเธเธเธ—เธธเธเนเธเธฅเน*/
         {provide: APP_GUARD, useClass: JwtAuthGuard},
         {provide: APP_GUARD , useClass: PermissionsGuard},
         AuthRepository
     ],
     controllers: [AuthController],
-    exports:[PermissionCacheService]
+    exports:[PermissionCacheService, JwtModule]
 })
 export class AuthModule{}
+
+
