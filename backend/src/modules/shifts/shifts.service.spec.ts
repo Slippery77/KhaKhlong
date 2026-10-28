@@ -26,6 +26,12 @@ describe('ShiftsService — verifyShift ด้วย PIN', () => {
     findPinVerifiers: jest.Mock;
     verifyShift: jest.Mock;
   };
+  let usersRepository: {
+    getPinLockState: jest.Mock;
+    recordPinFailure: jest.Mock;
+    lockPinUser: jest.Mock;
+    clearPinFailuresForUser: jest.Mock;
+  };
   let service: ShiftsService;
 
   beforeEach(() => {
@@ -34,7 +40,13 @@ describe('ShiftsService — verifyShift ด้วย PIN', () => {
       findPinVerifiers: jest.fn(),
       verifyShift: jest.fn().mockResolvedValue(verifiedRow),
     };
-    service = new ShiftsService(repository as never, {} as never);
+    usersRepository = {
+      getPinLockState: jest.fn().mockResolvedValue({ pin_failed_attempts: 0, pin_locked_until: null }),
+      recordPinFailure: jest.fn().mockResolvedValue({ pin_failed_attempts: 1, pin_locked_until: null }),
+      lockPinUser: jest.fn().mockResolvedValue({ pin_failed_attempts: 5, pin_locked_until: new Date() }),
+      clearPinFailuresForUser: jest.fn().mockResolvedValue({ pin_failed_attempts: 0, pin_locked_until: null }),
+    };
+    service = new ShiftsService(repository as never, {} as never, {} as never, usersRepository as never);
   });
 
   it('ตั้ง verified_by เป็นเจ้าของ PIN ไม่ใช่คนที่ login อยู่', async () => {
@@ -77,6 +89,20 @@ describe('ShiftsService — verifyShift ด้วย PIN', () => {
     repository.findPinVerifiers.mockResolvedValue([
       { users_id: 'manager-1', pin_hash: await bcrypt.hash('123456', 4) },
     ]);
+    usersRepository.getPinLockState.mockResolvedValue({ pin_failed_attempts: 0, pin_locked_until: null });
+    repository.verifyShift
+      .mockRejectedValueOnce(new ForbiddenException('ไม่มีสิทธิ์รับรองยอด'))
+      .mockRejectedValueOnce(new ForbiddenException('ไม่มีสิทธิ์รับรองยอด'))
+      .mockRejectedValueOnce(new ForbiddenException('ไม่มีสิทธิ์รับรองยอด'))
+      .mockRejectedValueOnce(new ForbiddenException('ไม่มีสิทธิ์รับรองยอด'))
+      .mockRejectedValueOnce(new ForbiddenException('ไม่มีสิทธิ์รับรองยอด'));
+    usersRepository.recordPinFailure
+      .mockResolvedValueOnce({ pin_failed_attempts: 1, pin_locked_until: null })
+      .mockResolvedValueOnce({ pin_failed_attempts: 2, pin_locked_until: null })
+      .mockResolvedValueOnce({ pin_failed_attempts: 3, pin_locked_until: null })
+      .mockResolvedValueOnce({ pin_failed_attempts: 4, pin_locked_until: null })
+      .mockResolvedValueOnce({ pin_failed_attempts: 5, pin_locked_until: null });
+    usersRepository.lockPinUser.mockResolvedValue({ pin_failed_attempts: 5, pin_locked_until: new Date(Date.now() + 5 * 60 * 1000) });
 
     for (let attempt = 0; attempt < 5; attempt += 1) {
       await expect(service.verifyShift('shift-1', '000000')).rejects.toBeInstanceOf(
@@ -84,6 +110,8 @@ describe('ShiftsService — verifyShift ด้วย PIN', () => {
       );
     }
     // ครั้งที่ 6 ถูกบล็อกด้วย 429 ก่อนถึงขั้นตรวจ PIN
+    usersRepository.getPinLockState.mockResolvedValue({ pin_failed_attempts: 5, pin_locked_until: new Date(Date.now() + 5 * 60 * 1000) });
+    repository.verifyShift.mockClear();
     await expect(service.verifyShift('shift-1', '123456')).rejects.toMatchObject({
       status: 429,
     });

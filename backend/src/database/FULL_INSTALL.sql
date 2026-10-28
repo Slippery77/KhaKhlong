@@ -98,6 +98,7 @@ CREATE TABLE refresh_tokens (
     created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
     expires_at  TIMESTAMPTZ NOT NULL,
     revoked_at  TIMESTAMPTZ,
+    token_version INTEGER NOT NULL DEFAULT 0,
     FOREIGN KEY (tenant_id, user_id) REFERENCES users (tenant_id, users_id) ON DELETE CASCADE
 );
 CREATE INDEX idx_refresh_tokens_user ON refresh_tokens (tenant_id, user_id) WHERE revoked_at IS NULL;

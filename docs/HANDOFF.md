@@ -1,11 +1,11 @@
-# HANDOFF — PWA-POS (ค้าคล่อง / KhaKhlong)
+# HANDOFF � PWA-POS (��Ҥ��ͧ / KhaKhlong)
 
 > ไฟล์นี้คือสรุปสถานะล่าสุดสำหรับ **เปิดแชทใหม่แล้วทำงานต่อ** โดยไม่ต้องเล่าบริบทใหม่
 > อัปเดต: 2026-10-27 (ตรวจกับ `origin/main` = `78d3c8e` แล้ว) · ใช้แทน `docs/backend-todo.md` (ไฟล์นั้นล้าสมัยแล้ว)
 
-## วิธีใช้ในแชทใหม่
+## �Ը����᪷����
 
-พิมพ์ประโยคนี้เป็นข้อความแรก:
+��������¤����繢�ͤ����á:
 
 ```text
 อ่าน docs/HANDOFF.md ก่อน แล้วทำงานต่อจากหัวข้อ "9. ลำดับที่แนะนำถัดไป"
@@ -15,9 +15,9 @@
 
 ---
 
-## 1. ข้อมูลโปรเจกต์
+## 1. ��������ਡ��
 
-| รายการ | ค่า |
+| ��¡�� | ��� |
 |---|---|
 | Path | แต่ละเครื่องไม่เหมือนกัน (เครื่องเบนซ์ `D:\PWA-POS\`) |
 | Branch | `main` (branch `feat-aod`, `feat-benz` ยังอยู่ และ ณ วันที่อัปเดตมีโค้ดเท่ากับ `main`) |
@@ -29,16 +29,13 @@
 | Database | PostgreSQL 18 · db `pwa_pos` · user `pos_app` · รหัสผ่านอยู่ใน `.env` ของแต่ละเครื่อง (ห้ามเขียนรหัสจริงลงไฟล์นี้) |
 | เอกสารคู่มือ | `docs/setup-guide.md`, `docs/backend-dev-guide.md`, `docs/backend-coding-standard.md`, `docs/payment-module-guide.md`, `docs/system-config-guide.md`, `docs/edit-vat-frontend-guide.md`, `docs/inventory-endpoint-guide.md`, `docs/shifts-endpoint-guide.md`, `docs/orders-endpoint-guide.md`, `docs/user-roles-permissions.md` |
 
-### คำสั่งที่ใช้บ่อย
+### ����觷�������
 
-```powershell
-# ติดตั้ง dependency (repo เป็น npm workspaces — ต้องรันที่ root)
-npm ci
-
-# รัน backend (terminal 1)
+`powershell
+# �ѹ backend (terminal 1)
 cd backend; npx nest start --watch
 
-# รัน frontend (terminal 2)
+# �ѹ frontend (terminal 2)
 cd frontend; npm run dev
 
 # type-check / build
@@ -46,10 +43,9 @@ cd backend;  npx tsc --noEmit
 cd frontend; npx tsc -b; npx vite build
 
 # test
-cd backend; npx jest              # ปัจจุบันยังแดง (ดูหัวข้อ 6)
-cd backend; npx jest src/modules/inventory src/modules/shifts   # ชุดที่ผ่าน
+cd backend; npx jest
 
-# E2E (ต้องมี backend รันอยู่)
+# E2E (��ͧ�� backend �ѹ����)
 node backend/test/e2e/e2e-reports.mjs
 
 # psql (ใส่รหัสผ่านของเครื่องตัวเองจาก .env)
@@ -59,9 +55,9 @@ $env:PGPASSWORD='<รหัสผ่าน pos_app จาก .env>'
 
 ---
 
-## 2. สถานะโมดูล
+## 2. ʶҹ������
 
-### เสร็จและใช้งานได้
+### ���������ҹ��
 
 - **Auth** — login/logout/refresh token, JWT guard, permission guard, RLS + tenant isolation · **store finder ที่ `/`** (จำรหัสร้านใน `localStorage`, ตรวจ slug กับ server ก่อนพาไป login)
 - **Register** — สมัครร้านใหม่ (throttle 3 ครั้ง / 5 นาที / IP) · ตั้ง PIN เจ้าของร้านได้ตอนสมัคร (`PinInput`)
@@ -80,18 +76,25 @@ $env:PGPASSWORD='<รหัสผ่าน pos_app จาก .env>'
 - **Reports** — `sales/summary`, `sales/by-period`, `sales/top-items`, `sales/transactions`, `sales/receipt/:id`; หน้า Sale Report ต่อ API จริงแล้ว
 - **Store / VAT UI** — `StoreSettingPage` (GET/PATCH tenants) และหน้าแก้ VAT/service charge ผ่าน `/system-config`
 
-### ยังไม่เริ่ม / ยังไม่ครบ
+### �ѧ�������� / �ѧ���ú
 
 - **Audit Logs** — ไม่มี endpoint/UI (DB trigger เขียน audit บางเหตุการณ์ เช่น `trg_audit_users`, logout แต่ยังไม่มีหน้าดู)
-- **PWA/Offline** — ไม่มี manifest, service worker, Workbox, Dexie (`frontend/package.json` ยังไม่มี dependency เหล่านี้)
-- **Dashboard** — `/:tenantSlug/homepage` ยังเป็น `<div>Dashboard (TODO)</div>`
+- **PWA/Offline** — มี manifest, service worker, Workbox, ยังไม่มี Dexie (`frontend/package.json` ยังไม่มี dependency เหล่านี้)
+- **Dashboard** — เอาออกแล้ว
 - **Reports เพิ่มเติม** — ยังไม่มีหน้ารายงานรายกะ/ประวัติกะ, ตัวกรองช่วงวันที่ และ export
 
 ---
 
 ## 3. งานรอบล่าสุด (2026-10-25 ถึง 2026-10-27)
 
-### 3.1 Payment จริง + ปิดบิล (commit แล้ว)
+### 3.1 Receipt / ���������� (��������)
+- Backend: payment_cols ���� at_rate_snapshot, service_charge_rate_snapshot, 
+ounding_adjustment (���ʤ�����������)
+- Frontend rontend/src/features/receipt/: ReceiptPaper, ReceiptModal, useReceipt, 
+eceipt.api, 
+eceipt.print.css
+- ���������� PaymentModal (step done) ��� BillDetailModal (�������)
+- E2E ackend/test/e2e/e2e-receipt.mjs ��ͺ����
 
 - Commit หลัก: `4bd4ad4` (feat payment backend+frontend) → merge `76da899`, `92ac97f`
 - Backend `backend/src/modules/payment/`:
@@ -104,7 +107,11 @@ $env:PGPASSWORD='<รหัสผ่าน pos_app จาก .env>'
 - Frontend: `hooks/usePayment.ts`, `components/PaymentModal.tsx`, `MainPOS.tsx` เปิด modal จากปุ่มชำระเงิน
 - PromptPay QR: `014f434`, `4c9f8cc` (ช่องกรอก PromptPay ในหน้าตั้งค่าร้าน), `33a86f2` (แผง QR ใน payment modal)
 
-### 3.2 Reports module (commit แล้วใน `da56495`)
+### 3.3 Reports (��������)
+- Backend module 
+eports/ �ú
+- Frontend ��� API ��ԧ����
+- E2E e2e-reports.mjs ������
 
 - Backend ใหม่ทั้งโฟลเดอร์ `backend/src/modules/reports/` (controller/service/repository/dto) + ลงทะเบียนใน `app.module.ts`
 - สิทธิ์: `@RequireAnyPermission('report:view_all', 'report:view_own_shift')` (เพิ่ม `RequireAnyPermission` ใน guard แล้ว)
@@ -177,7 +184,7 @@ $env:PGPASSWORD='<รหัสผ่าน pos_app จาก .env>'
 
 ---
 
-## 4. งานค้าง P0 — ต้องทำก่อนเดโม
+## 4. �ҹ��ҧ P0
 
 **ไม่มีงาน P0 ค้าง** — ทั้ง 3 ข้อเสร็จและอยู่ใน `main` แล้ว (คงไว้เป็นบันทึก)
 
@@ -189,15 +196,18 @@ $env:PGPASSWORD='<รหัสผ่าน pos_app จาก .env>'
 - ทำใน `bd022fe` (ดูหัวข้อ 3.7): `UpdateUserDTO.pin` + bcrypt ใน `updateUser()` + ช่อง PIN ใน `UserFormPopup` + audit ผ่าน trigger
 - เหลือ (ไม่บล็อกเดโม): ทดสอบผ่าน UI จริง — สร้าง manager → ตั้ง PIN → ปิดกะยอดไม่ตรง → รับรองด้วย PIN นั้น
 
-### P0-3. ✅ เสร็จแล้ว — หน้าพิมพ์ใบเสร็จ / พิมพ์ซ้ำ (FE)
-- ทำเสร็จตามหัวข้อ 3.5: `features/receipt/` + ปุ่มใน `PaymentModal` / `BillDetailModal`, พรีวิว 80mm, ป้าย "สำเนา", เคารพ `max_reprints`
-- เหลือเป็น P1 (ไม่บล็อกเดโม): route `/receipt/:id` เปิดในแท็บใหม่, พิมพ์อัตโนมัติหลังจ่าย, โลโก้/ข้อความหัว-ท้ายใบเสร็จ (ต้อง `ALTER TABLE tenants` เพิ่ม `receipt_logo_url` / `receipt_header` / `receipt_footer`)
 
 ---
 
-## 5. งานค้าง P1 / P2
+## 5. �ҹ��ҧ P1 / P2
 
-### P1 — ความถูกต้องและความปลอดภัย
+### P1 � �����١��ͧ��Ф�����ʹ���
+- **GET /shifts �� report:view_all** � ������: ͹حҵ `report:view_all` ���� `report:view_own_shift` ��С�ͧ��� employee ���੾�Сз�����ͧ�Դ
+- **PIN lock ��褧��** � ������: ������� `users.pin_failed_attempts` / `users.pin_locked_until` Ẻ per-user, ��͡ 5 �ҷ�����ͼԴ 5 ����, �ѹ�֡/�Ŵ��͡��ҹ UsersRepository
+- **����� cron `escalate_overdue_shifts()`** � ������: ���� `ShiftEscalationService` ���¡ `escalate_overdue_shifts()` �ء 5 �ҷ�
+- **token_version / session revocation** � ������: JWT guard ��� query DB ��ѧ�Ѻ����� claim token_version; `TenantContextInterceptor` ��º `users.token_version` + `is_active` � transaction; `AuthService` ��� token_version � access/refresh; refresh token �١�Ѻ token_version ��л���ʸ������ç (patch DB `PATCH_06_refresh_token_version.sql`). token ��ҷ������� claim ��ͧ login ����; ����¹���ʼ�ҹ/�Դ��ҹ = session �����������ѹ��.
+- **POST /orders/sync �Ѻ @Body() dto: any** (��Ǩ�ͺ�鴻Ѩ�غѹ��辺 endpoint ���)
+- **/:tenantSlug/homepage** — เอาออกแล้ว
 
 ทุกข้อด้านล่างตรวจกับโค้ดใน `78d3c8e` แล้ว (2026-10-27) ยังเป็นจริงอยู่
 
@@ -222,11 +232,10 @@ $env:PGPASSWORD='<รหัสผ่าน pos_app จาก .env>'
 - **Orders**: void/comp รายการ (`void:approve`, `discount:approve`), sync DTO
 - **Menu reorder endpoint** (ยังไม่มี)
 - **Audit Log endpoint/UI**
-- **Inventory polish**: ช่องค้นหาในการ์ดนับวัตถุดิบ, ใช้ business date แทน local date, แก้ note ใน `record_stock_count()` ที่มีช่องว่างนำหน้า + ทศนิยม 4 ตำแหน่ง
 
 ---
 
-## 6. คุณภาพ / เทสต์ / เอกสาร
+## 6. �س�Ҿ / �ʵ� / �͡���
 
 | รายการ | สถานะล่าสุด (2026-10-27, รันบน `78d3c8e` หลัง `npm ci` ที่ root) |
 |---|---|
@@ -249,12 +258,12 @@ $env:PGPASSWORD='<รหัสผ่าน pos_app จาก .env>'
 
 ---
 
-## 7. กติกาและ decision ที่ห้ามลืม
+## 7. �ӴѺ����йӶѴ�
 
-### UI / Design system
-- bg `#FAF7F2`, accent `#8C6D58`, hover `#7a5c45`, text `#2D241E`, border `#d9c6b0` / `#E8DFD5`, font Kanit, `rounded-xl` / `rounded-2xl`
-- ห้ามใช้ emoji เป็นไอคอน → ใช้ `lucide-react`
-- ทุกจุดคลิกต้องมี `cursor-pointer`, hover transition 150–300 ms, focus state ครบ, label/aria ครบ
+1. **��Ǩ�ͺ�������¹�ŧ�Ѩ�غѹ** � �� diff �ͧ����������з��ͺ
+2. **Commit �ҹ������** ��Ҿ���� (�����¡ commit ���������)
+3. **��� P1** ��������Ӥѭ
+4. **���ͺ E2E** �������Ǣ�ͧ
 
 ### Backend
 - Response convention: `{ status: 'success', data: ... }`

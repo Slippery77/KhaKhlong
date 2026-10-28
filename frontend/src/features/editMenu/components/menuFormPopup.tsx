@@ -40,39 +40,41 @@ export default function MenuFormPopup({item, onSubmit, onClose, isSubmitting, er
     };
 
     return(
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-      <div className="w-96 rounded-2xl bg-white p-5 shadow-lg">
-        <h2 className="mb-4 text-lg font-semibold text-[#2D241E]">
-          {isEdit ? 'แก้ไขเมนู' : 'เพิ่มเมนู'}
-        </h2>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
+      <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl ring-1 ring-black/5">
+        <div className="mb-5 flex items-center justify-between">
+          <h2 className="text-lg font-semibold text-[#2D241E]">
+            {isEdit ? 'แก้ไขเมนู' : 'เพิ่มเมนู'}
+          </h2>
+        </div>
 
-        <form onSubmit={handleSubmit} className="flex flex-col gap-3">
-          <label className="flex flex-col gap-1 text-sm text-stone-600">
-            ชื่อเมนู
+        <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+          <label className="flex flex-col gap-1.5 text-sm text-stone-600">
+            ชื่อเมนู <span className="text-red-500">*</span>
             <input
               autoFocus
               value={name}
               onChange={e => setName(e.target.value)}
               maxLength={150}
               placeholder="เช่น ข้าวผัดหมู"
-              className="rounded-xl border border-[#d9c6b0] px-3 py-2 text-[#2D241E] outline-none focus:border-[#8C6D58]"
+              className="rounded-xl border border-[#d9c6b0]/80 px-3 py-2.5 text-[#2D241E] shadow-sm outline-none transition-all duration-200 focus:border-[#8C6D58] focus:ring-2 focus:ring-[#8C6D58]/10 hover:border-[#c4b09a]"
             />
           </label>
 
-          <label className="flex flex-col gap-1 text-sm text-stone-600">
+          <label className="flex flex-col gap-1.5 text-sm text-stone-600">
             คำอธิบาย (ไม่บังคับ)
             <textarea
               value={description}
               onChange={e => setDescription(e.target.value)}
               maxLength={1000}
-              rows={2}
+              rows={3}
               placeholder="เช่น ไข่ดาว แตงกวา พริกน้ำปลา"
-              className="resize-none rounded-xl border border-[#d9c6b0] px-3 py-2 text-[#2D241E] outline-none focus:border-[#8C6D58]"
+              className="resize-none rounded-xl border border-[#d9c6b0]/80 px-3 py-2.5 text-[#2D241E] shadow-sm outline-none transition-all duration-200 focus:border-[#8C6D58] focus:ring-2 focus:ring-[#8C6D58]/10 hover:border-[#c4b09a]"
             />
           </label>
 
-          <label className="flex flex-col gap-1 text-sm text-stone-600">
-            ราคา (บาท)
+          <label className="flex flex-col gap-1.5 text-sm text-stone-600">
+            ราคา (บาท) <span className="text-red-500">*</span>
             <input
               type="number"
               inputMode="decimal"
@@ -80,26 +82,26 @@ export default function MenuFormPopup({item, onSubmit, onClose, isSubmitting, er
               step="0.01"
               value={price}
               onChange={e => setPrice(e.target.value)}
-              placeholder="0"
-              className="rounded-xl border border-[#d9c6b0] px-3 py-2 text-[#2D241E] outline-none focus:border-[#8C6D58]"
+              placeholder="0.00"
+              className="rounded-xl border border-[#d9c6b0]/80 px-3 py-2.5 text-[#2D241E] shadow-sm outline-none transition-all duration-200 focus:border-[#8C6D58] focus:ring-2 focus:ring-[#8C6D58]/10 hover:border-[#c4b09a]"
             />
           </label>
 
-          {error && <p className="text-xs text-red-600">{error}</p>}
+          {error && <p className="rounded-lg bg-red-50 px-3 py-2 text-xs text-red-600">{error}</p>}
 
-          <div className="mt-1 flex gap-2">
+          <div className="mt-2 flex gap-2.5">
             <button
               type="button"
               onClick={onClose}
               disabled={isSubmitting}
-              className="flex-1 rounded-xl py-2 border border-[#d9c6b0] text-[#2D241E] transition enabled:hover:bg-[#FAF7F2] enabled:active:scale-95 disabled:opacity-50"
+              className="flex-1 rounded-xl py-2.5 border border-[#d9c6b0] text-[#2D241E] transition-all duration-200 enabled:hover:bg-[#FAF7F2] enabled:active:scale-[0.98] disabled:opacity-50 cursor-pointer"
             >
               ยกเลิก
             </button>
             <button
               type="submit"
               disabled={!canSubmit}
-              className="flex-1 rounded-xl py-2 font-semibold bg-[#8C6D58] text-white transition enabled:hover:bg-[#7a5c45] enabled:active:scale-95 disabled:opacity-50"
+              className="flex-1 rounded-xl py-2.5 font-semibold bg-[#8C6D58] text-white shadow-sm transition-all duration-200 enabled:hover:bg-[#7a5c45] enabled:hover:shadow-md enabled:active:scale-[0.98] disabled:opacity-50 cursor-pointer"
             >
               {isSubmitting ? 'กำลังบันทึก...' : 'บันทึก'}
             </button>
