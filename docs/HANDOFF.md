@@ -1,332 +1,334 @@
-﻿# HANDOFF ๏ฟฝ PWA-POS (๏ฟฝ๏ฟฝาค๏ฟฝ๏ฟฝอง / KhaKhlong)
+﻿# HANDOFF — PWA-POS (ค้าคล่อง / KhaKhlong)
 
-> เนเธเธฅเนเธเธตเนเธเธทเธญเธชเธฃเธธเธเธชเธ–เธฒเธเธฐเธฅเนเธฒเธชเธธเธ”เธชเธณเธซเธฃเธฑเธ **เน€เธเธดเธ”เนเธเธ—เนเธซเธกเนเนเธฅเนเธงเธ—เธณเธเธฒเธเธ•เนเธญ** เนเธ”เธขเนเธกเนเธ•เนเธญเธเน€เธฅเนเธฒเธเธฃเธดเธเธ—เนเธซเธกเน
-> เธญเธฑเธเน€เธ”เธ•: 2026-10-27 (เธ•เธฃเธงเธเธเธฑเธ `origin/main` = `78d3c8e` เนเธฅเนเธง) ยท เนเธเนเนเธ—เธ `docs/backend-todo.md` (เนเธเธฅเนเธเธฑเนเธเธฅเนเธฒเธชเธกเธฑเธขเนเธฅเนเธง)
+> ไฟล์นี้คือสรุปสถานะล่าสุดสำหรับ **เปิดแชทใหม่แล้วทำงานต่อ** โดยไม่ต้องเล่าบริบทใหม่
+> อัปเดต: **2026-10-30** · branch `feat-aod` (`HEAD` = `006b5b9`) · `origin/main` = `b352de6` (2026-10-28)
+> ใช้แทน `docs/backend-todo.md` และ `docs/daily-update-2026-10-21.md` (สองไฟล์นั้นล้าสมัยแล้ว)
 
-## ๏ฟฝิธ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝแชท๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ
+## วิธีใช้ในแชทใหม่
 
-๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝยค๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ็นข๏ฟฝอค๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝรก:
+พิมพ์ประโยคนี้เป็นข้อความแรก:
 
 ```text
-เธญเนเธฒเธ docs/HANDOFF.md เธเนเธญเธ เนเธฅเนเธงเธ—เธณเธเธฒเธเธ•เนเธญเธเธฒเธเธซเธฑเธงเธเนเธญ "9. เธฅเธณเธ”เธฑเธเธ—เธตเนเนเธเธฐเธเธณเธ–เธฑเธ”เนเธ"
+อ่าน docs/HANDOFF.md ก่อน แล้วทำงานต่อจากหัวข้อ "9. ลำดับที่แนะนำถัดไป"
 ```
 
-เธ–เนเธฒเธญเธขเธฒเธเนเธซเนเธ—เธธเธเนเธเธ—เนเธซเธกเนเธฃเธนเนเธเธฃเธดเธเธ—เธญเธฑเธ•เนเธเธกเธฑเธ•เธด เนเธซเนเธเธฑเธ”เธชเธฃเธธเธเธขเนเธญเนเธชเน `AGENTS.md` เธ—เธตเน root เนเธเธฃเน€เธเธเธ•เน (เธญเธฑเธเน€เธ”เธ•เนเธงเนเนเธฅเนเธง)
+บริบทแบบย่อ (stack, กติกา, คำสั่งเทสต์) อยู่ใน `AGENTS.md` ที่ root ของ repo — แก้ที่ root ที่เดียว (`docs/AGENTS.md` เป็น pointer ไปที่นั่น)
 
 ---
 
-## 1. ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝเจก๏ฟฝ๏ฟฝ
+## 1. ข้อมูลโปรเจกต์
 
-| ๏ฟฝ๏ฟฝยก๏ฟฝ๏ฟฝ | ๏ฟฝ๏ฟฝ๏ฟฝ |
+| รายการ | ค่า |
 |---|---|
-| Path | เนเธ•เนเธฅเธฐเน€เธเธฃเธทเนเธญเธเนเธกเนเน€เธซเธกเธทเธญเธเธเธฑเธ (เน€เธเธฃเธทเนเธญเธเน€เธเธเธเน `D:\PWA-POS\`) |
-| Branch | `main` (branch `feat-aod`, `feat-benz` เธขเธฑเธเธญเธขเธนเน เนเธฅเธฐ เธ“ เธงเธฑเธเธ—เธตเนเธญเธฑเธเน€เธ”เธ•เธกเธตเนเธเนเธ”เน€เธ—เนเธฒเธเธฑเธ `main`) |
-| HEAD | `origin/main` = `78d3c8e` โ€” Merge pull request #15 from Slippery77/feat-benz (2026-10-27) |
-| Remote | `https://github.com/Slippery77/PWA-POS.git` |
-| Working tree | เธ“ `78d3c8e` เธเธฒเธเธ—เธธเธเธเธดเนเธเนเธเนเธเธฅเนเธเธตเนเธ–เธนเธ commit เนเธฅเธฐ merge เน€เธเนเธฒ `main` เนเธฅเนเธง โ€” เธเนเธญเธเน€เธฃเธดเนเธกเธเธฒเธเนเธซเนเธฃเธฑเธ `git status` เน€เธเนเธเน€เธเธฃเธทเนเธญเธเธ•เธฑเธงเน€เธญเธเธญเธตเธเธเธฃเธฑเนเธ |
-| Frontend | React + TypeScript + Vite + Tailwind v4 ยท dev port **5173** ยท proxy `/api` โ’ `http://localhost:3000` |
-| Backend | NestJS 11 ยท port **3000** ยท prefix `/api` ยท Swagger เน€เธเธดเธ” |
-| Database | PostgreSQL 18 ยท db `pwa_pos` ยท user `pos_app` ยท เธฃเธซเธฑเธชเธเนเธฒเธเธญเธขเธนเนเนเธ `.env` เธเธญเธเนเธ•เนเธฅเธฐเน€เธเธฃเธทเนเธญเธ (เธซเนเธฒเธกเน€เธเธตเธขเธเธฃเธซเธฑเธชเธเธฃเธดเธเธฅเธเนเธเธฅเนเธเธตเน) |
-| เน€เธญเธเธชเธฒเธฃเธเธนเนเธกเธทเธญ | `docs/setup-guide.md`, `docs/backend-dev-guide.md`, `docs/backend-coding-standard.md`, `docs/payment-module-guide.md`, `docs/system-config-guide.md`, `docs/edit-vat-frontend-guide.md`, `docs/inventory-endpoint-guide.md`, `docs/shifts-endpoint-guide.md`, `docs/orders-endpoint-guide.md`, `docs/user-roles-permissions.md` |
+| Branch ที่ทำงาน | `feat-aod` — งาน void/comp + PIN ยัง**ไม่ commit** (ดู 3.8–3.10) |
+| Integration branch | `main` (`origin/main` = `b352de6`, 2026-10-28) |
+| Remote | `https://github.com/Slippery77/KhaKhlong.git` (branch เก่า `feat-aod`, `feat-benz`) |
+| Frontend | React + TypeScript + Vite + Tailwind v4 · dev port **5173** · proxy `/api` → `http://localhost:3000` |
+| Backend | NestJS 11 · port **3000** · prefix `/api` · Swagger เปิด |
+| Database | PostgreSQL 18 · db `pwa_pos` · user `pos_app` · รหัสผ่านอยู่ใน `.env` ของแต่ละเครื่อง (ห้ามเขียนรหัสจริงลงไฟล์นี้) |
+| เอกสารคู่มือ | `docs/setup-guide.md`, `docs/backend-dev-guide.md`, `docs/backend-coding-standard.md`, `docs/payment-module-guide.md`, `docs/void-comp-approval-guide.md`, `docs/system-config-guide.md`, `docs/edit-vat-frontend-guide.md`, `docs/inventory-endpoint-guide.md`, `docs/shifts-endpoint-guide.md`, `docs/orders-endpoint-guide.md`, `docs/user-roles-permissions.md` |
 
-### ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ่งท๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ
+### คำสั่งที่ใช้บ่อย
 
-`powershell
-# ๏ฟฝัน backend (terminal 1)
+```powershell
+# ติดตั้ง dependency (repo เป็น npm workspaces — ต้องรันที่ root)
+npm ci
+
+# รัน backend (terminal 1)
 cd backend; npx nest start --watch
 
-# ๏ฟฝัน frontend (terminal 2)
+# รัน frontend (terminal 2)
 cd frontend; npm run dev
 
 # type-check / build
 cd backend;  npx tsc --noEmit
 cd frontend; npx tsc -b; npx vite build
 
-# test
-cd backend; npx jest
+# test (รันเฉพาะชุดที่แก้ — ทั้งชุดยังมี boilerplate แดง)
+cd backend; npx jest src/modules/shifts
+cd backend; npx jest src/modules/orders
 
-# E2E (๏ฟฝ๏ฟฝอง๏ฟฝ๏ฟฝ backend ๏ฟฝัน๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ)
+# E2E (ต้องมี backend + DB จริงรันอยู่)
+node backend/test/e2e/e2e-void-comp.mjs
 node backend/test/e2e/e2e-reports.mjs
 
-# psql (เนเธชเนเธฃเธซเธฑเธชเธเนเธฒเธเธเธญเธเน€เธเธฃเธทเนเธญเธเธ•เธฑเธงเน€เธญเธเธเธฒเธ .env)
-$env:PGPASSWORD='<เธฃเธซเธฑเธชเธเนเธฒเธ pos_app เธเธฒเธ .env>'
+# psql (ใส่รหัสผ่านของเครื่องตัวเองจาก .env)
+$env:PGPASSWORD='<รหัสผ่าน pos_app จาก .env>'
 & 'C:\Program Files\PostgreSQL\18\bin\psql.exe' -U pos_app -d pwa_pos -c "SELECT 1;"
 ```
 
 ---
 
-## 2. สถาน๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ
+## 2. สถานะโมดูล
 
-### ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝาน๏ฟฝ๏ฟฝ
+### เสร็จและใช้งานได้
 
-- **Auth** โ€” login/logout/refresh token, JWT guard, permission guard, RLS + tenant isolation ยท **store finder เธ—เธตเน `/`** (เธเธณเธฃเธซเธฑเธชเธฃเนเธฒเธเนเธ `localStorage`, เธ•เธฃเธงเธ slug เธเธฑเธ server เธเนเธญเธเธเธฒเนเธ login)
-- **Register** โ€” เธชเธกเธฑเธเธฃเธฃเนเธฒเธเนเธซเธกเน (throttle 3 เธเธฃเธฑเนเธ / 5 เธเธฒเธ—เธต / IP) ยท เธ•เธฑเนเธ PIN เน€เธเนเธฒเธเธญเธเธฃเนเธฒเธเนเธ”เนเธ•เธญเธเธชเธกเธฑเธเธฃ (`PinInput`)
-- **Menu** โ€” เธซเธกเธงเธ”/เน€เธกเธเธน/ modifiers เธเธฃเธ endpoint ยท เธซเธเนเธฒ Edit Menu เธเธนเธเน€เธกเธเธนเธเธฑเธเธเธฅเธธเนเธกเธ•เธฑเธงเน€เธฅเธทเธญเธเนเธ”เนเนเธฅเนเธง (`linkModifier.tsx`)
-- **Floors / Tables** โ€” เธเธทเนเธเธ—เธตเน เนเธ•เนเธฐ เธเธฑเธเธฃเนเธฒเธ
-- **Orders** โ€” create, list (open), get by id, add items (+kitchen ticket), move table, close-unpaid, sync (sync เธขเธฑเธเธฃเธฑเธ `any` โ€” เธ”เธน P1)
-- **Inventory** โ€” stock view, movements (เธฃเธฑเธเน€เธเนเธฒ/เธเธฃเธฑเธ/เธเธญเธเน€เธชเธตเธข), **count batch** (เธฃเธญเธเธฅเนเธฒเธชเธธเธ”)
-- **Shifts** โ€” open, current, close, verify (PIN เธเธนเนเธเธฑเธ”เธเธฒเธฃ/เน€เธเนเธฒเธเธญเธ), reopen, cashbook, list
-- **KDS** โ€” เธเธดเธงเธเธฃเธฑเธง + mark ready
-- **System Config** โ€” GET/PATCH (เธซเธเนเธฒ UI เนเธเนเน€เธเธเธฒเธฐ VAT; เธเนเธฒเธญเธทเนเธเธขเธฑเธเนเธกเนเธกเธตเธซเธเนเธฒเธเธญ)
-- **Tenants / Store** โ€” GET/PATCH + เธซเธเนเธฒ `setting/store` เนเธฅเนเธง
-- **Users** โ€” list, create, update, deactivate, reactivate ยท **เธ•เธฑเนเธ PIN เนเธ”เนเธ—เธฑเนเธเธ•เธญเธเธชเธฃเนเธฒเธเนเธฅเธฐเนเธเนเนเธ** (`UpdateUserDTO.pin` เธ•เธฃเธงเธ `/^\d{6}$/` + bcrypt) ยท `UserTable` เนเธชเธ”เธ badge `has_pin` (เนเธกเนเธชเนเธ `pin_hash` เธญเธญเธ API)
-- **Roles / Permissions** โ€” seed เธเธฃเธ, employee 9 เธชเธดเธ—เธเธดเน
-- **Payment** โ€” `attempts` (เธเธญเธเธเธดเธฅ) โ’ `pay` (เน€เธเธดเธเธชเธ”/QR) โ’ `cancel`; เธญเธญเธเน€เธฅเธเนเธเน€เธชเธฃเนเธ, เธ”เธนเนเธเน€เธชเธฃเนเธ, เธเธฑเธเธ—เธถเธเธเธฒเธฃเธเธดเธกเธเน/เธเธดเธกเธเนเธเนเธณ; UI `PaymentModal` 3 เธเธฑเนเธ เนเธเนเธขเธญเธ”เธเธฒเธ server เน€เธ—เนเธฒเธเธฑเนเธ
-- **Receipt (FE)** โ€” `features/receipt/` เธเธฃเธตเธงเธดเธงเธเธฃเธฐเธ”เธฒเธฉ 80mm + เธเธดเธกเธเนเธเธฃเธดเธเธเนเธฒเธ `window.print()`, เธเนเธฒเธข "เธชเธณเน€เธเธฒ" เธ•เธฒเธก `isCopy`, เน€เธเธฒเธฃเธ `max_reprints` (409); เน€เธเธดเธ”เนเธ”เนเธเธฒเธ `PaymentModal` (เธซเธฅเธฑเธเธเนเธฒเธข) เนเธฅเธฐ `BillDetailModal` (เธเธดเธกเธเนเธเนเธณเนเธเธฃเธฒเธขเธเธฒเธ)
-- **Reports** โ€” `sales/summary`, `sales/by-period`, `sales/top-items`, `sales/transactions`, `sales/receipt/:id`; เธซเธเนเธฒ Sale Report เธ•เนเธญ API เธเธฃเธดเธเนเธฅเนเธง
-- **Store / VAT UI** โ€” `StoreSettingPage` (GET/PATCH tenants) เนเธฅเธฐเธซเธเนเธฒเนเธเน VAT/service charge เธเนเธฒเธ `/system-config`
+- **Auth** — login/logout/refresh token, JWT guard, permission guard, RLS + tenant isolation · **store finder ที่ `/`** · **ตรวจ `token_version` ใน JWT guard แล้ว** (เปลี่ยนรหัสผ่าน = token เก่าใช้ไม่ได้)
+- **Register** — สมัครร้านใหม่ (throttle 3 ครั้ง / 5 นาที / IP) · ตั้ง PIN เจ้าของร้านได้ตอนสมัคร (`PinInput`) · **แก้บั๊กลำดับพารามิเตอร์แล้ว** (ดู 3.9)
+- **Menu** — หมวด/เมนู/ modifiers ครบ endpoint · ผูกเมนูกับกลุ่มตัวเลือกได้ (`linkModifier.tsx`)
+- **Floors / Tables** — พื้นที่ โต๊ะ ผังร้าน
+- **Orders** — create, list (open), get by id, add items (+kitchen ticket), move table, close-unpaid, sync (`sync` ยังรับ `any` — ดู P1) · **void / comp รายการพร้อม PIN ผู้อนุมัติ** (ดู 3.8)
+- **Inventory** — stock view, movements (รับเข้า/ปรับ/ของเสีย), **count batch** (รอบล่าสุด)
+- **Shifts** — open, current, close, verify (PIN ผู้จัดการ/เจ้าของ), reopen, cashbook, list · **`GET /shifts` ใช้ `report:view_all` หรือ `report:view_own_shift` แล้ว** (employee เห็นกะตัวเอง) · **PIN lock เก็บใน DB** (คงทนข้าม restart)
+- **KDS** — คิวครัว + mark ready
+- **System Config** — GET/PATCH (หน้า UI ใช้เฉพาะ VAT)
+- **Tenants / Store** — GET/PATCH + หน้า `setting/store`
+- **Users** — list, create, update, deactivate, reactivate · ตั้ง PIN ได้ทั้งสร้างและแก้ไข (`UpdateUserDTO.pin` ตรวจ `/^\d{6}$/` + bcrypt) · `UserTable` แสดง badge `has_pin` (ไม่ส่ง `pin_hash` ออก API)
+- **Roles / Permissions** — seed ครบ, employee 9 สิทธิ์
+- **Payment** — `attempts` → `pay` → `cancel`; ออกเลขใบเสร็จ, ดู/พิมพ์ใบเสร็จ; UI `PaymentModal` 3 ขั้น ใช้ยอดจาก server เท่านั้น
+- **Receipt (FE)** — `features/receipt/` พรีวิว 80mm + พิมพ์จริง, ป้าย "สำเนา" ตาม `isCopy`, เคารพ `max_reprints` (409)
+- **Reports** — `sales/summary`, `sales/by-period`, `sales/top-items`, `sales/transactions`, `sales/receipt/:id`
+- **Void / Comp (2026-10-30)** — batch endpoint + PIN ผู้อนุมัติ + audit ผ่าน trigger + FE modal + E2E 31 ข้อผ่าน
 
-### ๏ฟฝัง๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ / ๏ฟฝัง๏ฟฝ๏ฟฝ๏ฟฝรบ
+### ยังไม่เริ่ม / ยังไม่ครบ
 
-- **Audit Logs** โ€” เนเธกเนเธกเธต endpoint/UI (DB trigger เน€เธเธตเธขเธ audit เธเธฒเธเน€เธซเธ•เธธเธเธฒเธฃเธ“เน เน€เธเนเธ `trg_audit_users`, logout เนเธ•เนเธขเธฑเธเนเธกเนเธกเธตเธซเธเนเธฒเธ”เธน)
-- **PWA/Offline** โ€” เธกเธต manifest, service worker, Workbox, เธขเธฑเธเนเธกเนเธกเธต Dexie (`frontend/package.json` เธขเธฑเธเนเธกเนเธกเธต dependency เน€เธซเธฅเนเธฒเธเธตเน)
-- **Dashboard** โ€” เน€เธญเธฒเธญเธญเธเนเธฅเนเธง
-- **Reports เน€เธเธดเนเธกเน€เธ•เธดเธก** โ€” เธขเธฑเธเนเธกเนเธกเธตเธซเธเนเธฒเธฃเธฒเธขเธเธฒเธเธฃเธฒเธขเธเธฐ/เธเธฃเธฐเธงเธฑเธ•เธดเธเธฐ, เธ•เธฑเธงเธเธฃเธญเธเธเนเธงเธเธงเธฑเธเธ—เธตเน เนเธฅเธฐ export
-
----
-
-## 3. เธเธฒเธเธฃเธญเธเธฅเนเธฒเธชเธธเธ” (2026-10-25 เธ–เธถเธ 2026-10-27)
-
-### 3.1 Receipt / ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ (๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ)
-- Backend: payment_cols ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ at_rate_snapshot, service_charge_rate_snapshot, 
-ounding_adjustment (๏ฟฝ๏ฟฝ๏ฟฝสค๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ)
-- Frontend rontend/src/features/receipt/: ReceiptPaper, ReceiptModal, useReceipt, 
-eceipt.api, 
-eceipt.print.css
-- ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ PaymentModal (step done) ๏ฟฝ๏ฟฝ๏ฟฝ BillDetailModal (๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ)
-- E2E ackend/test/e2e/e2e-receipt.mjs ๏ฟฝ๏ฟฝอบ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ
-
-- Commit เธซเธฅเธฑเธ: `4bd4ad4` (feat payment backend+frontend) โ’ merge `76da899`, `92ac97f`
-- Backend `backend/src/modules/payment/`:
-  - `POST /payments/attempts` โ€” เธชเธฃเนเธฒเธ attempt, เธเธณเธเธงเธ“เธขเธญเธ”เธเธฒเธ server, เธฅเนเธญเธเธเธดเธฅเธเธฑเธเน€เธเธฃเธทเนเธญเธเธญเธทเนเธเธเธณเธฃเธฐเธเนเธณ
-  - `GET /payments/attempts/:payment_attempt_id`
-  - `POST /payments/attempts/:id/pay` โ€” เน€เธเธดเธเธชเธ”เธ•เนเธญเธเธชเนเธ `cashReceived` เนเธฅเธฐเธ•เนเธญเธ โฅ เธขเธญเธ”; QR เธชเนเธ `{}`
-  - `POST /payments/attempts/:id/cancel`
-  - `GET /payments/:id/receipt`, `POST /payments/:id/print`
-  - DB trigger เน€เธเนเธเธเธนเนเธเธณเธเธงเธ“เธขเธญเธ”/เธญเธญเธเน€เธฅเธเนเธเน€เธชเธฃเนเธ/เธเธดเธ”เธญเธญเน€เธ”เธญเธฃเน/เธเธทเธเนเธ•เนเธฐ
-- Frontend: `hooks/usePayment.ts`, `components/PaymentModal.tsx`, `MainPOS.tsx` เน€เธเธดเธ” modal เธเธฒเธเธเธธเนเธกเธเธณเธฃเธฐเน€เธเธดเธ
-- PromptPay QR: `014f434`, `4c9f8cc` (เธเนเธญเธเธเธฃเธญเธ PromptPay เนเธเธซเธเนเธฒเธ•เธฑเนเธเธเนเธฒเธฃเนเธฒเธ), `33a86f2` (เนเธเธ QR เนเธ payment modal)
-
-### 3.3 Reports (๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ)
-- Backend module 
-eports/ ๏ฟฝรบ
-- Frontend ๏ฟฝ๏ฟฝ๏ฟฝ API ๏ฟฝ๏ฟฝิง๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ
-- E2E e2e-reports.mjs ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ
-
-- Backend เนเธซเธกเนเธ—เธฑเนเธเนเธเธฅเน€เธ”เธญเธฃเน `backend/src/modules/reports/` (controller/service/repository/dto) + เธฅเธเธ—เธฐเน€เธเธตเธขเธเนเธ `app.module.ts`
-- เธชเธดเธ—เธเธดเน: `@RequireAnyPermission('report:view_all', 'report:view_own_shift')` (เน€เธเธดเนเธก `RequireAnyPermission` เนเธ guard เนเธฅเนเธง)
-- Frontend เนเธซเธกเน `frontend/src/features/saleReport/api/reports.api.ts`
-- `SalesContext.tsx` เน€เธเธฅเธตเนเธขเธเธเธฒเธ mock/localStorage โ’ เน€เธฃเธตเธขเธ Reports API เธเธฃเธดเธ; `BillDetailModal.tsx` เนเธฅเธฐ `CashMovementForm.tsx` เธ•เนเธญ API
-- E2E `backend/test/e2e/e2e-reports.mjs` (เธ—เธ”เธชเธญเธ register โ’ เน€เธเธดเธ”เธเธฐ โ’ cash movement โ’ เธเธฒเธข โ’ เธเนเธฒเธขเน€เธเธดเธ โ’ reports เธเธฃเธ) เธญเธขเธนเนเนเธ repo เนเธฅเนเธง
-
-### 3.3 UI เธญเธทเนเธเนเธเธฃเธญเธเน€เธ”เธตเธขเธงเธเธฑเธ (commit เนเธฅเนเธง)
-
-- `29eac7e` โ€” เธซเธเนเธฒ Store settings, helper เธ—เธตเนเน€เธเธตเนเธขเธงเธเนเธญเธ, เธเธฃเธฑเธ UI เธซเธฅเธฒเธขเธเธธเธ”
-- `27a7e35` โ€” เน€เธเธดเธ” popup เน€เธเธดเธ”เธเธฐเธญเธฑเธ•เนเธเธกเธฑเธ•เธดเน€เธกเธทเนเธญ login เธเธฃเธฑเนเธเนเธฃเธเธเธญเธเธงเธฑเธ (เธซเธเนเธฒ Tables)
-- Login/Register/Table page redesign เธเธฒเธ `feat-benz`
-
-### 3.4 เธชเธ–เธฒเธเธฐ commit เธ“ เธงเธฑเธเธ—เธตเนเธญเธฑเธเน€เธ”เธ•
-
-เธเธฒเธเธ—เธตเนเธซเธฑเธงเธเนเธญเน€เธ”เธดเธกเน€เธเธขเธฃเธฐเธเธธเธงเนเธฒ "เธเนเธฒเธเนเธ working tree" เธ–เธนเธ commit เนเธฅเธฐ merge เน€เธเนเธฒ `main` เธเธฃเธเนเธฅเนเธง:
-
-| Commit | เน€เธเธทเนเธญเธซเธฒ |
-|---|---|
-| `69ffbb2` | feat(receipt): เธเธฃเธตเธงเธดเธง 80mm, เธเธดเธกเธเน, เธเธดเธกเธเนเธเนเธณ (เธฃเธงเธก backend receipt fields + `e2e-receipt.mjs`) |
-| `50657d4` | feat(auth): store finder + เธเธณเธฃเธซเธฑเธชเธฃเนเธฒเธเธฅเนเธฒเธชเธธเธ” (เธฃเธงเธก `e2e-public-tenant.mjs`) |
-| `8c8b867` | docs: เธเธฑเธเธ—เธถเธเธเธฒเธเนเธเน€เธชเธฃเนเธเนเธฅเธฐ store finder |
-| `bd022fe` | feat(menu): เธเธนเธ modifier เธเธฑเธเน€เธกเธเธน ยท feat(pin): เธ•เธฑเนเธ/เนเธเน PIN เธเธนเนเนเธเน (เธ”เธน 3.7) |
-| `78d3c8e` | Merge PR #15 (`feat-benz` โ’ `main`) |
-
-### 3.5 เนเธเน€เธชเธฃเนเธ + เธเธดเธกเธเนเธเนเธณ (FE) โ€” 2026-10-26
-
-- Backend: `payment_cols` เน€เธเธดเนเธก `vat_rate_snapshot`, `service_charge_rate_snapshot`, `rounding_adjustment`; `toPaymentResponse` เธเธทเธ `vatRate`, `serviceChargeRate`, `roundingAdjustment` (เนเธเนเน€เธเนเธ **เธเนเธฒเธขเธเธณเธเธฑเธ** เธเธเนเธเน€เธชเธฃเนเธเน€เธ—เนเธฒเธเธฑเนเธ เนเธกเนเธเธณเธเธงเธ“เธเนเธณ) โ€” เธเธญเธฅเธฑเธกเธเนเธกเธตเนเธเธชเธเธตเธกเธฒเธญเธขเธนเนเนเธฅเนเธง **เนเธกเนเธ•เนเธญเธ ALTER TABLE**
-- Frontend เนเธซเธกเน `frontend/src/features/receipt/`:
-  - `ReceiptPaper` โ€” เธเธฃเธฐเธ”เธฒเธฉ 80mm (เธเธทเนเธเธ—เธตเนเธเธดเธกเธเน 72mm) เนเธเนเธ•เธฑเธงเน€เธ”เธตเธขเธงเธ—เธฑเนเธเธเธฃเธตเธงเธดเธงเนเธฅเธฐเนเธเนเธเธเธดเธกเธเน
-  - `ReceiptModal` โ€” เธเธฃเธตเธงเธดเธง + เธเธธเนเธกเธเธดเธกเธเน, เธเนเธฒเธข "เธชเธณเน€เธเธฒ" เธ•เธฒเธก `isCopy`, เธเธฑเธ”เธเธฒเธฃ 409 (`max_reprints`)
-  - `useReceipt` / `receipt.api` โ€” `GET /payments/:id/receipt` + `POST /payments/:id/print`
-  - `receipt.print.css` โ€” `@page { size: 80mm auto; margin: 4mm 2mm }` + เธเนเธญเธเธ—เธธเธเธญเธขเนเธฒเธเธ—เธตเนเนเธกเนเนเธเน `.receipt-print-area` (portal เนเธ•เน `<body>`)
-- เธฅเธณเธ”เธฑเธเธเธฒเธฃเธเธดเธกเธเน: เธเธ”เธเธดเธกเธเน โ’ `POST /print` โ’ `flushSync` เนเธซเนเธเนเธฒเธข "เธชเธณเน€เธเธฒ" เธฅเธเธเธฃเธฐเธ”เธฒเธฉ โ’ `window.print()`
-- เธเธธเธ”เน€เธฃเธตเธขเธเนเธเน: `PaymentModal` step `done` (เธเธดเธกเธเนเธซเธฅเธฑเธเธเนเธฒเธข) เนเธฅเธฐ `BillDetailModal` (เธเธดเธกเธเนเธเนเธณเธเธฒเธเธฃเธฒเธขเธเธฒเธเธขเธญเธ”เธเธฒเธข)
-- เธ—เธ”เธชเธญเธ: `npx tsc --noEmit` (backend) / `npx tsc -b` + `vite build` (frontend) เธเนเธฒเธ; `node backend/test/e2e/e2e-receipt.mjs` เธเนเธฒเธเธ—เธธเธเธเนเธญ (เนเธเน€เธชเธฃเนเธ, printCount/isCopy, max_reprints=2 โ’ เธเธดเธกเธเนเนเธ”เน 3 เธเธฃเธฑเนเธ เธเธฃเธฑเนเธเธ—เธตเน 4 = 409, 404, 401, เธเนเธฒเธขเธเนเธณเนเธ”เนเนเธเน€เธ”เธดเธก)
-- เธฃเธฒเธขเธฅเธฐเน€เธญเธตเธขเธ”เน€เธเธดเธเธญเธญเธเนเธเธ: `docs/payment-module-guide.md` เธซเธฑเธงเธเนเธญ 7.5
-
-### 3.6 เธ—เธฒเธเน€เธเนเธฒเน€เธงเนเธ: store finder + เธเธณเธฃเธซเธฑเธชเธฃเนเธฒเธเนเธเน€เธเธฃเธทเนเธญเธ (Phase 1) โ€” 2026-10-27
-
-เธเธฑเธเธซเธฒเน€เธ”เธดเธก: เธ•เนเธญเธเธเธดเธกเธเน URL `/{slug}/login` เน€เธญเธ, path `/` เน€เธเนเธเธเธญเธเธฒเธง, เธเธดเธ”เนเธ—เนเธเนเธฅเนเธงเธ•เนเธญเธเธเธณ URL เนเธซเธกเน, เธเธญเธฃเนเธก login เนเธเนเธฃเธซเธฑเธชเธฃเนเธฒเธเนเธกเนเนเธ”เน
-
-- Backend: `GET /api/public/tenants/:slug` (`modules/tenants/public-tenants.controller.ts`)
-  - `@Public()` + throttle 20 เธเธฃเธฑเนเธ/เธเธฒเธ—เธต ยท เธ•เธญเธ `200 { status, data:{ slug, exists, active } }` เน€เธชเธกเธญ (เนเธกเน 404)
-  - เนเธกเนเธเธทเธเธเธทเนเธญเธฃเนเธฒเธ/เธเนเธญเธกเธนเธฅเธญเธทเนเธ โ’ เธฅเธ”เธเธฒเธฃเนเธฅเนเน€เธ”เธฒเธฃเธฒเธขเธเธทเนเธญเธฃเนเธฒเธ; เธ•เธฑเธงเธเธฑเธเธเธฃเธดเธเธขเธฑเธเน€เธเนเธ RLS + `tenant_id` เนเธ token
-  - เธ•เธฃเธงเธเธฃเธนเธเนเธเธ slug เธ”เนเธงเธข regex เน€เธ”เธตเธขเธงเธเธฑเธ `chk_tenant_slug_format` เธเนเธญเธเธขเธดเธ DB
-- Frontend:
-  - `features/auth/pages/store_finder_page.tsx` โ€” route `/` (เนเธฅเธฐ `/login`): เธ–เนเธฒเน€เธเธฃเธทเนเธญเธเน€เธเธขเธฅเนเธญเธเธญเธดเธ โ’ เน€เธ”เนเธ `/{slug}/login` เธ—เธฑเธเธ—เธต; เธ–เนเธฒเนเธกเนเน€เธเธข/เธเธ” "เน€เธเธฅเธตเนเธขเธเธฃเนเธฒเธ" (`?switch=1`) โ’ เธซเธเนเธฒเธเธฃเธญเธเธฃเธซเธฑเธชเธฃเนเธฒเธ + เธเธฒเธฃเนเธ” "เธฃเนเธฒเธเธ—เธตเนเนเธเนเธฅเนเธฒเธชเธธเธ”" + เธเธธเนเธก "เธฅเธทเธกเธฃเนเธฒเธเธเธตเน"
-  - `features/auth/tenantStorage.ts` โ€” `saveLastTenantSlug` / `getLastTenantSlug` / `clearLastTenantSlug` (เน€เธเนเธเนเธ `localStorage` เนเธกเนเนเธเน session)
-  - `features/auth/api/publicTenant.api.ts` โ€” เน€เธฃเธตเธขเธ endpoint เธเนเธฒเธเธเธ
-  - `useLogin.ts` โ€” เธเธฑเธเธ—เธถเธ slug เธซเธฅเธฑเธ login เธชเธณเน€เธฃเนเธ; logout เธเธฅเธฑเธ `/` (เนเธกเนเธเธถเนเธ `useParams`)
-  - `login_form.tsx` โ€” เนเธ–เธ "เธฃเธซเธฑเธชเธฃเนเธฒเธ" เธเธฑเธเน€เธเนเธ/เนเธเนเนเธเนเธ”เน + เธฅเธดเธเธเน "เนเธกเนเนเธเนเธฃเนเธฒเธเธเธตเน? เน€เธเธฅเธตเนเธขเธเธฃเนเธฒเธ"
-  - `AuthContext` โ€” session เธซเธกเธ”เธญเธฒเธขเธธเนเธฅเนเธงเนเธกเนเธกเธต slug โ’ เธเธฅเธฑเธ `/` (เน€เธ”เธดเธกเน€เธ”เนเธ `/register` เธเธถเนเธเธ—เธณเนเธซเนเธเธเธกเธตเธเธฑเธเธเธตเนเธฅเนเธงเธซเธฅเธ)
-  - `AppRouter` โ€” เน€เธเธดเนเธก `/`, `/login`, เนเธฅเธฐ catch-all `*` โ’ store finder
-- เธ—เธ”เธชเธญเธ: `npx tsc --noEmit` / `npx tsc -b` + `vite build` เธเนเธฒเธ ยท `node backend/test/e2e/e2e-public-tenant.mjs` เธเนเธฒเธเธ—เธธเธเธเนเธญ (เธฃเนเธฒเธเธเธฃเธดเธ = exists/active, เธฃเนเธฒเธเธกเธฑเนเธง = false, slug เธเธดเธ”เธฃเธนเธเนเธเธ = false, เธ•เธฑเธงเธเธดเธกเธเนเนเธซเธเน normalize เนเธ”เน, เนเธกเนเธ•เนเธญเธเธกเธต token)
-- **Phase 2/3 เธ—เธตเนเธขเธฑเธเนเธกเนเธ—เธณ:** login เธ”เนเธงเธขเธญเธตเน€เธกเธฅ (`resolve_user_by_email` + DTO เธเธฃเนเธญเธกเนเธฅเนเธง), device pairing + PIN
-
-### 3.7 PIN เธเธนเนเนเธเน + เธเธนเธ modifier เธเธฑเธเน€เธกเธเธน โ€” 2026-10-27 (`bd022fe`)
-
-- Backend:
-  - `users/dto/updateUser.dto.ts` โ€” เน€เธเธดเนเธก `pin?` เธ•เธฃเธงเธ `@Matches(/^\d{6}$/)`
-  - `users.service.ts` โ€” hash PIN เธ”เนเธงเธข bcrypt เธ—เธฑเนเธเธ•เธญเธ create เนเธฅเธฐ update; audit เน€เธเธตเธขเธเนเธ”เธข trigger `trg_audit_users`
-  - `users.repository.ts` / `user-response.dto.ts` โ€” เธเธทเธ `has_pin` (boolean) เนเธ—เธเธเธฒเธฃเธชเนเธ `pin_hash`
-  - `register/dto/registerOwner.dto.ts` + `register.service.ts` โ€” เธฃเธฑเธ PIN เน€เธเนเธฒเธเธญเธเธฃเนเธฒเธเธ•เธญเธเธชเธกเธฑเธเธฃ
-- Frontend:
-  - `features/users/components/UserFormPopup.tsx` โ€” เธเนเธญเธ PIN เธ—เธฑเนเธเธชเธฃเนเธฒเธเนเธฅเธฐเนเธเนเนเธ ยท `UserTable.tsx` เนเธชเธ”เธ badge `has_pin`
-  - `features/registerOwner/components/PinInput.tsx` โ€” เธเนเธญเธเธเธฃเธญเธ PIN เธ•เธญเธเธชเธกเธฑเธเธฃเธฃเนเธฒเธ
-  - `features/editMenu/components/linkModifier.tsx` + `useAdminMenu.ts` + `menu_edit.tsx` โ€” เธเธนเธเธเธฅเธธเนเธกเธ•เธฑเธงเน€เธฅเธทเธญเธเธเธฑเธเน€เธกเธเธน ยท `mainpos/components/ModifierPopup.tsx` เธเธฃเธฑเธเธ•เธฒเธก
-- เธขเธฑเธเนเธกเนเธกเธต: E2E เธเธญเธเธเธฒเธฃเธ•เธฑเนเธ/เนเธเน PIN เนเธฅเธฐเธเธฒเธฃเธฃเธฑเธเธฃเธญเธเธเธฐเธ”เนเธงเธข PIN เธ—เธตเนเธ•เธฑเนเธเธเนเธฒเธ UI
+- **Audit Logs** — ไม่มี endpoint/UI (DB trigger เขียน audit บางเหตุการณ์ แต่ยังไม่มีหน้าดู)
+- **PWA/Offline** — ไม่มี manifest, service worker, Workbox, Dexie
+- **Dashboard** — `/:tenantSlug/homepage` ยังเป็น `<div>Dashboard (TODO)</div>`
+- **Reports เพิ่มเติม** — หน้ารายงานรายกะ, ตัวกรองช่วงวันที่บน UI, export
+- **Shift escalation อัตโนมัติ** — มี service แล้วแต่ยังไม่ทำงานจริง (ดู 5/P1-1)
 
 ---
 
-## 4. ๏ฟฝาน๏ฟฝ๏ฟฝาง P0
+## 3. งานรอบล่าสุด
 
-**เนเธกเนเธกเธตเธเธฒเธ P0 เธเนเธฒเธ** โ€” เธ—เธฑเนเธ 3 เธเนเธญเน€เธชเธฃเนเธเนเธฅเธฐเธญเธขเธนเนเนเธ `main` เนเธฅเนเธง (เธเธเนเธงเนเน€เธเนเธเธเธฑเธเธ—เธถเธ)
+### 3.1 Payment จริง + ปิดบิล (commit แล้ว)
 
-### P0-1. โ… เน€เธชเธฃเนเธเนเธฅเนเธง โ€” Commit เธเธฒเธ Reports + Payment
-- reports เธ—เธฑเนเธเธเธธเธ”เธ–เธนเธ commit เนเธ `da56495` (backend + FE + `e2e-reports.mjs`)
-- เธเธธเธ”เนเธเน€เธชเธฃเนเธเธ–เธนเธ commit เนเธ `69ffbb2` เนเธฅเธฐ merge เน€เธเนเธฒ `main` เนเธฅเนเธง
+- Commit หลัก: `4bd4ad4` → merge `76da899`, `92ac97f`
+- `backend/src/modules/payment/`: `POST /payments/attempts`, `GET /payments/attempts/:id`, `POST .../pay`, `POST .../cancel`, `GET /payments/:id/receipt`, `POST /payments/:id/print`
+- DB trigger เป็นผู้คำนวณยอด/ออกเลขใบเสร็จ/ปิดออเดอร์/คืนโต๊ะ
+- Frontend: `hooks/usePayment.ts`, `components/PaymentModal.tsx`, `MainPOS.tsx`
+- PromptPay QR: `014f434`, `4c9f8cc`, `33a86f2`
 
-### P0-2. โ… เน€เธชเธฃเนเธเนเธฅเนเธง โ€” เธเนเธญเธ PIN เธเธนเนเธเธฑเธ”เธเธฒเธฃเนเธเธซเธเนเธฒเธเธนเนเนเธเน
-- เธ—เธณเนเธ `bd022fe` (เธ”เธนเธซเธฑเธงเธเนเธญ 3.7): `UpdateUserDTO.pin` + bcrypt เนเธ `updateUser()` + เธเนเธญเธ PIN เนเธ `UserFormPopup` + audit เธเนเธฒเธ trigger
-- เน€เธซเธฅเธทเธญ (เนเธกเนเธเธฅเนเธญเธเน€เธ”เนเธก): เธ—เธ”เธชเธญเธเธเนเธฒเธ UI เธเธฃเธดเธ โ€” เธชเธฃเนเธฒเธ manager โ’ เธ•เธฑเนเธ PIN โ’ เธเธดเธ”เธเธฐเธขเธญเธ”เนเธกเนเธ•เธฃเธ โ’ เธฃเธฑเธเธฃเธญเธเธ”เนเธงเธข PIN เธเธฑเนเธ
+### 3.2 Reports module (commit แล้วใน `da56495`)
 
+- `backend/src/modules/reports/` (controller/service/repository/dto) + ลงทะเบียนใน `app.module.ts`
+- สิทธิ์: `@RequireAnyPermission('report:view_all', 'report:view_own_shift')`
+- Frontend `frontend/src/features/saleReport/api/reports.api.ts`; `SalesContext.tsx` ต่อ API จริง
+- E2E `backend/test/e2e/e2e-reports.mjs`
+
+### 3.3 UI อื่นในรอบ 2026-10-25 ถึง 2026-10-27
+
+- `29eac7e` — หน้า Store settings + helper
+- `27a7e35` — popup เปิดกะอัตโนมัติเมื่อ login ครั้งแรกของวัน
+- Login/Register/Table page redesign จาก `feat-benz`
+
+### 3.4 ใบเสร็จ + พิมพ์ซ้ำ (FE) — 2026-10-26
+
+- `payment_cols` มี `vat_rate_snapshot`, `service_charge_rate_snapshot`, `rounding_adjustment` — ใช้เป็น **ป้ายกำกับ** บนใบเสร็จเท่านั้น ไม่คำนวณซ้ำ
+- `frontend/src/features/receipt/`: `ReceiptPaper` (80mm), `ReceiptModal`, `useReceipt`/`receipt.api`, `receipt.print.css`
+- ลำดับพิมพ์: กดพิมพ์ → `POST /print` → `flushSync` ให้ป้าย "สำเนา" ลงกระดาษ → `window.print()`
+- ทดสอบ: `node backend/test/e2e/e2e-receipt.mjs` ผ่านทุกข้อ
+- รายละเอียด: `docs/payment-module-guide.md` หัวข้อ 7.5
+
+### 3.5 ทางเข้าเว็บ: store finder + จำรหัสร้าน (Phase 1) — 2026-10-27
+
+- `GET /api/public/tenants/:slug` (`modules/tenants/public-tenants.controller.ts`) — `@Public()` + throttle 20/นาที, ตอบ `{ status, data:{ slug, exists, active } }` เสมอ
+- FE: `store_finder_page.tsx` (route `/`, `/login`), `tenantStorage.ts`, `publicTenant.api.ts`, catch-all `*`
+- **Phase 2/3 ที่ยังไม่ทำ:** login ด้วยอีเมล (`resolve_user_by_email` + DTO พร้อมแล้ว), device pairing + PIN
+
+### 3.6 PIN ผู้ใช้ + ผูก modifier กับเมนู — 2026-10-27 (`bd022fe`)
+
+- `UpdateUserDTO.pin` (`@Matches(/^\d{6}$/)`), hash ด้วย bcrypt ทั้ง create/update, คืน `has_pin` แทน `pin_hash`
+- FE: ช่อง PIN ใน `UserFormPopup`, badge `has_pin` ใน `UserTable`, `PinInput` ตอนสมัครร้าน
+
+### 3.7 ความปลอดภัยรอบ 2026-10-28 (`6b5c7d3`)
+
+commit เดียว 4 เรื่อง:
+
+1. **`token_version` ใน JWT guard** — `jwtAuth.guard.ts` เทียบ claim กับ DB; ไม่มี claim = ปฏิเสธ; เปลี่ยน/รีเซ็ตรหัสผ่านตัด session เก่าทันที · E2E `e2e-token-version.mjs`
+2. **`GET /shifts` สิทธิ์ถูกต้อง** — `@RequireAnyPermission('report:view_all', 'report:view_own_shift')`; ถ้าไม่มี `report:view_all` service กรอง `opened_by = user.sub` ให้เห็นแค่กะตัวเอง
+3. **PIN lock เก็บใน DB** — `pin_failed_attempts` / `pin_locked_until` ถูกเขียนจริง (แทน `Map` ใน memory), `findPinVerifiers()` กรองคนที่ยังไม่ถูกล็อก
+4. **Shift escalation cron** — `common/shift-escalation.service.ts` เรียก `escalate_overdue_shifts()` ทุก 5 นาที (**ยังมีบั๊ก tenant context — ดู 5/P1-1**)
+
+### 3.8 Void / Comp รายการอาหาร + PIN ผู้อนุมัติ — 2026-10-30 (ยังไม่ commit)
+
+รายละเอียดเต็ม: `docs/void-comp-approval-guide.md`
+
+- **Backend** `modules/orders/`:
+  - `POST /orders/items/void` — `{ orderItemIds[], reason, approverPin }` · ต้องมี `void:approve`
+  - `POST /orders/items/comp` — `{ orderItemIds[], reason, approverPin }` · ต้องมี `discount:approve`
+  - route เดิมแบบต่อรายการ (`/orders/items/:id/void`) **ถูกลบ** → 404 (กันโค้ดเก่าเรียกค้าง)
+  - `OrdersService.verifyApproverPin()` — PIN ของผู้จัดการ/เจ้าของร้าน**คนใดก็ได้ในร้าน**, ตรวจสิทธิ์ตาม permission key, PIN ผิดนับที่ "บัญชีที่กดขอ" 5 ครั้ง → 429 ล็อก 5 นาที, และเก็บตัวนับด้วย `DbContextService.durableQuery()` เพื่อไม่ให้ 403 rollback ลบตัวนับ
+  - `void_order_item()` / `comp_order_item()` trigger ของ DB ตรวจ `has_permission(NEW.*_by, ...)` และ `*_by` จึงเก็บ **ผู้อนุมัติ** ไม่ใช่คนกด (คนกดไม่ได้ถูกบันทึก — ดู 8)
+  - `OrdersModule` import `UsersModule`; `UsersRepository.recordPinFailureDurable()` + `DbContextService.durableQuery()` ถูกเพิ่มในรอบนี้
+- **Frontend** `features/mainpos/`:
+  - `components/ItemActionModal.tsx` — modal กลาง (PIN 6 หลัก + เหตุผล), a11y ครบ (label/aria), Esc/backdrop ปิด, scroll lock; `VoidItemModal` / `CompItemModal` เป็น wrapper บาง ๆ
+  - ปุ่ม void/comp โผล่ทุกคน (สิทธิ์ยืนยันด้วย PIN ไม่ใช่ role) — prop `userRole` ถูกถอดออก
+  - `api/orders.api.ts` — `voidOrderItems()` / `compOrderItems()`
+  - `OrderSidebar.tsx` — badge `ให้ฟรี (COMP) n`, ยอดรวมไม่คิดรายการ comp, บรรทัด `ให้ฟรี (COMP) −฿`
+  - `useOrderCartHydration.ts` + `pos.types.ts` — ติดธง `orderItemComped` ต่อรายการ
+  - หลัง void/comp สำเร็จ `MainPOS.tsx` เรียก `refreshCartFromServer()` + toast
+- **ทดสอบ**: `npx tsc --noEmit` / `npx tsc -b` ผ่าน · `npx eslint` สะอาดเฉพาะไฟล์ที่แตะ · `node backend/test/e2e/e2e-void-comp.mjs` = **31/31 ผ่าน** (รวมเคส employee ใช้ PIN ผู้จัดการ, lockout 429, route เก่า 404)
+
+### 3.9 แก้บั๊ก register: `createOwner` สลับพารามิเตอร์ — 2026-10-30
+
+- `UsersRepository.createOwner` เดิมประกาศ `(password, display_name, pin)` แต่ผู้เรียกส่ง `(password, pin, display_name)` → hash PIN ไปลง `display_name` และชื่อร้านไปลง `pin_hash`
+- แก้ลำดับพารามิเตอร์ให้ตรงกับผู้เรียกแล้ว (`register.service.ts` ไม่ต้องแก้)
+- **ผลกระทบถาวร**: ร้านที่สมัครก่อนแก้ยังมี hash อยู่ใน `display_name` และ PIN ใช้งานไม่ได้ — ซ่อมข้อมูลเดิมอัตโนมัติไม่ได้ ต้องแก้ด้วยมือถ้าจำเป็น (เช่น `admin_purge_tenant` แล้วสมัครใหม่ตอนเทสต์)
+
+### 3.10 `shifts.verifyShift` — PIN lock คงทน + นับที่ผู้ขอ — 2026-10-30 (ยังไม่ commit)
+
+ของเดิม: นับครั้งผิดใน `catch` ของ transition error (ซึ่งรวม error ที่ไม่เกี่ยวกับ PIN) และเขียนผ่าน `db.query` ที่อยู่ใน transaction ของ request → 403 ทำให้ rollback ตัวนับหายทั้งหมด
+
+- `verifyShift(shiftId, pin, requesterId?)`: ตรวจรูปแบบ PIN 6 หลัก → ตรวจ `pin_locked_until` ของ**ผู้ขอ** (429) → ตรวจสถานะกะ → หาเจ้าของ PIN จาก `findPinVerifiers()` (กรองคนถูกล็อกอยู่)
+- PIN ไม่ตรง: `recordPinFailureDurable(requesterId, 5, 5)` แล้ว 403 (หรือ 429 ถ้าเพิ่งครบโควตา) — เดา PIN ข้ามบัญชีไม่ได้
+- PIN ถูกแต่ transition ล้มเหลว (เช่น `invalid shift transition`, `must be verified by owner`): **ไม่นับครั้งผิด** แค่ map เป็น 409/403
+- สำเร็จ: `clearPinFailuresForUser(requesterId)`
+- `shifts.controller.ts` ส่ง `req.user?.sub` เข้า service แล้ว
+- Spec `shifts.service.spec.ts` อัปเดตตามดีไซน์ใหม่ (ทั้งหมด 4 suites / 10 tests ผ่าน)
+
+### 3.11 เอกสาร — 2026-10-30
+
+- `AGENTS.md` (root) เขียนใหม่ทั้งไฟล์ — เดิมมี **conflict marker `<<<<<<<` ค้างอยู่ในไฟล์ committed**; ตอนนี้มีกติกา void/comp + durableQuery + รายชื่อ E2E ครบ
+- `docs/AGENTS.md` เหลือเป็น pointer ไป root (กันสองชุดไม่ตรงกัน)
+- `docs/HANDOFF.md` (ไฟล์นี้) เขียนใหม่จากสำเนาสุดท้ายที่ยังอ่านได้ (`7d73e71`) เพราะสำเนา `006b5b9` เพี้ยน encoding ทั้งไฟล์
 
 ---
 
-## 5. ๏ฟฝาน๏ฟฝ๏ฟฝาง P1 / P2
+## 4. งานค้าง P0
 
-### P1 ๏ฟฝ ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝูก๏ฟฝ๏ฟฝอง๏ฟฝ๏ฟฝะค๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝอด๏ฟฝ๏ฟฝ๏ฟฝ
-- **GET /shifts ๏ฟฝ๏ฟฝ report:view_all** ๏ฟฝ ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ: อนุญาต `report:view_all` ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ `report:view_own_shift` ๏ฟฝ๏ฟฝะก๏ฟฝอง๏ฟฝ๏ฟฝ๏ฟฝ employee ๏ฟฝ๏ฟฝ๏ฟฝเฉพ๏ฟฝะกะท๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝอง๏ฟฝิด
-- **PIN lock ๏ฟฝ๏ฟฝ่คง๏ฟฝ๏ฟฝ** ๏ฟฝ ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ: ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ `users.pin_failed_attempts` / `users.pin_locked_until` แบบ per-user, ๏ฟฝ๏ฟฝอก 5 ๏ฟฝาท๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝอผิด 5 ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ, ๏ฟฝัน๏ฟฝึก/๏ฟฝลด๏ฟฝ๏ฟฝอก๏ฟฝ๏ฟฝาน UsersRepository
-- **๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ cron `escalate_overdue_shifts()`** ๏ฟฝ ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ: ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ `ShiftEscalationService` ๏ฟฝ๏ฟฝ๏ฟฝยก `escalate_overdue_shifts()` ๏ฟฝุก 5 ๏ฟฝาท๏ฟฝ
-- **token_version / session revocation** ๏ฟฝ ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ: JWT guard ๏ฟฝ๏ฟฝ๏ฟฝ query DB ๏ฟฝ๏ฟฝัง๏ฟฝับ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ claim token_version; `TenantContextInterceptor` ๏ฟฝ๏ฟฝยบ `users.token_version` + `is_active` ๏ฟฝ transaction; `AuthService` ๏ฟฝ๏ฟฝ๏ฟฝ token_version ๏ฟฝ access/refresh; refresh token ๏ฟฝูก๏ฟฝับ token_version ๏ฟฝ๏ฟฝะป๏ฟฝ๏ฟฝ๏ฟฝสธ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝรง (patch DB `PATCH_06_refresh_token_version.sql`). token ๏ฟฝ๏ฟฝาท๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ claim ๏ฟฝ๏ฟฝอง login ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ; ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝยน๏ฟฝ๏ฟฝ๏ฟฝสผ๏ฟฝาน/๏ฟฝิด๏ฟฝ๏ฟฝาน = session ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝัน๏ฟฝ๏ฟฝ.
-- **POST /orders/sync ๏ฟฝับ @Body() dto: any** (๏ฟฝ๏ฟฝวจ๏ฟฝอบ๏ฟฝ้ดปัจ๏ฟฝุบัน๏ฟฝ๏ฟฝ่พบ endpoint ๏ฟฝ๏ฟฝ๏ฟฝ)
-- **/:tenantSlug/homepage** โ€” เน€เธญเธฒเธญเธญเธเนเธฅเนเธง
+**ไม่มีงาน P0 ค้าง** — คงไว้เป็นบันทึกว่าอะไรเสร็จแล้ว
 
-เธ—เธธเธเธเนเธญเธ”เนเธฒเธเธฅเนเธฒเธเธ•เธฃเธงเธเธเธฑเธเนเธเนเธ”เนเธ `78d3c8e` เนเธฅเนเธง (2026-10-27) เธขเธฑเธเน€เธเนเธเธเธฃเธดเธเธญเธขเธนเน
+- P0-1 Reports + Payment — commit แล้ว (`da56495`, `4bd4ad4`)
+- P0-2 PIN ผู้จัดการในหน้าผู้ใช้ — `bd022fe` + ใช้จริงใน void/comp/shift verify
+- P0-3 หน้าพิมพ์ใบเสร็จ/พิมพ์ซ้ำ — `69ffbb2`
+- P0-4 Void/Comp พร้อม PIN ผู้อนุมัติ — 2026-10-30 (รอ commit, ดู 3.8)
 
-- **`GET /shifts` เนเธเน `report:view_all`** (`shifts.controller.ts`) โ’ employee เธ”เธนเธเธฃเธฐเธงเธฑเธ•เธดเธเธฐเธ•เธฑเธงเน€เธญเธเนเธกเนเนเธ”เนเธ—เธฑเนเธเธ—เธตเนเธกเธต `report:view_own_shift` (เธขเธทเธเธขเธฑเธเธเธฒเธ DB: employee เธกเธต 9 เธชเธดเธ—เธเธดเน เธฃเธงเธกเธ•เธฑเธงเธเธตเน)
-- **PIN lock เนเธกเนเธเธเธ—เธ** โ€” `findPinVerifiers()` เธญเนเธฒเธ `pin_locked_until` เนเธฅเนเธง เนเธ•เนเนเธกเนเธกเธตเนเธเนเธ”เน€เธเธตเธขเธเธเนเธฒ `pin_failed_attempts` / `pin_locked_until`; เธ•เธญเธเธเธตเนเธเธฑเธเธ”เนเธงเธข `Map` เนเธ memory (`shifts.service.ts` `pinAttempts`) โ’ restart เนเธฅเนเธงเธเธฅเธ”เธฅเนเธญเธ, เธซเธฅเธฒเธข instance เนเธกเนเนเธเธฃเน
-- **เนเธกเนเธกเธต cron `escalate_overdue_shifts()`** โ€” เนเธกเนเธกเธต `@nestjs/schedule`; เธชเธ–เธฒเธเธฐ `escalated` เนเธกเนเน€เธเธดเธ”เธญเธฑเธ•เนเธเธกเธฑเธ•เธด
-- **`token_version` เนเธกเนเธ–เธนเธเธ•เธฃเธงเธเนเธ JWT guard** (`backend/src/modules/auth/guards/jwtAuth.guard.ts`) โ€” users repository เน€เธเธดเนเธก `token_version` เน€เธกเธทเนเธญเน€เธเธฅเธตเนเธขเธเธฃเธซเธฑเธชเธเนเธฒเธเนเธฅเนเธง เนเธ•เน session เน€เธเนเธฒเธขเธฑเธเนเธเนเนเธ”เน
-- **`POST /orders/sync` เธฃเธฑเธ `@Body() dto: any`** โ’ ValidationPipe เนเธกเนเธ•เธฃเธงเธ เนเธฅเธฐ `createdBy` เธกเธฒเธเธฒเธ body (client เธเธฅเธญเธกเธเธนเนเธชเธฃเนเธฒเธเธเธดเธฅเนเธ”เน โ€” เธเธงเธฃเนเธเน user เธเธฒเธ JWT เน€เธซเธกเธทเธญเธ `POST /orders`); เธเธงเธฃเน€เธเธดเนเธก DTO + เธเธณเธเธฑเธ” batch เธซเธฃเธทเธญเน€เธฅเธดเธเนเธเน endpoint เธเธตเนเธ–เนเธฒ PWA เธชเนเธเธเธดเธงเธเนเธฒเธ `POST /orders` + add items (เธ•เธฑเธ”เธชเธดเธเธฃเนเธงเธกเธเธฑเธเธเธเธ—เธณ PWA)
-- **เนเธกเนเธกเธต login lockout / audit login** โ€” `password_locked_until` เนเธกเนเธ–เธนเธเนเธเน, `login_success` / `login_failed` เนเธกเนเธ–เธนเธเน€เธเธตเธขเธ (เธกเธตเนเธเน `logout`)
-- **เนเธกเนเธกเธต `GET /users/me`, `POST /auth/pin-login`**
-- **`/:tenantSlug/homepage` เธขเธฑเธเน€เธเนเธ TODO** โ€” catch-all เธกเธตเนเธฅเนเธง (path เนเธเธฅเธเธเธฅเธฑเธเนเธเธซเธเนเธฒ store finder)
+---
 
-### P2 โ€” เธเธตเน€เธเธญเธฃเนเธ•เธฒเธก scope
+## 5. งานค้าง P1 / P2
 
-- **PWA/Offline**: manifest + service worker (Workbox) + IndexedDB (Dexie) + เธเธดเธง sync เธญเธญเน€เธ”เธญเธฃเน โ€” scope 3.2.11 เธเธณเธซเธเธ” offline เน€เธเธเธฒเธฐ Menu + Order
-  - เธ•เธเธฅเธเนเธฅเนเธง (2026-10-27): เธญเธญเน€เธ”เธญเธฃเนเธ—เธตเนเธชเธฑเนเธเธ•เธญเธเธญเธญเธเนเธฅเธเนเน€เธเนเธฒเธเธดเธง **outbox** เนเธเน€เธเธฃเธทเนเธญเธ เนเธฅเนเธงเธชเนเธเน€เธเนเธ `queued` (เธชเนเธเธเธฃเธฑเธง) เธ•เธญเธ sync โ€” เนเธกเนเนเธเนเธชเธ–เธฒเธเธฐ `draft`
-  - เธเนเธญเธกเธนเธฅเธ—เธตเนเธ•เนเธญเธเนเธเธเนเธเธเธญเนเธฒเธเธญเธขเนเธฒเธเน€เธ”เธตเธขเธง: `GET /menu/full`, เธฃเธฒเธขเธเธฒเธฃเนเธ•เนเธฐ, เธเธฐเธเธฑเธเธเธธเธเธฑเธ
-  - เธเนเธญเธเน€เธฃเธดเนเธก: เธฅเนเธญเธ URL deploy เนเธซเนเน€เธชเธฃเนเธเธเนเธญเธเธ—เธณ `manifest.json` (`start_url` เธเธนเธเธเธฑเธ origin)
-- **Reports เธ•เนเธญเธขเธญเธ”**: เธซเธเนเธฒเธฃเธฒเธขเธเธฒเธเธฃเธฒเธขเธเธฐ/เธเธฃเธฐเธงเธฑเธ•เธดเธเธฐ, เธ•เธฑเธงเธเธฃเธญเธ `from`/`to`/`shiftId` เธเธ UI (API เธฃเธญเธเธฃเธฑเธเนเธฅเนเธง เนเธ•เน FE เธชเนเธเนเธเน `period`), export
-- **System Config UI เธ—เธตเนเน€เธซเธฅเธทเธญ** โ€” เธซเธเนเธฒ VAT เธเธฑเธ Store เธ—เธณเนเธฅเนเธง; เธเนเธฒเธ•เธฑเนเธเธฃเธฐเธเธเธญเธทเนเธเธขเธฑเธเนเธกเนเธกเธตเธซเธเนเธฒเธเธญ
+### P1 — ความถูกต้องและความปลอดภัย
+
+1. **`ShiftEscalationService` ทำงานไม่ได้จริง** — `this.db.query('SELECT escalate_overdue_shifts()')` ถูกเรียกนอก request/tenant context → ล้มด้วย `ไม่มี tenant context` ทุก 5 นาที (log ระดับ debug, มองไม่เห็น) ทำให้กะค้าง `pending_verification` ไม่มีวันกลายเป็น `escalated` · แนวทางแก้: วนทีละ tenant (อ่าน `tenants` ด้วย `referenceQuery`/superuser แล้ว `SET LOCAL app.tenant_id`) หรือทำเป็น DB cron (`pg_cron`) เรียกฟังก์ชันโดยไม่ต้องมี tenant
+2. **`POST /orders/sync` รับ `@Body() dto: any`** — ValidationPipe ไม่ตรวจ และ `createdBy` มาจาก body (ปลอมผู้สร้างบิลได้) ควรมี DTO + ใช้ user จาก JWT เหมือน `POST /orders` หรือเลิกใช้ถ้า PWA ส่งผ่าน `POST /orders` + add items
+3. **ไม่มี login lockout / audit login** — `password_locked_until` ไม่ถูกใช้, `login_success` / `login_failed` ไม่ถูกเขียน (มีแค่ `logout`)
+4. **ไม่มี `GET /users/me`, `POST /auth/pin-login`**
+5. **`/:tenantSlug/homepage` ยังเป็น TODO**
+
+### P2 — ฟีเจอร์ตาม scope
+
+- **PWA/Offline**: manifest + service worker (Workbox) + IndexedDB (Dexie) + outbox sync (scope 3.2.11: offline เฉพาะ Menu + Order)
+  - ตกลงแล้ว (2026-10-27): ออเดอร์ที่สั่งตอนออฟไลน์เข้าคิว outbox แล้วส่งเป็น `queued` ตอน sync — ไม่ใช้สถานะ `draft`
+  - ข้อมูลที่แคชอ่านอย่างเดียว: `GET /menu/full`, รายการโต๊ะ, กะปัจจุบัน
+  - ก่อนเริ่ม: ล็อก URL deploy ให้เสร็จก่อนทำ `manifest.json`
+- **Reports ต่อยอด**: หน้ารายงานรายกะ/ประวัติกะ, ตัวกรอง `from`/`to`/`shiftId` บน UI (API รองรับแล้ว แต่ FE ส่งแค่ `period`), export
+- **System Config UI ที่เหลือ** (หน้า VAT กับ Store ทำแล้ว)
 - **Dashboard homepage**
-- **Orders**: void/comp เธฃเธฒเธขเธเธฒเธฃ (`void:approve`, `discount:approve`), sync DTO
-- **Menu reorder endpoint** (เธขเธฑเธเนเธกเนเธกเธต)
+- **Menu reorder endpoint**
 - **Audit Log endpoint/UI**
+- **Inventory polish**: ช่องค้นหาในการ์ดนับวัตถุดิบ, ใช้ business date แทน local date, note ใน `record_stock_count()` มีช่องว่างนำหน้า + ทศนิยม 4 ตำแหน่ง
+
+### ปิดแล้ว (เคยอยู่ใน P1 — อย่าเปิดซ้ำ)
+
+- `GET /shifts` สิทธิ์ผิด → แก้ใน `6b5c7d3`
+- PIN lock เป็น memory Map / ไม่คงทน → เขียนลง DB ใน `6b5c7d3` (shifts) และ 2026-10-30 (orders + นับที่ผู้ขอ)
+- `token_version` ไม่ถูกตรวจใน JWT guard → `6b5c7d3`
+- ไม่มี cron `escalate_overdue_shifts()` → มี service แล้ว แต่ **ยังไม่ทำงานจริง** (ข้อ 1 ด้านบน)
+- ไม่มี void/comp → 2026-10-30
 
 ---
 
-## 6. ๏ฟฝุณ๏ฟฝาพ / ๏ฟฝสต๏ฟฝ / ๏ฟฝอก๏ฟฝ๏ฟฝ๏ฟฝ
+## 6. คุณภาพ / เทสต์ / เอกสาร
 
-| เธฃเธฒเธขเธเธฒเธฃ | เธชเธ–เธฒเธเธฐเธฅเนเธฒเธชเธธเธ” (2026-10-27, เธฃเธฑเธเธเธ `78d3c8e` เธซเธฅเธฑเธ `npm ci` เธ—เธตเน root) |
+| รายการ | สถานะล่าสุด (2026-10-30, branch `feat-aod`) |
 |---|---|
-| Backend `npx tsc --noEmit` | **เธเนเธฒเธ** |
-| Frontend `npx tsc -b` | **เธเนเธฒเธ** |
-| Frontend `npx vite build` | **เธเนเธฒเธ** (เธกเธตเนเธเนเธเธณเน€เธ•เธทเธญเธ chunk size) |
-| Backend `npx jest` | **9 suites failed / 6 passed (9 tests failed / 16 passed / 25 total)** โ€” `app.controller`, `permission-cache.service`, `menu.service`, `menu.controller`, `system-config.service`, `system-config.controller`, `tenants.controller`, `payment.service`, `payment.controller`; เธชเธฒเน€เธซเธ•เธธเธซเธฅเธฑเธเธเธทเธญ spec boilerplate เธเธฒเธ” DI mock เนเธฅเธฐ `app.controller.spec` เธเธฒเธ” `"Hello World!"` เนเธ•เนเนเธ”เน `"Hello POS!"` |
-| Backend `npx eslint "src/**/*.ts"` | **4,782 problems (4,718 errors, 64 warnings)** โ€” เธชเนเธงเธเนเธซเธเน prettier formatting; เธเธงเธฃเธ—เธณ commit เนเธขเธ |
-| Frontend `npx eslint src` | **40 problems (39 errors, 1 warning)** โ€” เธซเธฅเธฑเธ เน `react-hooks/set-state-in-effect` เนเธ hooks เธซเธฅเธฒเธขเธ•เธฑเธง + `@typescript-eslint/no-explicit-any` เนเธ `libs/appClient.ts` |
-| Backend e2e | `backend/test/app.e2e-spec.ts` เธขเธฑเธเน€เธเนเธ boilerplate (เธขเธดเธ `/` เธเธฒเธ” `"Hello World!"`) โ’ เนเธเนเนเธกเนเนเธ”เน |
-| E2E เธ—เธตเนเธญเธขเธนเนเนเธ repo | `backend/test/e2e/`: `e2e-reports.mjs`, `e2e-receipt.mjs`, `e2e-public-tenant.mjs` |
-| E2E เธ—เธตเนเธขเธฑเธเนเธกเนเธญเธขเธนเนเนเธ repo | เธชเธเธฃเธดเธเธ•เนเนเธ `%TEMP%\opencode\` เธเธเน€เธเธฃเธทเนเธญเธเธ—เธตเนเน€เธเธตเธขเธ: `e2e-shift.mjs`, `e2e-stock-count-batch.mjs`, `e2e-floors.mjs`, `e2e-kds-badge.mjs` โ€” เธเธงเธฃเธขเนเธฒเธขเน€เธเนเธฒ `backend/test/e2e/` |
+| Backend `npx tsc --noEmit` | **ผ่าน** |
+| Frontend `npx tsc -b` | **ผ่าน** |
+| Frontend `npx vite build` | **ผ่าน** (มีคำเตือน chunk size) |
+| Backend `npx jest` | **9 suites failed / 6 passed (9 tests failed / 18 passed)** — ทั้งหมดเป็น spec boilerplate เดิม (`app.controller` คาด `"Hello World!"`, `menu.*`, `payment.*`, `system-config.*`, `tenants.controller`, `permission-cache.*` ขาด DI mock) · ชุดที่แก้ต้องเขียว: `npx jest src/modules/shifts`, `npx jest src/modules/orders` |
+| Backend `npx eslint "src/**/*.ts"` | ยังแดงหลายพัน problems (ส่วนใหญ่ prettier) — **อย่า auto-fix ปนกับ feature commit** |
+| Frontend `npx eslint src` | ~40 problems เดิม (`react-hooks/set-state-in-effect`, `no-explicit-any` ใน `libs/appClient.ts`) — ไฟล์ที่แตะในงาน void/comp สะอาด |
+| Backend e2e spec | `backend/test/app.e2e-spec.ts` ยังเป็น boilerplate (`"Hello World!"`) → ใช้ไม่ได้ |
+| E2E ใน repo | `backend/test/e2e/`: `e2e-reports.mjs`, `e2e-receipt.mjs`, `e2e-public-tenant.mjs`, `e2e-token-version.mjs`, `e2e-void-comp.mjs` |
+| E2E ที่ยังไม่อยู่ใน repo | สคริปต์ใน `%TEMP%\opencode\` ของเครื่องที่เขียน: `e2e-shift.mjs`, `e2e-stock-count-batch.mjs`, `e2e-floors.mjs`, `e2e-kds-badge.mjs` |
 
-**เธเนเธญเธเธงเธฃเธฃเธฐเธงเธฑเธเน€เธงเธฅเธฒเน€เธ—เธชเธ•เน**
-- repo เน€เธเนเธ npm workspaces โ€” `npm ci` เธ•เนเธญเธเธฃเธฑเธเธ—เธตเน root เธ–เนเธฒเธฃเธฑเธเนเธเนเธเธฅเน€เธ”เธญเธฃเน `backend`/`frontend` เธญเธขเนเธฒเธเน€เธ”เธตเธขเธง dependency เธเธฐเนเธกเนเธเธฃเธเนเธฅเธฐ `tsc` เธเธฐเนเธ”เธ
-- E2E เธ•เนเธญเธเน€เธเธตเธขเธเน€เธเนเธ Node `.mjs` เน€เธ—เนเธฒเธเธฑเนเธ (PowerShell เธ—เธณ UTF-8 เน€เธเธตเนเธขเธ)
-- เน€เธ—เธชเธ•เนเธเธฐเธชเธฃเนเธฒเธ tenant เนเธซเธกเน (`inv-<stamp>`, `shift-<stamp>`, `rep-<stamp>`) เธเนเธฒเธเนเธ DB โ’ เธฅเนเธฒเธเธ”เนเธงเธข `admin_purge_tenant` เน€เธกเธทเนเธญเธเธณเน€เธเนเธ
-- `POST /register` เธเธณเธเธฑเธ” 3 เธเธฃเธฑเนเธ / 5 เธเธฒเธ—เธต / IP โ’ เธฃเธฑเธ E2E เธเนเธณเธ–เธตเน เน เธเธฐเนเธ”เธ 429 (เธชเธเธฃเธดเธเธ•เน reports เธกเธต fallback เนเธเน tenant เธฅเนเธฒเธชเธธเธ”)
-- E2E reports เธ•เนเธญเธเธฃเธฑเธ backend เธ—เธตเนเธ•เนเธญ DB เธเธฃเธดเธ เนเธฅเธฐเธ•เนเธญเธเธกเธต KDS เธชเนเธเธญเธฒเธซเธฒเธฃเธเธ `served` เธเนเธญเธเธเนเธฒเธขเน€เธเธดเธ (PAY-03)
+**ข้อควรระวังเวลาเทสต์**
+
+- repo เป็น npm workspaces — `npm ci` ต้องรันที่ root ถ้ารันใน `backend`/`frontend` อย่างเดียว dependency จะไม่ครบและ `tsc` จะแดง
+- E2E เขียนเป็น Node `.mjs` เท่านั้น (PowerShell ทำให้ UTF-8 เพี้ยน)
+- **ห้ามอ่าน/เขียนไฟล์ไทยด้วย `Get-Content` / `Set-Content`** — console ทำให้เพี้ยน; ใช้ tool อ่าน/เขียนไฟล์ของ agent และตรวจด้วยการอ่านกลับ
+- เทสต์สร้าง tenant ใหม่ (`inv-<stamp>`, `shift-<stamp>`, `rep-<stamp>`, `vc-<stamp>`) ค้างใน DB → ล้างด้วย `admin_purge_tenant` เมื่อจำเป็น
+- `POST /register` จำกัด 3 ครั้ง / 5 นาที / IP → รัน E2E ซ้ำถี่จะโดน 429
+- `e2e-void-comp.mjs` มีเทสต์ lockout 5 ครั้ง → **ต้องรันเป็นเคสสุดท้าย** (ล็อก owner ไว้ 5 นาที)
+- E2E reports ต้องมี KDS ส่งอาหารจน `served` ก่อนจ่ายเงิน (PAY-03)
 
 ---
 
-## 7. ๏ฟฝำดับ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝะนำถัด๏ฟฝ
+## 7. กติกาและ decision ที่ห้ามลืม
 
-1. **๏ฟฝ๏ฟฝวจ๏ฟฝอบ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝยน๏ฟฝลง๏ฟฝัจ๏ฟฝุบัน** ๏ฟฝ ๏ฟฝ๏ฟฝ diff ๏ฟฝอง๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝะท๏ฟฝ๏ฟฝอบ
-2. **Commit ๏ฟฝาน๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ** ๏ฟฝ๏ฟฝาพ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ (๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝยก commit ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ)
-3. **๏ฟฝ๏ฟฝ๏ฟฝ P1** ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝำคัญ
-4. **๏ฟฝ๏ฟฝ๏ฟฝอบ E2E** ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝ๏ฟฝวข๏ฟฝอง
+### UI / Design system
+- bg `#FAF7F2`, accent `#8C6D58`, hover `#7a5c45`, text `#2D241E`, border `#d9c6b0` / `#E8DFD5`, font Kanit, `rounded-xl` / `rounded-2xl`
+- ห้ามใช้ emoji เป็นไอคอน → ใช้ `lucide-react`
+- ทุกจุดคลิกต้องมี `cursor-pointer`, hover transition 150–300 ms, focus state, label/aria ครบ
 
 ### Backend
 - Response convention: `{ status: 'success', data: ... }`
-- เนเธเธฃเธเธชเธฃเนเธฒเธ 3 เธเธฑเนเธ: controller โ’ service โ’ repository; เนเธเน `query` / `referenceQuery` เธ•เธฒเธก `docs/backend-dev-guide.md`
-- เธ—เธธเธ endpoint เธ•เนเธญเธเธกเธต permission guard + RLS เธ—เธณเธเธฒเธเธเนเธฒเธ `app_tenant_id()`
-- Transaction: batch เนเธ”เธเธฑเธเนเธซเน rollback เธ—เธฑเนเธเธเธธเธ” (เนเธเน request เน€เธ”เธตเธขเธง) โ€” `DbContextService` เน€เธเธดเธ” `BEGIN` เธ•เนเธญ request เนเธฅเธฐ `COMMIT`/`ROLLBACK` เธ•เธญเธเธเธ (`tenant-context.interceptor.ts`)
-- เธ•เนเธญเธเธเธฒเธฃเธชเธดเธ—เธเธดเนเนเธเธ "เธญเธขเนเธฒเธเนเธ”เธญเธขเนเธฒเธเธซเธเธถเนเธ" เนเธเน `@RequireAnyPermission(...)` (เธญเธขเนเธฒเนเธเน `@RequirePermissions` เธซเธฅเธฒเธขเธ•เธฑเธงเน€เธเธฃเธฒเธฐเธซเธกเธฒเธขเธ–เธถเธเธ•เนเธญเธเธกเธตเธเธฃเธ)
+- โครงสร้าง 3 ชั้น: controller → service → repository; `query` / `referenceQuery` ตาม `docs/backend-dev-guide.md`
+- ทุก endpoint ต้องมี permission guard + RLS ทำงานผ่าน `app_tenant_id()`
+- Transaction: `DbContextService` เปิด `BEGIN` ต่อ request และ `COMMIT`/`ROLLBACK` ตอนจบ (`tenant-context.interceptor.ts`) — **งานที่ต้องรอดแม้ตอบ error ต้องใช้ `db.durableQuery()`** (เช่น ตัวนับ PIN ผิด)
+- ต้องการสิทธิ์แบบ "อย่างใดอย่างหนึ่ง" ใช้ `@RequireAnyPermission(...)`
 
 ### Payment
-- **เธขเธญเธ”เน€เธเธดเธ/เธ เธฒเธฉเธต/เธชเนเธงเธเธฅเธ”เธกเธฒเธเธฒเธ DB เธ—เธฑเนเธเธซเธกเธ”** โ€” client เนเธฅเธฐ NestJS เธซเนเธฒเธกเธเธณเธเธงเธ“เธขเธญเธ”เธชเธธเธ—เธเธดเน€เธญเธ; `PaymentModal` เนเธชเธ”เธ `attempt.amount` เธเธฒเธ server
-- Flow: `POST /payments/attempts` (เธเธญเธ + เธฅเนเธญเธเธเธดเธฅ) โ’ `POST .../pay` (เธชเธณเน€เธฃเนเธ + เธญเธญเธเนเธเน€เธชเธฃเนเธ + เธเธดเธ”เธเธดเธฅ + เธเธทเธเนเธ•เนเธฐ) เธซเธฃเธทเธญ `.../cancel`
-- เน€เธเธดเธเธชเธ”: `cashReceived` เธ•เนเธญเธ โฅ เธขเธญเธ” เนเธฅเธฐเธ—เธจเธเธดเธขเธกเนเธกเนเน€เธเธดเธ 2 เธ•เธณเนเธซเธเนเธ; QR: เธซเนเธฒเธกเธชเนเธ `cashReceived`
-- `pay` เธเนเธณเธเธ attempt เธ—เธตเนเธชเธณเน€เธฃเนเธเนเธฅเนเธง = เธเธทเธเนเธเน€เธชเธฃเนเธเน€เธ”เธดเธก (idempotent) เนเธกเนเธชเธฃเนเธฒเธ payment เนเธซเธกเน
-- เธ•เนเธญเธเธกเธตเธเธฐเน€เธเธดเธ”เธญเธขเธนเนเธ—เธฑเนเธเธ•เธญเธเธชเธฃเนเธฒเธ attempt เนเธฅเธฐเธ•เธญเธเธเนเธฒเธข; เธ–เนเธฒเธฃเธฒเธขเธเธฒเธฃเธขเธฑเธเนเธกเน `served` โ’ 409 (PAY-03)
-- เธกเธต attempt เธเนเธฒเธเธญเธขเธนเน โ’ 409 `PAYMENT_ATTEMPT_PENDING` เธเธฃเนเธญเธก `paymentAttemptId`; UI เธ•เนเธญเธเน€เธชเธเธญเธเธธเนเธกเธขเธเน€เธฅเธดเธเนเธฅเนเธงเน€เธฃเธดเนเธกเนเธซเธกเน
-- เธเธดเธ” modal เธฃเธฐเธซเธงเนเธฒเธ confirm เธ•เนเธญเธ `cancel` attempt เน€เธชเธกเธญ เนเธกเนเธเธฑเนเธเธเธดเธฅเธ–เธนเธเธฅเนเธญเธเนเธฅเธฐเธเธดเธ”เธเธฐเนเธกเนเนเธ”เน
-- เธเธดเธกเธเนเธเนเธณเธเธณเธเธฑเธ”เธ•เธฒเธก `max_reprints` เธเธญเธเธฃเนเธฒเธ (0 = เนเธกเนเธเธณเธเธฑเธ”); เนเธเธ—เธตเน 2 เน€เธเนเธเธ•เนเธเนเธ `isCopy = true`
+- **ยอดเงิน/ภาษี/ส่วนลดมาจาก DB ทั้งหมด** — client และ NestJS ห้ามคำนวณยอดสุทธิเอง; `PaymentModal` แสดง `attempt.amount` จาก server
+- Flow: `POST /payments/attempts` → `.../pay` หรือ `.../cancel`; ปิด modal ต้อง cancel attempt เสมอ
+- เงินสด: `cashReceived` ≥ ยอด และทศนิยมไม่เกิน 2 ตำแหน่ง; QR: ห้ามส่ง `cashReceived`
+- `pay` ซ้ำ = คืนใบเสร็จเดิม (idempotent)
+- ต้องมีกะเปิดทั้งตอนสร้าง attempt และตอนจ่าย; รายการยังไม่ `served` → 409 (PAY-03)
+- attempt ค้าง → 409 `PAYMENT_ATTEMPT_PENDING` + `paymentAttemptId`
+- พิมพ์ซ้ำจำกัดตาม `max_reprints` (0 = ไม่จำกัด); ใบที่ 2 เป็นต้นไป `isCopy = true`
+
+### Void / Comp
+- ต้องมี PIN ผู้จัดการ/เจ้าของร้าน**ทุกครั้ง** — void = `void:approve`, comp = `discount:approve`; PIN ของใครก็ได้ในร้าน (ไม่ต้องสลับ login)
+- `*_by` เก็บ **ผู้อนุมัติ** (DB trigger ตรวจ `has_permission(NEW.*_by, ...)`) — คนกดไม่ได้ถูกเก็บ
+- PIN ผิดนับที่บัญชีผู้ขอ 5 ครั้ง / 5 นาที → 429; ตัวนับต้องเขียนด้วย `durableQuery`
+- ปุ่มโผล่ทุกคน (สิทธิ์ยืนยันด้วย PIN) ไม่ผูกกับ role ใน UI
+- รายการ comp ไม่ถูกคิดในยอดรวมบิล (ทั้ง FE ที่แสดง และ DB ที่คำนวณตอนจ่าย)
+- รายละเอียด/สัญญา API: `docs/void-comp-approval-guide.md`
 
 ### Reports
-- เธ—เธธเธ query เธเธฃเธญเธ `tenant_id = app_tenant_id()` เนเธฅเธฐเธญเนเธฒเธเธเธฒเธ `payments` / `cash_movements` / `shifts` (เนเธกเนเธเธณเธเธงเธ“เธขเธญเธ”เนเธซเธกเน)
-- `period`: `TODAY` | `WEEK` | `MONTH`; เธฃเธฒเธขเธเธฒเธเธ•เธฒเธกเธเธฐเนเธเน `shiftId` โ’ เน€เธ—เธตเธขเธ `business_date`
-- `cashOnHand = opening_cash + cash_sales + cash_in โ’ cash_out`
-- เธ–เนเธฒเนเธกเนเธชเนเธ `shiftId`/`from`/`to` เธเธฐเธญเธดเธ `CURRENT_DATE` เธเธญเธ DB เนเธกเนเนเธเน business date โ€” เธฃเธฐเธงเธฑเธเน€เธงเธฅเธฒเน€เธ—เธชเธ•เนเธเนเธฒเธกเธงเธฑเธ
-- `top-items` เนเธฅเธฐ `transactions` เธ•เนเธญเธ join เธเนเธฒเธ `payment_attempt_orders` (เธเธดเธฅเน€เธ”เธตเธขเธงเธซเธฅเธฒเธขเนเธ•เนเธฐเนเธ”เน)
+- ทุก query กรอง `tenant_id = app_tenant_id()` และอ่านจาก `payments` / `cash_movements` / `shifts`
+- `period`: `TODAY` | `WEEK` | `MONTH`; รายงานตามกะใช้ `shiftId` → เทียบ `business_date`
+- `cashOnHand = opening_cash + cash_sales + cash_in − cash_out`
+- ถ้าไม่ส่ง `shiftId`/`from`/`to` จะอิง `CURRENT_DATE` ของ DB ไม่ใช่ business date
+- `top-items` และ `transactions` join ผ่าน `payment_attempt_orders`
 
 ### Shift / PIN
-- Blind count: เนเธกเนเนเธเธงเนเธขเธญเธ”เธเธฒเธ”เธซเธงเธฑเธเธเนเธญเธเธเธ”เธขเธทเธเธขเธฑเธ
-- PIN เธเธนเนเธเธฑเธ”เธเธฒเธฃ/เน€เธเนเธฒเธเธญเธเธฃเนเธฒเธ **เธเธเนเธ”เธเนเนเธ”เนเนเธเธฃเนเธฒเธ**; `verified_by` = เน€เธเนเธฒเธเธญเธ PIN; DB trigger เธ•เธฃเธงเธ `has_permission(NEW.verified_by, 'shift:verify')`
-- `POST /shifts/:id/verify` เธฃเธฑเธ `{ pin }`, guard `@AnyAuthenticated()`; เธเธดเธ” 5 เธเธฃเธฑเนเธเธ•เนเธญ `shift_id` โ’ 429 เธฅเนเธญเธ 5 เธเธฒเธ—เธต (in-memory)
-- เธเธดเธ”เธเธฐเธ•เธญเธเธขเธญเธ”เธ•เธฃเธ = เธเธดเธ”เนเธ”เนเน€เธฅเธข; เธขเธญเธ”เนเธกเนเธ•เธฃเธ = เธฃเธญ manager/owner verify
-- เน€เธเธดเธ”เธเธฐเธงเธฑเธเธ–เธฑเธ”เนเธเนเธ”เนเนเธกเนเธเธฐเธเนเธญเธเธขเธฑเธเธเนเธฒเธเธ•เธฃเธงเธเธชเธญเธ (เนเธกเน block เธเธฒเธฃเธเธฒเธข)
-- เธเธดเธ”เธเธฐเนเธกเนเนเธ”เนเธ–เนเธฒเธขเธฑเธเธกเธตเธเธดเธฅเน€เธเธดเธ”เธเนเธฒเธเนเธ DB โ€” **เธญเธญเน€เธ”เธญเธฃเนเธญเธญเธเนเธฅเธเนเธ—เธตเนเธขเธฑเธเนเธกเน sync เธกเธญเธเนเธกเนเน€เธซเนเธเธเธฒเธ server** (เธ•เนเธญเธเธเธฑเธเธเธฑเนเธ PWA)
+- Blind count: ไม่โชว์ยอดคาดหวังก่อนกดยืนยัน
+- PIN ผู้จัดการ/เจ้าของร้านคนใดก็ได้ในร้าน; `verified_by` = เจ้าของ PIN; DB trigger ตรวจ `has_permission(NEW.verified_by, 'shift:verify')`
+- `POST /shifts/:id/verify` รับ `{ pin }`, guard `@AnyAuthenticated()`; **นับ PIN ผิดที่บัญชีผู้ขอ** 5 ครั้ง → 429 ล็อก 5 นาที (เก็บใน DB)
+- ปิดกะตอนยอดตรง = ปิดได้เลย; ยอดไม่ตรง = รอ manager/owner verify
+- เปิดกะวันถัดไปได้แม้กะก่อนยังค้างตรวจสอบ
+- ปิดกะไม่ได้ถ้ายังมีบิลเปิดค้างใน DB — ออเดอร์ออฟไลน์ที่ยังไม่ sync มองไม่เห็นจาก server
 
 ### Inventory
-- Periodic Physical Count (INV-11): เธเธฑเธเธเธญเธเน€เธซเธฅเธทเธญเธเธฃเธดเธเธชเธดเนเธเธงเธฑเธ, `record_stock_count()` เธเธณเธเธงเธ“ delta เธเธฒเธ ledger
-- Audit เธญเธฑเธ•เนเธเธกเธฑเธ•เธดเน€เธกเธทเนเธญเน€เธเธตเนเธขเธ > `inventory_variance_alert_percent` (20%) เนเธฅเธฐ > 1 เธซเธเนเธงเธข (INV-12)
-- เธซเธเนเธฒเธเธฃเธฑเธเธงเธฑเธ•เธ–เธธเธ”เธดเธเนเธชเธ”เธเธงเธฑเธ•เธ–เธธเธ”เธดเธ active เธ—เธฑเนเธเธซเธกเธ” เนเธ•เนเธเธฑเธเธ—เธถเธเน€เธเธเธฒเธฐเธเนเธญเธเธ—เธตเนเธเธฃเธญเธ
-- เน€เธ•เธทเธญเธเนเธ•เนเนเธกเนเธเธฅเนเธญเธเธเธฒเธฃเธเธดเธ”เธเธฐ
+- Periodic Physical Count (INV-11): `record_stock_count()` คำนวณ delta จาก ledger
+- Audit อัตโนมัติเมื่อเพี้ยน > `inventory_variance_alert_percent` (20%) และ > 1 หน่วย (INV-12)
+- เตือนแต่ไม่บล็อกการปิดกะ
 
 ---
 
-## 8. เธเนเธญเธเธณเธเธฑเธ”เธ—เธตเนเธฃเธนเนเธญเธขเธนเน
+## 8. ข้อจำกัดที่รู้อยู่
 
-- `inventory_transactions` เนเธกเนเธกเธต `shift_id` โ’ เธเธนเธเธเธฒเธฃเธเธฃเธฑเธเธงเธฑเธ•เธ–เธธเธ”เธดเธเธเธฑเธเธเธฐเนเธกเนเนเธ”เนเธ•เธฃเธ เน
-- `record_stock_count()` เนเธกเนเธเธฑเธเธ—เธถเธเนเธ–เธงเน€เธกเธทเนเธญ delta = 0
-- เธ•เธฑเธงเน€เธฅเธ "เธงเธฑเธเธเธตเนเธเธฃเธฑเธเธขเธญเธ”เนเธฅเนเธง N เธฃเธฒเธขเธเธฒเธฃ" เธญเธดเธเธงเธฑเธเธเธเธดเธ—เธดเธเน€เธเธฃเธทเนเธญเธ + เธเธฑเธเน€เธเธเธฒเธฐ adjustment
-- `GET /shifts` เธขเธฑเธเนเธเน `report:view_all` เธ—เธณเนเธซเน employee เธ”เธนเธเธฐเธ•เธฑเธงเน€เธญเธเนเธกเนเนเธ”เน (P1)
-- PIN lock เธขเธฑเธเน€เธเนเธ memory Map; เธเธดเธฅเธ”เน `pin_failed_attempts` / `pin_locked_until` เนเธ DB เธขเธฑเธเนเธกเนเธกเธตเธเธเน€เธเธตเธขเธ
-- Reports เธ—เธตเนเนเธกเนเธฃเธฐเธเธธ `shiftId` เนเธเน `CURRENT_DATE` เธเธญเธ DB เนเธกเนเนเธเน business date
-- `docs/backend-todo.md` เนเธฅเธฐ `docs/daily-update-2026-10-21.md` เธฅเนเธฒเธชเธกเธฑเธข โ€” เนเธเนเนเธเธฅเนเธเธตเนเนเธ—เธ
-- เนเธกเนเธกเธต `.env` เนเธ repo (เธกเธต `.env.example`); เธ•เนเธญเธเธเธฑเธ”เธฅเธญเธเนเธฅเธฐเธ•เธฑเนเธเธเนเธฒเน€เธญเธ
-- เธเธฃเธฐเธงเธฑเธ•เธด git เธเธญเธเนเธเธฅเนเธเธตเนเน€เธเธขเธกเธตเธฃเธซเธฑเธชเธเนเธฒเธ DB เธเธญเธเน€เธเธฃเธทเนเธญเธ dev เธญเธขเธนเน โ€” เธ–เนเธฒ repo เน€เธเนเธ public เนเธซเนเธ–เธทเธญเธงเนเธฒเธฃเธซเธฑเธชเธเธฑเนเธเธฃเธฑเนเธงเนเธฅเนเธง เนเธฅเธฐเน€เธเธฅเธตเนเธขเธเธฃเธซเธฑเธชเธเนเธฒเธ `pos_app` เธเธเน€เธเธฃเธทเนเธญเธเธ—เธตเนเนเธเนเธฃเธซเธฑเธชเธเธฑเนเธ
+- **ไม่บันทึกว่าใครเป็นคนกดขอ void/comp** — มีแค่ผู้อนุมัติ (`*_by`); ถ้าต้องการ audit เต็มต้องเพิ่มคอลัมน์ `requested_by` (ต้อง ALTER TABLE)
+- **ร้านที่สมัครก่อนแก้บั๊ก `createOwner`** มี bcrypt hash ใน `display_name` และ PIN ใช้ไม่ได้ — ซ่อมข้อมูลเดิมอัตโนมัติไม่ได้
+- `ShiftEscalationService` ยังไม่ทำงาน (ไม่มี tenant context) — ดู 5/P1-1
+- `inventory_transactions` ไม่มี `shift_id` → ผูกการปรับวัตถุดิบกับกะไม่ได้ตรง ๆ
+- `record_stock_count()` ไม่บันทึกแถวเมื่อ delta = 0
+- Reports ที่ไม่ระบุ `shiftId` ใช้ `CURRENT_DATE` ของ DB ไม่ใช่ business date
+- `POST /orders/sync` ยังไม่มี DTO
+- ไม่มี `.env` ใน repo (มี `.env.example`)
+- ประวัติ git ของไฟล์นี้เคยมีรหัสผ่าน DB ของเครื่อง dev — ถ้า repo เป็น public ให้ถือว่ารหัสนั้นรั่วแล้ว และเปลี่ยนรหัสผ่าน `pos_app` บนเครื่องที่ใช้รหัสนั้น
 
 ---
 
-## 9. เธฅเธณเธ”เธฑเธเธ—เธตเนเนเธเธฐเธเธณเธ–เธฑเธ”เนเธ
+## 9. ลำดับที่แนะนำถัดไป
 
-1. **เธ—เธธเธเธเธ: sync เน€เธเธฃเธทเนเธญเธเธเธฑเธ `main`** โ€” `git checkout main && git pull` (branch `main` เนเธเน€เธเธฃเธทเนเธญเธเธญเธฒเธเธ•เธฒเธกเธซเธฅเธฑเธ `origin/main`)
-2. **P1** เนเธเน backend tests เนเธซเนเน€เธเธตเธขเธง + frontend lint + เธชเธดเธ—เธเธดเน `GET /shifts` + PIN lock เธฅเธ DB + `token_version` เนเธ JWT guard + `/orders/sync`
-3. **P2** PWA offline โ’ Reports เธฃเธฒเธขเธเธฐ/เธ•เธฑเธงเธเธฃเธญเธเธงเธฑเธเธ—เธตเน โ’ Dashboard โ’ Orders void/comp โ’ Audit log
-4. เธขเนเธฒเธข E2E 4 เธ•เธฑเธงเธเธฒเธ `%TEMP%\opencode\` เน€เธเนเธฒ repo เนเธฅเธฐเน€เธเธดเนเธก E2E เธเธญเธ PIN (เธซเธฑเธงเธเนเธญ 3.7)
+1. **commit + PR งาน void/comp + PIN lock ของ shifts** (branch `feat-aod` → `main`) — อย่าเผลอ commit ไฟล์ที่ไม่เกี่ยว (`CategoryCard.tsx`, `MenuSidebar.tsx`, `package-lock.json`)
+2. **แก้ `ShiftEscalationService` ให้รันได้จริง** (P1-1) — ตอนนี้ระบบ escalation ตายเงียบ
+3. **P1 ที่เหลือ**: `/orders/sync` DTO + user จาก JWT, login lockout/audit, `GET /users/me`, `POST /auth/pin-login`
+4. **P2**: PWA offline (outbox) → Reports รายกะ/ตัวกรองวันที่ → Dashboard → Audit log → Menu reorder
+5. ย้าย E2E 4 ตัวจาก `%TEMP%\opencode\` เข้า repo และเพิ่ม E2E ของ PIN ผ่าน UI (ตั้ง PIN → void/comp → verify กะ)
 
-> เธเนเธญเธเน€เธฃเธดเนเธกเธเธฒเธเธ—เธธเธเธเธฃเธฑเนเธ: `git status` เธ•เนเธญเธเธฃเธนเนเธงเนเธฒเธกเธตเธเธฒเธเธเนเธฒเธเธญเธฐเนเธฃ, เธฃเธฑเธ `npx tsc --noEmit` (backend) เนเธฅเธฐ `npx tsc -b` (frontend) เนเธซเนเธเนเธฒเธเธเนเธญเธ commit
-
-
-
+> ก่อนเริ่มงานทุกครั้ง: ดู `git status`, รัน `npx tsc --noEmit` (backend) และ `npx tsc -b` (frontend) ให้ผ่านก่อน commit
