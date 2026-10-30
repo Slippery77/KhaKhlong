@@ -323,4 +323,74 @@ export class OrdersRepository {
     const result = await this.db.query(sql);
     return result.rows;
   }
+
+  // ------------------------------------------------------------------
+  // Void / Comp (ORD-04) — ทุกครั้งต้องมีผู้จัดการ/เจ้าของร้านอนุมัติด้วย PIN
+  // ------------------------------------------------------------------
+
+  /** ผู้ใช้ในร้านนี้ที่ตั้ง PIN ไว้และมีสิทธิ์ตาม permissionKey (ใช้ตรวจ PIN ผู้อนุมัติ) */
+  async findPinApprovers(permissionKey: string) {
+    const sql = `
+      SELECT u.users_id, u.display_name, u.pin_hash
+      FROM users u
+      JOIN role_permissions rp ON rp.role_id = u.role_id
+      JOIN permissions p ON p.permission_id = rp.permission_id
+      WHERE p.permission_key = $1
+        AND u.tenant_id = app_tenant_id()
+        AND u.pin_hash IS NOT NULL
+        AND u.is_active
+        AND (u.pin_locked_until IS NULL OR u.pin_locked_until <= now())
+    `;
+    const result = await this.db.query(sql, [permissionKey]);
+    return result.rows as { users_id: string; display_name: string; pin_hash: string }[];
+  }
+
+  async getOrderItemsForUpdate(orderItemIds: string[]) {
+    const sql = `
+      SELECT oi.order_item_id, oi.order_id, oi.status, oi.is_comped,
+             o.closed_at, o.payment_id
+      FROM order_items oi
+      JOIN orders o ON o.order_id = oi.order_id AND o.tenant_id = oi.tenant_id
+      WHERE oi.order_item_id = ANY($1::uuid[])
+        AND oi.tenant_id = app_tenant_id()
+      ORDER BY oi.order_item_id
+      FOR UPDATE OF oi
+    `;
+    const result = await this.db.query(sql, [orderItemIds]);
+    return result.rows;
+  }
+
+  async voidOrderItems(orderItemIds: string[], approverId: string, reason: string) {
+    const sql = `
+      UPDATE order_items
+      SET status = 'voided',
+          voided_by = $2,
+          void_reason = $3,
+          updated_at = now()
+      WHERE order_item_id = ANY($1::uuid[])
+        AND tenant_id = app_tenant_id()
+        AND status IN ('queued', 'preparing')
+        AND is_comped = false
+      RETURNING order_item_id, order_id, status, voided_by, voided_at, void_reason
+    `;
+    const result = await this.db.query(sql, [orderItemIds, approverId, reason]);
+    return result.rows;
+  }
+
+  async compOrderItems(orderItemIds: string[], approverId: string, reason: string) {
+    const sql = `
+      UPDATE order_items
+      SET is_comped = true,
+          comp_reason = $3,
+          comped_by = $2,
+          updated_at = now()
+      WHERE order_item_id = ANY($1::uuid[])
+        AND tenant_id = app_tenant_id()
+        AND status = 'served'
+        AND is_comped = false
+      RETURNING order_item_id, order_id, status, is_comped, comped_by, comped_at, comp_reason
+    `;
+    const result = await this.db.query(sql, [orderItemIds, approverId, reason]);
+    return result.rows;
+  }
 }

@@ -1,13 +1,32 @@
-import { Injectable, ConflictException, BadRequestException, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  ConflictException,
+  BadRequestException,
+  NotFoundException,
+  ForbiddenException,
+  HttpException,
+  HttpStatus,
+} from '@nestjs/common';
+import * as bcrypt from 'bcrypt';
 import { OrdersRepository } from './orders.repository';
+import { UsersRepository } from '../users/users.repository';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { AddOrderItemsDto } from './dto/add-order-items.dto';
 import { MoveTableDto } from './dto/move-table.dto';
 import { CloseUnpaidDto } from './dto/close-unpaid.dto';
+import { VoidOrderItemDto } from './dto/void-order-item.dto';
+import { CompOrderItemDto } from './dto/comp-order-item.dto';
 
 @Injectable()
 export class OrdersService {
-  constructor(private readonly ordersRepository: OrdersRepository) {}
+  // กันเดา PIN: ผิด 5 ครั้งในบัญชีที่กดขออนุมัติ → ล็อก 5 นาที (เก็บใน DB ของผู้ใช้)
+  private static readonly PIN_MAX_ATTEMPTS = 5;
+  private static readonly PIN_LOCK_MINUTES = 5;
+
+  constructor(
+    private readonly ordersRepository: OrdersRepository,
+    private readonly usersRepository: UsersRepository,
+  ) {}
 
   async createOrder(dto: CreateOrderDto, userId: string) {
     let result: any;
@@ -142,5 +161,174 @@ export class OrdersService {
         suggestedAction: active === 0 ? 'close_unpaid' : pending > 0 ? 'in_progress' : 'pay',
       };
     });
+  }
+
+  /**
+   * ตรวจ PIN ผู้จัดการ/เจ้าของร้านที่อนุมัติ void หรือ comp
+   * - PIN ของใครก็ได้ในร้านที่มีสิทธิ์ตาม permissionKey (ไม่ต้องสลับ login)
+   * - ผิดซ้ำจะนับที่ "บัญชีที่กดขอ" เพื่อกันเดา PIN จากบัญชีเดียว
+   */
+  private async verifyApproverPin(pin: string, permissionKey: string, requesterId: string) {
+    if (!/^\d{6}$/.test(pin ?? '')) {
+      throw new BadRequestException('PIN ผู้อนุมัติต้องเป็นตัวเลข 6 หลัก');
+    }
+
+    const lockState = await this.usersRepository.getPinLockState(requesterId);
+    if (lockState?.pin_locked_until) {
+      const lockedUntil = new Date(lockState.pin_locked_until);
+      if (lockedUntil > new Date()) {
+        throw new HttpException(
+          'กรอก PIN ผิดหลายครั้งเกินไป กรุณารอ 5 นาทีแล้วลองใหม่',
+          HttpStatus.TOO_MANY_REQUESTS,
+        );
+      }
+    }
+
+    const approvers = await this.ordersRepository.findPinApprovers(permissionKey);
+    if (approvers.length === 0) {
+      throw new ConflictException(
+        'ไม่พบผู้จัดการ/เจ้าของร้านที่พร้อมอนุมัติ (ยังไม่ตั้ง PIN หรือถูกล็อกชั่วคราว)',
+      );
+    }
+
+    let approver: { users_id: string; display_name: string; pin_hash: string } | null = null;
+    for (const candidate of approvers) {
+      if (await bcrypt.compare(pin, candidate.pin_hash)) {
+        approver = candidate;
+        break;
+      }
+    }
+
+    if (!approver) {
+      let lockedUntil: Date | null = null;
+      try {
+        const updated = await this.usersRepository.recordPinFailureDurable(
+          requesterId,
+          OrdersService.PIN_MAX_ATTEMPTS,
+          OrdersService.PIN_LOCK_MINUTES,
+        );
+        const lock = updated?.pin_locked_until ? new Date(updated.pin_locked_until) : null;
+        if (lock && lock > new Date()) lockedUntil = lock;
+      } catch {
+        // นับครั้งผิดไม่สำเร็จก็ยังต้องปฏิเสธ PIN นี้
+      }
+      if (lockedUntil) {
+        throw new HttpException(
+          'กรอก PIN ผิดหลายครั้งเกินไป กรุณารอ 5 นาทีแล้วลองใหม่',
+          HttpStatus.TOO_MANY_REQUESTS,
+        );
+      }
+      throw new ForbiddenException('PIN ผู้อนุมัติไม่ถูกต้อง หรือผู้ใช้ไม่มีสิทธิ์อนุมัติ');
+    }
+
+    await this.usersRepository.clearPinFailuresForUser(requesterId).catch(() => undefined);
+    return approver;
+  }
+
+  /** ตรวจรายการร่วมของ void/comp: ต้องอยู่บิลเดียวกัน ยังไม่ปิด/จ่าย และสถานะเข้าเงื่อนไข */
+  private async loadActionableItems(
+    rawIds: string[],
+    allowedStatuses: string[],
+  ) {
+    const orderItemIds = Array.from(new Set(rawIds));
+    if (orderItemIds.length === 0) {
+      throw new BadRequestException('ต้องระบุรายการที่ต้องการดำเนินการ');
+    }
+
+    const items = await this.ordersRepository.getOrderItemsForUpdate(orderItemIds);
+    if (items.length !== orderItemIds.length) {
+      throw new NotFoundException('ไม่พบรายการที่ระบุในบิลนี้');
+    }
+    if (new Set(items.map((item) => item.order_id)).size > 1) {
+      throw new BadRequestException('รายการที่เลือกต้องอยู่ในบิลเดียวกัน');
+    }
+    if (items.some((item) => item.closed_at)) {
+      throw new ConflictException('บิลนี้ปิดแล้ว ไม่สามารถดำเนินการได้');
+    }
+    if (items.some((item) => item.payment_id)) {
+      throw new ConflictException('บิลนี้จ่ายเงินแล้ว ไม่สามารถดำเนินการได้');
+    }
+    if (items.some((item) => item.status === 'voided')) {
+      throw new ConflictException('มีรายการที่ถูกยกเลิกไปแล้ว กรุณารีเฟรชหน้าจอ');
+    }
+    if (items.some((item) => item.is_comped)) {
+      throw new ConflictException('มีรายการที่ Comp ไปแล้ว กรุณารีเฟรชหน้าจอ');
+    }
+    const blocked = items.filter((item) => !allowedStatuses.includes(item.status));
+    if (blocked.length > 0) {
+      throw new ConflictException('มีรายการที่สถานะไม่สามารถดำเนินการได้ กรุณารีเฟรชหน้าจอ');
+    }
+    return orderItemIds;
+  }
+
+  async voidOrderItems(dto: VoidOrderItemDto, requesterId: string) {
+    const approver = await this.verifyApproverPin(dto.approverPin, 'void:approve', requesterId);
+    const orderItemIds = await this.loadActionableItems(dto.orderItemIds, ['queued', 'preparing']);
+
+    try {
+      const result = await this.ordersRepository.voidOrderItems(orderItemIds, approver.users_id, dto.reason);
+      if (result.length !== orderItemIds.length) {
+        throw new ConflictException('ยกเลิกได้ไม่ครบทุกรายการ กรุณาลองใหม่');
+      }
+      return {
+        status: 'success',
+        data: {
+          items: result,
+          approvedBy: { usersId: approver.users_id, displayName: approver.display_name },
+        },
+      };
+    } catch (err: any) {
+      if (err instanceof HttpException) throw err;
+      if (err.code === 'P0001') {
+        const msg: string = err.message ?? '';
+        if (msg.includes('voiding a preparing item requires void:approve')) {
+          throw new ForbiddenException('การยกเลิกรายการที่กำลังเตรียม ต้องมีสิทธิ์ void:approve');
+        }
+        if (msg.includes('voided item is final')) {
+          throw new ConflictException('รายการนี้ถูกยกเลิกแล้ว');
+        }
+        if (msg.includes('invalid order_item transition')) {
+          throw new ConflictException('สถานะรายการนี้ไม่สามารถยกเลิกได้ กรุณารีเฟรชหน้าจอ');
+        }
+      }
+      throw err;
+    }
+  }
+
+  async compOrderItems(dto: CompOrderItemDto, requesterId: string) {
+    const approver = await this.verifyApproverPin(dto.approverPin, 'discount:approve', requesterId);
+    const orderItemIds = await this.loadActionableItems(dto.orderItemIds, ['served']);
+
+    try {
+      const result = await this.ordersRepository.compOrderItems(orderItemIds, approver.users_id, dto.reason);
+      if (result.length !== orderItemIds.length) {
+        throw new ConflictException('Comp ได้ไม่ครบทุกรายการ กรุณาลองใหม่');
+      }
+      return {
+        status: 'success',
+        data: {
+          items: result,
+          approvedBy: { usersId: approver.users_id, displayName: approver.display_name },
+        },
+      };
+    } catch (err: any) {
+      if (err instanceof HttpException) throw err;
+      if (err.code === 'P0001') {
+        const msg: string = err.message ?? '';
+        if (msg.includes('comp requires discount:approve')) {
+          throw new ForbiddenException('การ Comp ต้องมีสิทธิ์ discount:approve');
+        }
+        if (msg.includes('comp allowed only when status=served')) {
+          throw new ConflictException('สามารถ Comp ได้เฉพาะรายการที่เสิร์ฟแล้วเท่านั้น');
+        }
+        if (msg.includes('comp cannot be reverted')) {
+          throw new ConflictException('ไม่สามารถยกเลิก Comp ได้');
+        }
+        if (msg.includes('invalid order_item transition')) {
+          throw new ConflictException('สถานะรายการนี้ไม่สามารถ Comp ได้ กรุณารีเฟรชหน้าจอ');
+        }
+      }
+      throw err;
+    }
   }
 }

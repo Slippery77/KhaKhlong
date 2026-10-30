@@ -22,8 +22,8 @@ export class UsersRepository {
         username: string,
         email: string,
         password: string,
+        pin: string,
         display_name: string,
-        pin:string
     ) {
         const sql = `INSERT INTO users (tenant_id, role_id, username, email, password_hash, pin_hash, display_name)
                     VALUES ($1,$2,$3,$4,$5,$6,$7)
@@ -216,6 +216,27 @@ export class UsersRepository {
             WHERE users_id = $1 AND tenant_id = app_tenant_id()
         `;
         const result = await this.db.query(sql, [userId]);
+        return result.rows[0] ?? null;
+    }
+
+    /**
+     * นับ PIN ผิดแบบ "คงอยู่จริง" — เขียนนอก transaction ของ request
+     * (ถ้าเขียนใน transaction แล้วโยน 403 ตัวนับจะถูก rollback หายทั้งหมด)
+     * นับครบเพดานจะล็อกให้ใน statement เดียว กันสถานะค้างครึ่ง ๆ
+     */
+    async recordPinFailureDurable(userId: string, maxAttempts: number, lockMinutes: number) {
+        const sql = `
+            UPDATE users
+            SET pin_failed_attempts = pin_failed_attempts + 1,
+                pin_locked_until = CASE
+                    WHEN pin_failed_attempts + 1 >= $2
+                        THEN now() + make_interval(mins => $3)
+                    ELSE pin_locked_until
+                END
+            WHERE users_id = $1 AND tenant_id = app_tenant_id()
+            RETURNING pin_failed_attempts, pin_locked_until
+        `;
+        const result = await this.db.durableQuery(sql, [userId, maxAttempts, lockMinutes]);
         return result.rows[0] ?? null;
     }
 

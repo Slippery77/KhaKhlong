@@ -66,6 +66,43 @@ export class DbContextService {
     }
 
     /**
+     * เขียนแบบ "แยกธุรกรรม" — commit ทันที ไม่ว่า request หลักจะ rollback ภายหลัง
+     *
+     * ใช้กับตัวนับด้านความปลอดภัย (เช่น นับ PIN ผิด) ที่ต้องคงอยู่จริง
+     * ถ้าเขียนใน transaction ของ request แล้วโยน error เพื่อปฏิเสธคำขอ
+     * ตัวนับจะถูก rollback หายไปด้วย = ล็อกไม่ได้เลย
+     *
+     * หมายเหตุ: ดึง tenant จาก connection ของ request ปัจจุบันเพื่อตั้ง RLS ให้เหมือนเดิม
+     * ห้ามใช้กับงานธุรกิจปกติ (void/comp/ชำระเงิน) — พวกนั้นต้อง rollback ได้
+     */
+    async durableQuery<T extends QueryResultRow = any>(sql: string, params?: any[]) {
+        const store = this.als.getStore();
+        let tenantId = '';
+        if (store) {
+            const ctx = await store.client.query<{ tid: string | null }>(
+                `SELECT NULLIF(current_setting('app.current_tenant_id', true), '') AS tid`,
+            );
+            tenantId = ctx.rows[0]?.tid ?? '';
+        }
+
+        const client = await this.pool.connect();
+        try {
+            await client.query('BEGIN');
+            if (tenantId) {
+                await client.query(`SELECT set_config('app.current_tenant_id', $1, true)`, [tenantId]);
+            }
+            const result = await client.query<T>(sql, params);
+            await client.query('COMMIT');
+            return result;
+        } catch (err) {
+            await client.query('ROLLBACK').catch(() => undefined);
+            throw err;
+        } finally {
+            client.release();
+        }
+    }
+
+    /**
      * เปิด transaction + ตั้ง context + รันงานข้างใน
      * Interceptor เรียกตัวนี้ และ register ก็เรียกตัวนี้เหมือนกัน
      */

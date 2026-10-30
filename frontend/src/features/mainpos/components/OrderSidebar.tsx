@@ -1,5 +1,5 @@
 import { type CartMenu } from "../types/pos.types"
-import { UtensilsCrossed, SendHorizontal, Trash2, Minus, Plus, Loader2 } from "lucide-react"
+import { UtensilsCrossed, SendHorizontal, Trash2, Minus, Plus, Loader2, XCircle, BadgePercent } from "lucide-react"
 
 interface PropsOrderSidebar {
     cartMenu: CartMenu[]
@@ -12,11 +12,21 @@ interface PropsOrderSidebar {
     onIncreaseValue?: (item: CartMenu) => void
     onSendToKitchen?: () => void
     onPayment?: () => void
+    onVoidItem?: (item: CartMenu) => void
+    onCompItem?: (item: CartMenu) => void
 }
 
 // จำนวนที่ยังไม่ถูกส่งเข้าครัว (ส่งแล้วจะยังแสดงใน Sidebar จนกว่าจะชำระเงิน)
 const getPendingQuantity = (item: CartMenu) =>
     Math.max(item.quantity - (item.sentQuantity ?? 0), 0)
+
+// จำนวนที่ถูก Comp (ให้ฟรี) — ต้องนับรายชิ้น ไม่ใช่ทั้งกลุ่ม
+const getCompedQuantity = (item: CartMenu) =>
+    Math.min((item.orderItemComped ?? []).filter(Boolean).length, item.quantity)
+
+// จำนวนที่ยังต้องจ่ายเงินจริง = ทั้งหมด − ที่ให้ฟรี
+const getChargeableQuantity = (item: CartMenu) =>
+    Math.max(item.quantity - getCompedQuantity(item), 0)
 
 export default function OrderSidebar(props: PropsOrderSidebar) {
     const handleDelete = (item: CartMenu) => {
@@ -28,7 +38,12 @@ export default function OrderSidebar(props: PropsOrderSidebar) {
     }
 
     const subtotal = props.cartMenu.reduce(
-        (sum, item) => sum + item.price * item.quantity, 0
+        (sum, item) => sum + item.price * getChargeableQuantity(item), 0
+    )
+
+    // มูลค่าของที่ให้ฟรี (COMP) — แสดงเป็นบรรทัดแยกให้เห็นชัดว่าถูกตัดออกจากยอดจ่าย
+    const compedSubtotal = props.cartMenu.reduce(
+        (sum, item) => sum + item.price * getCompedQuantity(item), 0
     )
 
     const totalItems = props.cartMenu.reduce((sum,item)=> sum + item.quantity,0)
@@ -36,10 +51,10 @@ export default function OrderSidebar(props: PropsOrderSidebar) {
         (sum, item) => sum + getPendingQuantity(item),
         0
     )
-    const sentSubtotal = props.cartMenu.reduce(
-        (sum, item) => sum + item.price * (item.sentQuantity ?? 0),
-        0
-    )
+    const sentSubtotal = props.cartMenu.reduce((sum, item) => {
+        const sentChargeable = Math.max((item.sentQuantity ?? 0) - getCompedQuantity(item), 0)
+        return sum + item.price * sentChargeable
+    }, 0)
     const pendingSubtotal = props.cartMenu.reduce(
         (sum, item) => sum + item.price * getPendingQuantity(item),
         0
@@ -68,14 +83,27 @@ export default function OrderSidebar(props: PropsOrderSidebar) {
                     {props.cartMenu.map((item) => {
                         const sentQty = item.sentQuantity ?? 0
                         const pendingQty = getPendingQuantity(item)
+                        const statuses = item.orderItemStatuses ?? []
+                        const voidedQty = statuses.filter((s) => s === 'voided').length
+                        const voidableQty = statuses.filter((s) => s === 'queued' || s === 'preparing').length
+                        const compedFlags = item.orderItemComped ?? []
+                        const compedQty = getCompedQuantity(item)
+                        const chargeableQty = getChargeableQuantity(item)
+                        // Comp ได้เฉพาะชิ้นที่เสิร์ฟแล้วและยังไม่เคย Comp (กลุ่มอาจมีบางชิ้น Comp ไปแล้ว)
+                        const compableQty = statuses.reduce(
+                            (count, status, index) =>
+                                status === 'served' && !compedFlags[index] ? count + 1 : count,
+                            0,
+                        )
+                        const isAllVoided = item.quantity === 0 && voidedQty > 0
                         return (
                         <div
                             key={item.cartItemId || item.id}
-                            className="bg-white/90 border border-stone-200/80 rounded-xl p-3 flex flex-col gap-2 shadow-2xs hover:bg-white hover:border-stone-300 transition-all group"
+                            className={`bg-white/90 border border-stone-200/80 rounded-xl p-3 flex flex-col gap-2 shadow-2xs hover:bg-white hover:border-stone-300 transition-colors duration-200 group ${isAllVoided ? 'opacity-80' : ''}`}
                         >
                             <div className="flex items-start justify-between">
                                 <div className="flex-1 min-w-0 pr-2">
-                                    <h3 className="text-[#2D241E] font-medium text-sm">
+                                    <h3 className={`text-[#2D241E] font-medium text-sm ${isAllVoided ? 'line-through text-stone-400' : ''}`}>
                                         {item.name}
                                     </h3>
                                     <p className="text-xs text-[#A68874] font-medium mt-0.5">
@@ -83,8 +111,18 @@ export default function OrderSidebar(props: PropsOrderSidebar) {
                                     </p>
 
                                     {/* สถานะการส่งครัว: รายการที่ส่งแล้วยังอยู่จนกว่าจะชำระเงิน */}
-                                    {(sentQty > 0 || pendingQty > 0) && (
+                                    {(voidedQty > 0 || item.hasComped || sentQty > 0 || pendingQty > 0) && (
                                         <div className="flex flex-wrap items-center gap-1 mt-1">
+                                            {voidedQty > 0 && (
+                                                <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-rose-50 text-rose-700 border border-rose-100">
+                                                    ยกเลิก (VOID) {voidedQty}
+                                                </span>
+                                            )}
+                                            {compedQty > 0 && (
+                                                <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-100">
+                                                    ให้ฟรี (COMP) {compedQty}
+                                                </span>
+                                            )}
                                             {sentQty > 0 && (
                                                 <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-100">
                                                     ส่งครัวแล้ว {sentQty}
@@ -134,32 +172,69 @@ export default function OrderSidebar(props: PropsOrderSidebar) {
                             </div>
 
                             <div className="flex items-center justify-between border-t border-stone-100 pt-2 mt-0.5">
-                                <div className="flex items-center bg-[#FAF7F2] border border-stone-200/80 rounded-lg p-0.5">
-                                    <button
-                                        type="button"
-                                        onClick={() => props.onReduceValue?.(item)}
-                                        disabled={props.isSending || item.quantity <= sentQty}
-                                        className="w-5 h-5 flex items-center justify-center text-stone-500 hover:text-[#2D241E] hover:bg-[#EFE8DC] active:scale-90 rounded transition-all cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-transparent"
-                                        title={item.quantity <= sentQty ? 'ส่งครัวแล้ว ลดจำนวนไม่ได้' : 'ลดจำนวน'}
-                                    >
-                                        <Minus className="w-3 h-3 stroke-2" />
-                                    </button>
-                                    <span className="min-w-6 text-center text-xs font-semibold text-stone-700 select-none">
-                                        {item.quantity}
-                                    </span>
-                                    <button
-                                        type="button"
-                                        onClick={() => props.onIncreaseValue?.(item)}
-                                        disabled={props.isSending}
-                                        className="w-5 h-5 flex items-center justify-center text-stone-500 hover:text-[#2D241E] hover:bg-[#EFE8DC] active:scale-90 rounded transition-all cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-transparent"
-                                        title="เพิ่มจำนวน"
-                                    >
-                                        <Plus className="w-3 h-3 stroke-2" />
-                                    </button>
+                                <div className="flex items-center gap-1">
+                                    <div className="flex items-center bg-[#FAF7F2] border border-stone-200/80 rounded-lg p-0.5">
+                                        <button
+                                            type="button"
+                                            onClick={() => props.onReduceValue?.(item)}
+                                            disabled={props.isSending || item.quantity <= sentQty}
+                                            className="w-5 h-5 flex items-center justify-center text-stone-500 hover:text-[#2D241E] hover:bg-[#EFE8DC] active:scale-90 rounded transition-all cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-transparent"
+                                            title={item.quantity <= sentQty ? 'ส่งครัวแล้ว ลดจำนวนไม่ได้' : 'ลดจำนวน'}
+                                        >
+                                            <Minus className="w-3 h-3 stroke-2" />
+                                        </button>
+                                        <span className="min-w-6 text-center text-xs font-semibold text-stone-700 select-none">
+                                            {item.quantity}
+                                        </span>
+                                        <button
+                                            type="button"
+                                            onClick={() => props.onIncreaseValue?.(item)}
+                                            disabled={props.isSending}
+                                            className="w-5 h-5 flex items-center justify-center text-stone-500 hover:text-[#2D241E] hover:bg-[#EFE8DC] active:scale-90 rounded transition-all cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed disabled:hover:bg-transparent"
+                                            title="เพิ่มจำนวน"
+                                        >
+                                            <Plus className="w-3 h-3 stroke-2" />
+                                        </button>
+                                    </div>
+                                    {(voidableQty > 0 || compableQty > 0) && (
+                                        <div className="flex items-center gap-1">
+                                            {voidableQty > 0 && props.onVoidItem && (
+                                                <button
+                                                    type="button"
+                                                    onClick={() => props.onVoidItem?.(item)}
+                                                    disabled={props.isSending}
+                                                    className="p-1 rounded-lg text-stone-400 hover:text-rose-600 hover:bg-rose-50 transition-colors duration-200 cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-rose-400 disabled:opacity-30 disabled:cursor-not-allowed"
+                                                    title={`ยกเลิก ${voidableQty} รายการ (ต้องอนุมัติด้วย PIN ผู้จัดการ)`}
+                                                    aria-label={`ยกเลิก ${item.name} ${voidableQty} รายการ ต้องอนุมัติด้วย PIN`}
+                                                >
+                                                    <XCircle className="w-4 h-4" />
+                                                </button>
+                                            )}
+                                            {compableQty > 0 && props.onCompItem && (
+                                                <button
+                                                    type="button"
+                                                    onClick={() => props.onCompItem?.(item)}
+                                                    disabled={props.isSending}
+                                                    className="p-1 rounded-lg text-stone-400 hover:text-amber-700 hover:bg-amber-50 transition-colors duration-200 cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 disabled:opacity-30 disabled:cursor-not-allowed"
+                                                    title={`Comp ${compableQty} รายการ (ต้องอนุมัติด้วย PIN ผู้จัดการ)`}
+                                                    aria-label={`Comp ${item.name} ${compableQty} รายการ ต้องอนุมัติด้วย PIN`}
+                                                >
+                                                    <BadgePercent className="w-4 h-4" />
+                                                </button>
+                                            )}
+                                        </div>
+                                    )}
                                 </div>
 
-                                <span className="font-semibold text-[#2D241E] text-sm">
-                                    ฿{(item.price * item.quantity).toLocaleString()}
+                                <span className="text-right">
+                                    {compedQty > 0 && (
+                                        <span className="block text-[10px] text-stone-400 line-through">
+                                            ฿{(item.price * item.quantity).toLocaleString()}
+                                        </span>
+                                    )}
+                                    <span className={`font-semibold text-sm ${compedQty > 0 ? 'text-amber-700' : 'text-[#2D241E]'}`}>
+                                        ฿{(item.price * chargeableQty).toLocaleString()}
+                                    </span>
                                 </span>
                             </div>
                         </div>
@@ -185,6 +260,12 @@ export default function OrderSidebar(props: PropsOrderSidebar) {
                         <div className="flex justify-between text-[11px] text-stone-400">
                             <span>ยังไม่ส่งครัว</span>
                             <span>฿ {pendingSubtotal.toLocaleString()}</span>
+                        </div>
+                    )}
+                    {compedSubtotal > 0 && (
+                        <div className="flex justify-between text-[11px] text-amber-700">
+                            <span>ให้ฟรี (COMP)</span>
+                            <span>−฿ {compedSubtotal.toLocaleString()}</span>
                         </div>
                     )}
                 </div>

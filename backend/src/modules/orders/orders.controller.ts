@@ -22,6 +22,8 @@ import { CreateOrderDto } from './dto/create-order.dto';
 import { AddOrderItemsDto } from './dto/add-order-items.dto';
 import { MoveTableDto } from './dto/move-table.dto';
 import { CloseUnpaidDto } from './dto/close-unpaid.dto';
+import { VoidOrderItemDto } from './dto/void-order-item.dto';
+import { CompOrderItemDto } from './dto/comp-order-item.dto';
 import { RequirePermissions } from '../auth/guards/permissions.decorator';
 
 @ApiBearerAuth()
@@ -118,5 +120,35 @@ export class OrdersController {
   @Post('sync')
   async syncOrders(@Body() dto: any) {
     return this.ordersService.syncOrders(dto);
+  }
+
+  @ApiOperation({
+    summary: 'ยกเลิกรายการอาหาร (Void) — ต้องอนุมัติด้วย PIN ผู้จัดการ/เจ้าของร้าน',
+    description:
+      'ยกเลิกรายการที่สถานะ queued หรือ preparing ทุกครั้งต้องส่ง PIN ของผู้ใช้ที่มีสิทธิ์ void:approve ' +
+      'ระบบจะบันทึก voided_by = ผู้อนุมัติ และยกเลิกทุกรายการที่ส่งมาพร้อมกัน (ต้องอยู่บิลเดียวกัน)',
+  })
+  @ApiResponse({ status: 403, description: 'PIN ไม่ถูกต้อง หรือไม่มีสิทธิ์อนุมัติ' })
+  @ApiResponse({ status: 409, description: 'สถานะรายการไม่สามารถยกเลิกได้ / บิลปิดหรือจ่ายแล้ว' })
+  @RequirePermissions('order:create')
+  @Post('items/void')
+  async voidOrderItems(@Body() dto: VoidOrderItemDto, @Req() req: Request) {
+    const requesterId = (req as any).user?.sub;
+    return this.ordersService.voidOrderItems(dto, requesterId);
+  }
+
+  @ApiOperation({
+    summary: 'Comp รายการอาหาร — ต้องอนุมัติด้วย PIN ผู้จัดการ/เจ้าของร้าน',
+    description:
+      'Comp รายการที่เสิร์ฟแล้ว (สถานะ served) ต้องส่ง PIN ของผู้ใช้ที่มีสิทธิ์ discount:approve ' +
+      'ระบบจะบันทึก comped_by = ผู้อนุมัติ',
+  })
+  @ApiResponse({ status: 403, description: 'PIN ไม่ถูกต้อง หรือไม่มีสิทธิ์อนุมัติ' })
+  @ApiResponse({ status: 409, description: 'สถานะรายการไม่สามารถ Comp ได้ / บิลปิดหรือจ่ายแล้ว' })
+  @RequirePermissions('order:create')
+  @Post('items/comp')
+  async compOrderItems(@Body() dto: CompOrderItemDto, @Req() req: Request) {
+    const requesterId = (req as any).user?.sub;
+    return this.ordersService.compOrderItems(dto, requesterId);
   }
 }

@@ -45,6 +45,11 @@ interface CartGroup {
   quantity: number
   sentQuantity: number
   modifiers: ModifierOption[]
+  orderItemIds: string[]
+  orderItemStatuses: string[]
+  orderItemComped: boolean[]
+  hasVoided: boolean
+  hasComped: boolean
 }
 
 const toNumber = (value: number | string | null | undefined) => {
@@ -71,15 +76,39 @@ export function mapOrderItemsToCart(items: ApiOrderItem[]): CartMenu[] {
   const groups = new Map<string, CartGroup>()
 
   for (const item of items) {
-    if (item.status === "voided") continue
-
     const key = buildGroupKey(item)
     const existing = groups.get(key)
-    const isSent = item.status !== "draft"
+    const isSent = item.status !== "draft" && item.status !== "voided"
 
     if (existing) {
+      if (item.status === "voided") {
+        existing.hasVoided = true
+        existing.orderItemIds.push(item.order_item_id)
+        existing.orderItemStatuses.push(item.status)
+        existing.orderItemComped.push(false)
+        continue
+      }
       existing.quantity += 1
       if (isSent) existing.sentQuantity += 1
+      existing.orderItemIds.push(item.order_item_id)
+      existing.orderItemStatuses.push(item.status)
+      existing.orderItemComped.push(item.is_comped)
+      if (item.is_comped) existing.hasComped = true
+      continue
+    }
+
+    if (item.status === "voided") {
+      groups.set(key, {
+        first: item,
+        quantity: 0,
+        sentQuantity: 0,
+        modifiers: mapModifiers(item),
+        orderItemIds: [item.order_item_id],
+        orderItemStatuses: [item.status],
+        orderItemComped: [false],
+        hasVoided: true,
+        hasComped: false,
+      })
       continue
     }
 
@@ -88,27 +117,39 @@ export function mapOrderItemsToCart(items: ApiOrderItem[]): CartMenu[] {
       quantity: 1,
       sentQuantity: isSent ? 1 : 0,
       modifiers: mapModifiers(item),
+      orderItemIds: [item.order_item_id],
+      orderItemStatuses: [item.status],
+      orderItemComped: [item.is_comped],
+      hasVoided: false,
+      hasComped: item.is_comped,
     })
   }
 
-  return Array.from(groups.values()).map((group) => {
-    const { first, quantity, sentQuantity, modifiers } = group
-    const modifierTotal = modifiers.reduce((sum, m) => sum + m.price, 0)
-    const basePrice = toNumber(first.unit_price_snapshot)
+  return Array.from(groups.values())
+    .filter((group) => group.quantity > 0 || group.hasVoided)
+    .map((group) => {
+      const { first, quantity, sentQuantity, modifiers, orderItemIds, orderItemStatuses, orderItemComped, hasVoided, hasComped } = group
+      const modifierTotal = modifiers.reduce((sum, m) => sum + m.price, 0)
+      const basePrice = toNumber(first.unit_price_snapshot)
 
-    return {
-      cartItemId: `${first.order_item_id}-group`,
-      id: first.menu_item_id,
-      name: first.item_name_snapshot,
-      price: basePrice + modifierTotal,
-      basePrice,
-      quantity,
-      selectedAddons: modifiers.length > 0 ? modifiers : undefined,
-      // backend เก็บ spiciness + note รวมกันใน special_request
-      note: first.special_request ?? undefined,
-      sentQuantity,
-    }
-  })
+      return {
+        cartItemId: `${first.order_item_id}-group`,
+        id: first.menu_item_id,
+        name: first.item_name_snapshot,
+        price: basePrice + modifierTotal,
+        basePrice,
+        quantity: quantity || 0,
+        selectedAddons: modifiers.length > 0 ? modifiers : undefined,
+        // backend เก็บ spiciness + note รวมกันใน special_request
+        note: first.special_request ?? undefined,
+        sentQuantity,
+        orderItemIds,
+        orderItemStatuses,
+        orderItemComped,
+        hasVoided,
+        hasComped,
+      }
+    })
 }
 
 interface UseOrderCartHydrationParams {

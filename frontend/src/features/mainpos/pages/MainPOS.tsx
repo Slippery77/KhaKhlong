@@ -1,19 +1,37 @@
 import Header from "../../../components/Header"
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import MenuCard from "../components/MenuCard"
 import MenuSidebar from "../components/MenuSidebar"
 import OrderSidebar from "../components/OrderSidebar"
 import ModifierPopup from "../components/ModifierPopup"
 import PaymentModal from "../components/PaymentModal"
 import SearchBar from "../components/SearchBar"
+import VoidItemModal from "../components/VoidItemModal"
+import CompItemModal from "../components/CompItemModal"
 import { ArrowLeft, Search, ChefHat, CheckCircle2, X } from "lucide-react"
 import { useKDS } from "../../kds/context/KDSContext"
 import { useNavigate, useSearchParams } from "react-router-dom"
 import { useFullMenu } from "../hooks/useFullMenu"
-import { useOrderCartHydration } from "../hooks/useOrderCartHydration"
+import { useOrderCartHydration, type ApiOrderDetail } from "../hooks/useOrderCartHydration"
 import type { Menu, CartMenu, ModifierOption } from "../types/pos.types"
 import { useAuth } from "../../auth/context/AuthContext"
 import { apiFetch,ApiError } from "../../../libs/appClient"
+import { voidOrderItems, compOrderItems } from "../api/orders.api"
+
+/** รายการที่ยกเลิกได้: ครัวยังไม่เสิร์ฟ (queued/preparing) */
+const getVoidableItemIds = (item: CartMenu) =>
+    (item.orderItemIds ?? []).filter((_, index) => {
+        const status = item.orderItemStatuses?.[index]
+        return status === 'queued' || status === 'preparing'
+    })
+
+/** รายการที่ Comp ได้: เสิร์ฟแล้วและยังไม่เคย Comp (นับรายชิ้น) */
+const getCompableItemIds = (item: CartMenu) =>
+    (item.orderItemIds ?? []).filter((_, index) => {
+        const status = item.orderItemStatuses?.[index]
+        const comped = item.orderItemComped?.[index] ?? false
+        return status === 'served' && !comped
+    })
 
 
 export default function MainPOS() {
@@ -56,6 +74,29 @@ export default function MainPOS() {
     const [isPaymentOpen, setIsPaymentOpen] = useState<boolean>(false)
     // กันแก้ตะกร้าระหว่างกำลังส่งครัว (กันจำนวนที่ส่งกับที่แสดงไม่ตรงกัน)
     const [isSending, setIsSending] = useState<boolean>(false)
+    const [voidTarget, setVoidTarget] = useState<CartMenu | null>(null)
+    const [compTarget, setCompTarget] = useState<CartMenu | null>(null)
+    const [actionLoading, setActionLoading] = useState(false)
+    const [actionError, setActionError] = useState<string | null>(null)
+    // toast แจ้งผล void/comp สำเร็จ (aria-live)
+    const [actionToast, setActionToast] = useState<string | null>(null)
+
+    useEffect(() => {
+        if (!actionToast) return
+        const timer = window.setTimeout(() => setActionToast(null), 5000)
+        return () => window.clearTimeout(timer)
+    }, [actionToast])
+
+    // โหลดรายการในบิลจาก server ใหม่ (หลังส่งครัว/void/comp) เพื่อให้ order_item_id + สถานะตรงกับ DB
+    async function refreshCartFromServer(targetOrderId: string | null) {
+        if (!targetOrderId || !accessToken) return
+        const res = await apiFetch<{ status: string; data: ApiOrderDetail }>(`/orders/${targetOrderId}`, accessToken)
+        if (!res.data || res.data.closed_at) return
+        const { mapOrderItemsToCart } = await import('../hooks/useOrderCartHydration')
+        const nextCart = mapOrderItemsToCart(res.data.items ?? [])
+        setcartMenu(nextCart)
+        setOrder(nextCart.length > 0)
+    }
 
     // เปิดโต๊ะที่มีบิลค้าง → ดึงรายการในบิลกลับมาแสดงใน Sidebar
     // รายการที่ส่งครัว/เสิร์ฟแล้วจะถูกทำเครื่องหมาย sentQuantity และคงอยู่ใน Sidebar จนชำระเงิน
@@ -359,6 +400,8 @@ export default function MainPOS() {
             // ── 4. คงตะกร้าไว้ (ล้างตอนชำระเงินเท่านั้น) + toast ─────
             markAsSent()
             showSentToast()
+            // โหลดข้อมูลจาก DB เพื่อให้ได้ order_item_id และสถานะสำหรับ void/comp
+            await refreshCartFromServer(resolvedOrderId).catch(() => undefined)
         } catch (err) {
             setSendError(err instanceof ApiError ? err.message : 'ส่งครัวไม่สำเร็จ เชื่อมต่อเซิร์ฟเวอร์ไม่ได้')
         } finally {
@@ -458,6 +501,14 @@ export default function MainPOS() {
                             onIncreaseValue={onIncreaseValue}
                             onSendToKitchen={handleSendToKitchen}
                             onPayment={() => orderId && setIsPaymentOpen(true)}
+                            onVoidItem={(item) => {
+                                setActionError(null)
+                                setVoidTarget(item)
+                            }}
+                            onCompItem={(item) => {
+                                setActionError(null)
+                                setCompTarget(item)
+                            }}
                         />
                     )}
                 </aside>
@@ -470,6 +521,105 @@ export default function MainPOS() {
                         onClose={() => setIsPaymentOpen(false)}
                         onPaymentSuccess={handlePaymentSuccess}
                     />
+                )}
+
+                {voidTarget && (
+                    <VoidItemModal
+                        isOpen={true}
+                        itemName={voidTarget.name}
+                        quantity={getVoidableItemIds(voidTarget).length}
+                        loading={actionLoading}
+                        error={actionError}
+                        onClose={() => {
+                            setVoidTarget(null)
+                            setActionError(null)
+                        }}
+                        onConfirm={async ({ reason, approverPin }) => {
+                            const ids = getVoidableItemIds(voidTarget)
+                            if (ids.length === 0) {
+                                setActionError('ไม่มีรายการที่ยกเลิกได้ในขณะนี้ กรุณารีเฟรชหน้าจอ')
+                                return
+                            }
+                            setActionLoading(true)
+                            setActionError(null)
+                            try {
+                                const res = await voidOrderItems(
+                                    { orderItemIds: ids, reason, approverPin },
+                                    accessToken,
+                                )
+                                await refreshCartFromServer(orderId).catch(() => undefined)
+                                setVoidTarget(null)
+                                setActionToast(
+                                    `ยกเลิก ${ids.length} รายการ · อนุมัติโดย ${res.data.approvedBy.displayName}`,
+                                )
+                            } catch (err) {
+                                setActionError(
+                                    err instanceof ApiError ? err.message : 'ไม่สามารถยกเลิกรายการได้',
+                                )
+                            } finally {
+                                setActionLoading(false)
+                            }
+                        }}
+                    />
+                )}
+
+                {compTarget && (
+                    <CompItemModal
+                        isOpen={true}
+                        itemName={compTarget.name}
+                        quantity={getCompableItemIds(compTarget).length}
+                        loading={actionLoading}
+                        error={actionError}
+                        onClose={() => {
+                            setCompTarget(null)
+                            setActionError(null)
+                        }}
+                        onConfirm={async ({ reason, approverPin }) => {
+                            const ids = getCompableItemIds(compTarget)
+                            if (ids.length === 0) {
+                                setActionError('ไม่มีรายการที่ Comp ได้ในขณะนี้ กรุณารีเฟรชหน้าจอ')
+                                return
+                            }
+                            setActionLoading(true)
+                            setActionError(null)
+                            try {
+                                const res = await compOrderItems(
+                                    { orderItemIds: ids, reason, approverPin },
+                                    accessToken,
+                                )
+                                await refreshCartFromServer(orderId).catch(() => undefined)
+                                setCompTarget(null)
+                                setActionToast(
+                                    `Comp ${ids.length} รายการ · อนุมัติโดย ${res.data.approvedBy.displayName}`,
+                                )
+                            } catch (err) {
+                                setActionError(
+                                    err instanceof ApiError ? err.message : 'ไม่สามารถ Comp รายการได้',
+                                )
+                            } finally {
+                                setActionLoading(false)
+                            }
+                        }}
+                    />
+                )}
+
+                {actionToast && (
+                    <div
+                        role="status"
+                        aria-live="polite"
+                        className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-[#2D241E] text-white px-5 py-3 rounded-2xl shadow-xl flex items-center gap-3 font-kanit"
+                    >
+                        <CheckCircle2 className="w-5 h-5 text-emerald-400 shrink-0" aria-hidden="true" />
+                        <span className="text-sm font-medium">{actionToast}</span>
+                        <button
+                            type="button"
+                            onClick={() => setActionToast(null)}
+                            aria-label="ปิดการแจ้งเตือน"
+                            className="p-1 rounded-lg text-white/70 hover:text-white transition-colors duration-200 cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-white/60"
+                        >
+                            <X className="w-4 h-4" />
+                        </button>
+                    </div>
                 )}
 
                 {sendError && (

@@ -45,4 +45,13 @@ export interface CartMenu {
     note?: string
     /** จำนวนที่ส่งเข้าครัวสำเร็จแล้ว — รายการยังคงแสดงใน Sidebar จนกว่าจะชำระเงิน */
     sentQuantity?: number
+    /** order_item_ids ที่เกี่ยวข้องกับกลุ่มนี้ (สำหรับ void/comp) */
+    orderItemIds?: string[]
+    /** สถานะของ order items ในกลุ่ม */
+    orderItemStatuses?: string[]
+    /** รายการไหนถูก Comp บ้าง (ขนานกับ orderItemIds) — ใช้คำนวณยอดที่ต้องจ่ายจริง */
+    orderItemComped?: boolean[]
+    /** ว่ามีรายการที่ถูก comp หรือ void ในกลุ่มนี้ */
+    hasVoided?: boolean
+    hasComped?: boolean
 }
