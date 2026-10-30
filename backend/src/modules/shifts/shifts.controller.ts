@@ -98,8 +98,8 @@ export class ShiftsController {
     @HttpCode(200)
     @AnyAuthenticated()
     @Post(':shift_id/verify')
-    async verifyShift(@Param('shift_id',ParseUUIDPipe) shiftId:string, @Body() dto:VerifyShiftDto ){
-        return this.shiftsService.verifyShift(shiftId, dto.pin);
+    async verifyShift(@Param('shift_id',ParseUUIDPipe) shiftId:string, @Body() dto:VerifyShiftDto, @Req() req ){
+        return this.shiftsService.verifyShift(shiftId, dto.pin, req.user?.sub);
     }
 
 
