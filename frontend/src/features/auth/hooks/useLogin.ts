@@ -5,11 +5,13 @@ import { useAuth } from '../context/AuthContext';
 import { ApiError, apiFetch } from '../../../libs/appClient';
 import { getRefreshToken, saveSession } from '../authStorage'; // [เพิ่มใหม่] getRefreshToken ไว้ส่งตอน logout
 import { saveLastTenantSlug } from '../tenantStorage';
+import { clearTenantSnapshots } from '../../offline/snapshotCache';   // [ใหม่]
+
 
 export function useLogin(){
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [error, setError] = useState<string | null>(null);
-    const { accessToken, setAuth, clearAuth } = useAuth();
+    const { accessToken, user, setAuth, clearAuth } = useAuth();
     const navigate = useNavigate()
 
     const login = async (credentials: LoginCredentials)=>{
@@ -43,9 +45,12 @@ export function useLogin(){
             console.error('logout failed', err);
         }
         finally{
-            clearAuth();
             // กลับไปที่ "/" — ถ้าเครื่องจำร้านไว้จะเด้งเข้าหน้าร้านเดิมให้เอง
             // (ไม่พึ่ง useParams ซึ่งอาจว่างถ้า Header ถูกใช้ خارج route ของร้าน)
+            // ลบข้อมูลออฟไลน์ (โต๊ะ/กะ/เมนู) ของร้านนี้ออกจากเครื่อง
+            // ต้องทำก่อน clearAuth() เพราะหลังจากนั้น user จะเป็น null ไม่รู้ tenantSlug แล้ว
+            if (user?.tenantSlug) await clearTenantSnapshots(user.tenantSlug);
+            clearAuth();
             navigate('/');
         }
     }

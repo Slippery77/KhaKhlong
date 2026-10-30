@@ -12,7 +12,7 @@ import Dexie, { type Table } from 'dexie';
  */
 
 /** ประเภทข้อมูลที่แคชไว้ใช้ตอนออฟไลน์ — เพิ่มชนิดใหม่ที่นี่ (เช่น 'menu') */
-export type SnapshotKind = 'tables' | 'currentShift';
+export type SnapshotKind = 'tables' | 'currentShift'| 'menu';
 
 /**
  * snapshot = ภาพข้อมูล ณ เวลาที่โหลดสำเร็จครั้งล่าสุด
@@ -29,6 +29,10 @@ class PosDatabase extends Dexie {
   snapshots!: Table<Snapshot, [string, SnapshotKind]>;
 
   constructor() {
+    // ต้องเรียก super() ก่อนใช้ this เสมอ (กติกาของคลาสลูก)
+    // 'pwa-pos' = ชื่อฐานข้อมูล IndexedDB ที่จะเปิด (ไม่มีก็สร้างใหม่)
+    // ห้ามเปลี่ยนชื่อหลังปล่อยใช้งาน — browser จะมองเป็นฐานใหม่ที่ว่างเปล่า ข้อมูลเดิมค้างอยู่ฐานเก่า
+    // ใช้ชื่อเดียวทุกร้าน แยกร้านด้วยคอลัมน์ tenantSlug แทน
     super('pwa-pos');
 
     // version(1): schema แรก

@@ -1,4 +1,5 @@
 import { ApiError } from '../../libs/appClient';
+import { reportReachable, reportUnreachable } from './connectionStatus';
 import { db, type SnapshotKind } from './db';
 
 /**
@@ -91,10 +92,15 @@ export async function fetchWithSnapshot<T>(
   try {
     const data = await fetcher();
     // ไม่ต้อง await — หน้าจอแสดงผลได้ทันที การบันทึกทำเบื้องหลัง
+    reportReachable(); // ได้คำตอบจาก server → บอกป้ายสถานะว่าออนไลน์
     void saveSnapshot(tenantSlug, kind, data);
     return { data, isStale: false };
   } catch (error) {
-    if (!isUnreachableError(error)) throw error;
+    if (!isUnreachableError(error)) {
+      reportReachable(); // 4xx = server ตอบแล้ว (แค่ปฏิเสธ) → นับว่าติดต่อได้
+      throw error;
+    }  
+    reportUnreachable(); // ไปไม่ถึง server → ป้ายขึ้นทันที ไม่ต้องรอ ping
 
     const cached = await readSnapshot<T>(tenantSlug, kind);
     if (!cached) throw error;
