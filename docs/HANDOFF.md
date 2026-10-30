@@ -1,7 +1,7 @@
 ﻿# HANDOFF — PWA-POS (ค้าคล่อง / KhaKhlong)
 
 > ไฟล์นี้คือสรุปสถานะล่าสุดสำหรับ **เปิดแชทใหม่แล้วทำงานต่อ** โดยไม่ต้องเล่าบริบทใหม่
-> อัปเดต: **2026-10-30** · branch `feat-aod` (`HEAD` = `006b5b9`) · `origin/main` = `b352de6` (2026-10-28)
+> อัปเดต: **2026-10-30** · branch `feat-aod` · `origin/main` = `b352de6` (2026-10-28) · ดู `git log` สำหรับ hash ล่าสุด
 > ใช้แทน `docs/backend-todo.md` และ `docs/daily-update-2026-10-21.md` (สองไฟล์นั้นล้าสมัยแล้ว)
 
 ## วิธีใช้ในแชทใหม่
@@ -20,7 +20,7 @@
 
 | รายการ | ค่า |
 |---|---|
-| Branch ที่ทำงาน | `feat-aod` — งาน void/comp + PIN ยัง**ไม่ commit** (ดู 3.8–3.10) |
+| Branch ที่ทำงาน | `feat-aod` — งาน void/comp, PIN lock ของ shifts และ escalation commit แล้ว (2026-10-30); ดู `git log` สำหรับ hash ล่าสุด |
 | Integration branch | `main` (`origin/main` = `b352de6`, 2026-10-28) |
 | Remote | `https://github.com/Slippery77/KhaKhlong.git` (branch เก่า `feat-aod`, `feat-benz`) |
 | Frontend | React + TypeScript + Vite + Tailwind v4 · dev port **5173** · proxy `/api` → `http://localhost:3000` |
@@ -69,7 +69,7 @@ $env:PGPASSWORD='<รหัสผ่าน pos_app จาก .env>'
 - **Floors / Tables** — พื้นที่ โต๊ะ ผังร้าน
 - **Orders** — create, list (open), get by id, add items (+kitchen ticket), move table, close-unpaid, sync (`sync` ยังรับ `any` — ดู P1) · **void / comp รายการพร้อม PIN ผู้อนุมัติ** (ดู 3.8)
 - **Inventory** — stock view, movements (รับเข้า/ปรับ/ของเสีย), **count batch** (รอบล่าสุด)
-- **Shifts** — open, current, close, verify (PIN ผู้จัดการ/เจ้าของ), reopen, cashbook, list · **`GET /shifts` ใช้ `report:view_all` หรือ `report:view_own_shift` แล้ว** (employee เห็นกะตัวเอง) · **PIN lock เก็บใน DB** (คงทนข้าม restart)
+- **Shifts** — open, current, close, verify (PIN ผู้จัดการ/เจ้าของ), reopen, cashbook, list · **`GET /shifts` ใช้ `report:view_all` หรือ `report:view_own_shift` แล้ว** (employee เห็นกะตัวเอง) · **PIN lock เก็บใน DB** (คงทนข้าม restart) · **กะค้างรับรองเกิน `shift_escalation_hours` (default 4 ชม.) ถูก escalate หา owner อัตโนมัติ**
 - **KDS** — คิวครัว + mark ready
 - **System Config** — GET/PATCH (หน้า UI ใช้เฉพาะ VAT)
 - **Tenants / Store** — GET/PATCH + หน้า `setting/store`
@@ -79,11 +79,12 @@ $env:PGPASSWORD='<รหัสผ่าน pos_app จาก .env>'
 - **Receipt (FE)** — `features/receipt/` พรีวิว 80mm + พิมพ์จริง, ป้าย "สำเนา" ตาม `isCopy`, เคารพ `max_reprints` (409)
 - **Reports** — `sales/summary`, `sales/by-period`, `sales/top-items`, `sales/transactions`, `sales/receipt/:id`
 - **Void / Comp (2026-10-30)** — batch endpoint + PIN ผู้อนุมัติ + audit ผ่าน trigger + FE modal + E2E 31 ข้อผ่าน
+- **PWA shell** — `vite-plugin-pwa` + manifest + precache ทุกไฟล์ build + `navigateFallback '/index.html'` (deny `/api`) + แจ้งอัปเดตด้วย `UpdatePrompt` (`registerType: 'prompt'`, ไม่ reload เองกลางการสั่งอาหาร) + ไอคอน 64/192/512/maskable
 
 ### ยังไม่เริ่ม / ยังไม่ครบ
 
 - **Audit Logs** — ไม่มี endpoint/UI (DB trigger เขียน audit บางเหตุการณ์ แต่ยังไม่มีหน้าดู)
-- **PWA/Offline** — ไม่มี manifest, service worker, Workbox, Dexie
+- **Offline data layer** — PWA shell พร้อมแล้ว แต่ยังไม่มี Dexie/IndexedDB แคชเมนู/โต๊ะ/กะ และยังไม่มี outbox คิวออเดอร์ (service worker ไม่แคช `/api` โดยตั้งใจ)
 - **Dashboard** — `/:tenantSlug/homepage` ยังเป็น `<div>Dashboard (TODO)</div>`
 - **Reports เพิ่มเติม** — หน้ารายงานรายกะ, ตัวกรองช่วงวันที่บน UI, export
 - **Shift escalation อัตโนมัติ** — มี service แล้วแต่ยังไม่ทำงานจริง (ดู 5/P1-1)
@@ -139,9 +140,17 @@ commit เดียว 4 เรื่อง:
 1. **`token_version` ใน JWT guard** — `jwtAuth.guard.ts` เทียบ claim กับ DB; ไม่มี claim = ปฏิเสธ; เปลี่ยน/รีเซ็ตรหัสผ่านตัด session เก่าทันที · E2E `e2e-token-version.mjs`
 2. **`GET /shifts` สิทธิ์ถูกต้อง** — `@RequireAnyPermission('report:view_all', 'report:view_own_shift')`; ถ้าไม่มี `report:view_all` service กรอง `opened_by = user.sub` ให้เห็นแค่กะตัวเอง
 3. **PIN lock เก็บใน DB** — `pin_failed_attempts` / `pin_locked_until` ถูกเขียนจริง (แทน `Map` ใน memory), `findPinVerifiers()` กรองคนที่ยังไม่ถูกล็อก
-4. **Shift escalation cron** — `common/shift-escalation.service.ts` เรียก `escalate_overdue_shifts()` ทุก 5 นาที (**ยังมีบั๊ก tenant context — ดู 5/P1-1**)
+4. **Shift escalation cron** — `common/shift-escalation.service.ts` เรียก `escalate_overdue_shifts()` ทุก 5 นาที (รอบแรกหลัง 10 วินาที) · ตอน commit นี้ยังเรียกด้วย `query()` จึงล้มด้วย `ไม่มี tenant context` — **แก้แล้ว 2026-10-30 (ดู 3.12)**
 
-### 3.8 Void / Comp รายการอาหาร + PIN ผู้อนุมัติ — 2026-10-30 (ยังไม่ commit)
+### 3.7.1 PWA shell — 2026-10-28 (`a992417`)
+
+- `vite-plugin-pwa` ใน `vite.config.ts`: manifest (ชื่อ/สี/ไอคอน 64·192·512·maskable), `injectRegister: false` + ลงทะเบียนเองใน `features/offline/components/UpdatePrompt.tsx` (`useRegisterSW`)
+- `registerType: 'prompt'` — ไม่ reload เองกลางการสั่งอาหาร (กันตะกร้าหาย)
+- Workbox: precache ไฟล์ build ทั้งหมด, `maximumFileSizeToCacheInBytes` 4 MiB เพราะ `thailand-address.json` ~2.9 MB, `navigateFallback: '/index.html'`, deny `/api`
+- **ไม่ได้แคช API ที่ service worker** — ตั้งใจให้ข้อมูลร้านเก็บใน IndexedDB (ยังไม่ทำ)
+- ทดสอบ PWA ต้อง `npm run build` + `npm run preview` (dev ปิด service worker)
+
+### 3.8 Void / Comp รายการอาหาร + PIN ผู้อนุมัติ — 2026-10-30 (`dc0bf7a`)
 
 รายละเอียดเต็ม: `docs/void-comp-approval-guide.md`
 
@@ -167,7 +176,7 @@ commit เดียว 4 เรื่อง:
 - แก้ลำดับพารามิเตอร์ให้ตรงกับผู้เรียกแล้ว (`register.service.ts` ไม่ต้องแก้)
 - **ผลกระทบถาวร**: ร้านที่สมัครก่อนแก้ยังมี hash อยู่ใน `display_name` และ PIN ใช้งานไม่ได้ — ซ่อมข้อมูลเดิมอัตโนมัติไม่ได้ ต้องแก้ด้วยมือถ้าจำเป็น (เช่น `admin_purge_tenant` แล้วสมัครใหม่ตอนเทสต์)
 
-### 3.10 `shifts.verifyShift` — PIN lock คงทน + นับที่ผู้ขอ — 2026-10-30 (ยังไม่ commit)
+### 3.10 `shifts.verifyShift` — PIN lock คงทน + นับที่ผู้ขอ — 2026-10-30 (`02207bd`)
 
 ของเดิม: นับครั้งผิดใน `catch` ของ transition error (ซึ่งรวม error ที่ไม่เกี่ยวกับ PIN) และเขียนผ่าน `db.query` ที่อยู่ใน transaction ของ request → 403 ทำให้ rollback ตัวนับหายทั้งหมด
 
@@ -179,10 +188,20 @@ commit เดียว 4 เรื่อง:
 - Spec `shifts.service.spec.ts` อัปเดตตามดีไซน์ใหม่ (ทั้งหมด 4 suites / 10 tests ผ่าน)
 
 ### 3.11 เอกสาร — 2026-10-30
-
 - `AGENTS.md` (root) เขียนใหม่ทั้งไฟล์ — เดิมมี **conflict marker `<<<<<<<` ค้างอยู่ในไฟล์ committed**; ตอนนี้มีกติกา void/comp + durableQuery + รายชื่อ E2E ครบ
 - `docs/AGENTS.md` เหลือเป็น pointer ไป root (กันสองชุดไม่ตรงกัน)
 - `docs/HANDOFF.md` (ไฟล์นี้) เขียนใหม่จากสำเนาสุดท้ายที่ยังอ่านได้ (`7d73e71`) เพราะสำเนา `006b5b9` เพี้ยน encoding ทั้งไฟล์
+
+### 3.12 `ShiftEscalationService` ทำงานจริง — 2026-10-30
+
+- **อาการ**: log `[ShiftEscalationService] ไม่มี tenant context — route นี้ต้องผ่าน TenantContextInterceptor ก่อน` ทุก 5 นาที (เห็นที่ 14:08:59 / 14:13:49 / 14:18:49) และไม่มีกะไหนถูก escalate เลย
+- **สาเหตุ**: service เรียก `this.db.query()` ซึ่งอ่าน client จาก AsyncLocalStorage ของ request — cron ไม่มี request จึง throw ทันที
+- **ตรวจ DB ก่อนแก้**: `escalate_overdue_shifts()` เป็น `SECURITY DEFINER` (owner = `postgres`) ไล่ทุก tenant ด้วยตัวเองและข้าม RLS ได้ตามดีไซน์ (RLS ใช้ `ENABLE` ไม่ใช่ `FORCE`) — เรียกด้วย `pos_app` โดยไม่ตั้ง `app.current_tenant_id` แล้วได้ผลปกติ (คืน 0 ไม่ error)
+- **แก้**: เปลี่ยนเป็น `db.referenceQuery()` (ใช้ pool ตรง ทำงานนอก request ได้) · log ที่ล้มเหลวเป็นระดับ `error` (เดิม `debug` จึงซ่อนบั๊ก) · เพิ่ม `onModuleDestroy` เคลียร์ timer + `unref()` · `run()` คืนจำนวนกะเพื่อ assert ในเทสต์
+- **ทดสอบ**:
+  - unit `backend/src/common/shift-escalation.service.spec.ts` — 4 tests ผ่าน (ยืนยันว่าใช้ `referenceQuery` ไม่ใช่ `query`, ทน `n` เป็น string, DB พังแล้วคืน 0)
+  - E2E มือ: สร้างร้าน → เปิดกะ → ปิดด้วยยอดไม่ตรง (`pending_verification`) → ย้อน `closed_at` ไป 6 ชม. (เกณฑ์ 4 ชม.) → restart backend → 10 วินาทีถัดไป log `escalated 1 shift(s)` และ DB เป็น `status='escalated'`, `escalated_to` = owner ของร้าน
+- ข้อควรรู้: service ยังเป็น `setInterval` ในโปรเซส — ถ้ารันหลาย instance พร้อมกัน ทุก instance จะเรียกฟังก์ชัน (ปลอดภัยเพราะ `FOR UPDATE` + เงื่อนไขสถานะ) แต่ถ้าอยากได้คิวเดียวควรย้ายไป `pg_cron`
 
 ---
 
@@ -193,7 +212,7 @@ commit เดียว 4 เรื่อง:
 - P0-1 Reports + Payment — commit แล้ว (`da56495`, `4bd4ad4`)
 - P0-2 PIN ผู้จัดการในหน้าผู้ใช้ — `bd022fe` + ใช้จริงใน void/comp/shift verify
 - P0-3 หน้าพิมพ์ใบเสร็จ/พิมพ์ซ้ำ — `69ffbb2`
-- P0-4 Void/Comp พร้อม PIN ผู้อนุมัติ — 2026-10-30 (รอ commit, ดู 3.8)
+- P0-4 Void/Comp พร้อม PIN ผู้อนุมัติ — `dc0bf7a` (ดู 3.8)
 
 ---
 
@@ -201,18 +220,15 @@ commit เดียว 4 เรื่อง:
 
 ### P1 — ความถูกต้องและความปลอดภัย
 
-1. **`ShiftEscalationService` ทำงานไม่ได้จริง** — `this.db.query('SELECT escalate_overdue_shifts()')` ถูกเรียกนอก request/tenant context → ล้มด้วย `ไม่มี tenant context` ทุก 5 นาที (log ระดับ debug, มองไม่เห็น) ทำให้กะค้าง `pending_verification` ไม่มีวันกลายเป็น `escalated` · แนวทางแก้: วนทีละ tenant (อ่าน `tenants` ด้วย `referenceQuery`/superuser แล้ว `SET LOCAL app.tenant_id`) หรือทำเป็น DB cron (`pg_cron`) เรียกฟังก์ชันโดยไม่ต้องมี tenant
-2. **`POST /orders/sync` รับ `@Body() dto: any`** — ValidationPipe ไม่ตรวจ และ `createdBy` มาจาก body (ปลอมผู้สร้างบิลได้) ควรมี DTO + ใช้ user จาก JWT เหมือน `POST /orders` หรือเลิกใช้ถ้า PWA ส่งผ่าน `POST /orders` + add items
-3. **ไม่มี login lockout / audit login** — `password_locked_until` ไม่ถูกใช้, `login_success` / `login_failed` ไม่ถูกเขียน (มีแค่ `logout`)
-4. **ไม่มี `GET /users/me`, `POST /auth/pin-login`**
-5. **`/:tenantSlug/homepage` ยังเป็น TODO**
+1. **`POST /orders/sync` รับ `@Body() dto: any`** — ValidationPipe ไม่ตรวจ และ `createdBy` มาจาก body (ปลอมผู้สร้างบิลได้) ควรมี DTO + ใช้ user จาก JWT เหมือน `POST /orders` หรือเลิกใช้ถ้า PWA ส่งผ่าน `POST /orders` + add items
+2. **ไม่มี login lockout / audit login** — `password_locked_until` ไม่ถูกใช้, `login_success` / `login_failed` ไม่ถูกเขียน (มีแค่ `logout`)
+3. **ไม่มี `GET /users/me`, `POST /auth/pin-login`**
+4. **`/:tenantSlug/homepage` ยังเป็น TODO**
 
 ### P2 — ฟีเจอร์ตาม scope
 
-- **PWA/Offline**: manifest + service worker (Workbox) + IndexedDB (Dexie) + outbox sync (scope 3.2.11: offline เฉพาะ Menu + Order)
-  - ตกลงแล้ว (2026-10-27): ออเดอร์ที่สั่งตอนออฟไลน์เข้าคิว outbox แล้วส่งเป็น `queued` ตอน sync — ไม่ใช้สถานะ `draft`
-  - ข้อมูลที่แคชอ่านอย่างเดียว: `GET /menu/full`, รายการโต๊ะ, กะปัจจุบัน
-  - ก่อนเริ่ม: ล็อก URL deploy ให้เสร็จก่อนทำ `manifest.json`
+- **PWA shell**: manifest + service worker precache + update prompt + icons ทำแล้ว (`a992417`)
+  - **ยังเหลือ**: IndexedDB (Dexie) แคช `GET /menu/full` / โต๊ะ / กะปัจจุบัน + outbox คิวออเดอร์ออฟไลน์
 - **Reports ต่อยอด**: หน้ารายงานรายกะ/ประวัติกะ, ตัวกรอง `from`/`to`/`shiftId` บน UI (API รองรับแล้ว แต่ FE ส่งแค่ `period`), export
 - **System Config UI ที่เหลือ** (หน้า VAT กับ Store ทำแล้ว)
 - **Dashboard homepage**
@@ -225,8 +241,8 @@ commit เดียว 4 เรื่อง:
 - `GET /shifts` สิทธิ์ผิด → แก้ใน `6b5c7d3`
 - PIN lock เป็น memory Map / ไม่คงทน → เขียนลง DB ใน `6b5c7d3` (shifts) และ 2026-10-30 (orders + นับที่ผู้ขอ)
 - `token_version` ไม่ถูกตรวจใน JWT guard → `6b5c7d3`
-- ไม่มี cron `escalate_overdue_shifts()` → มี service แล้ว แต่ **ยังไม่ทำงานจริง** (ข้อ 1 ด้านบน)
-- ไม่มี void/comp → 2026-10-30
+- ไม่มี cron `escalate_overdue_shifts()` → มี service แล้ว และ**ทำงานจริงแล้ว** 2026-10-30 (ดู 3.12)
+- ไม่มี void/comp → 2026-10-30 (`dc0bf7a`)
 
 ---
 
@@ -237,7 +253,7 @@ commit เดียว 4 เรื่อง:
 | Backend `npx tsc --noEmit` | **ผ่าน** |
 | Frontend `npx tsc -b` | **ผ่าน** |
 | Frontend `npx vite build` | **ผ่าน** (มีคำเตือน chunk size) |
-| Backend `npx jest` | **9 suites failed / 6 passed (9 tests failed / 18 passed)** — ทั้งหมดเป็น spec boilerplate เดิม (`app.controller` คาด `"Hello World!"`, `menu.*`, `payment.*`, `system-config.*`, `tenants.controller`, `permission-cache.*` ขาด DI mock) · ชุดที่แก้ต้องเขียว: `npx jest src/modules/shifts`, `npx jest src/modules/orders` |
+| Backend `npx jest` | **9 suites failed / 7 passed (9 tests failed / 22 passed / 31 total)** — ทั้งหมดที่แดงเป็น spec boilerplate เดิม (`app.controller` คาด `"Hello World!"`, `menu.*`, `payment.*`, `system-config.*`, `tenants.controller`, `permission-cache.*` ขาด DI mock) · ชุดที่แก้ต้องเขียว: `npx jest src/modules/shifts`, `npx jest src/common` |
 | Backend `npx eslint "src/**/*.ts"` | ยังแดงหลายพัน problems (ส่วนใหญ่ prettier) — **อย่า auto-fix ปนกับ feature commit** |
 | Frontend `npx eslint src` | ~40 problems เดิม (`react-hooks/set-state-in-effect`, `no-explicit-any` ใน `libs/appClient.ts`) — ไฟล์ที่แตะในงาน void/comp สะอาด |
 | Backend e2e spec | `backend/test/app.e2e-spec.ts` ยังเป็น boilerplate (`"Hello World!"`) → ใช้ไม่ได้ |
@@ -265,7 +281,7 @@ commit เดียว 4 เรื่อง:
 
 ### Backend
 - Response convention: `{ status: 'success', data: ... }`
-- โครงสร้าง 3 ชั้น: controller → service → repository; `query` / `referenceQuery` ตาม `docs/backend-dev-guide.md`
+- โครงสร้าง 3 ชั้น: controller → service → repository; `query` (ต้องมี request context) / `referenceQuery` (pool ตรง — เฉพาะตารางกลางที่ไม่มี RLS และฟังก์ชัน `SECURITY DEFINER` ที่ตั้งใจข้าม tenant) ตาม `docs/backend-dev-guide.md`
 - ทุก endpoint ต้องมี permission guard + RLS ทำงานผ่าน `app_tenant_id()`
 - Transaction: `DbContextService` เปิด `BEGIN` ต่อ request และ `COMMIT`/`ROLLBACK` ตอนจบ (`tenant-context.interceptor.ts`) — **งานที่ต้องรอดแม้ตอบ error ต้องใช้ `db.durableQuery()`** (เช่น ตัวนับ PIN ผิด)
 - ต้องการสิทธิ์แบบ "อย่างใดอย่างหนึ่ง" ใช้ `@RequireAnyPermission(...)`
@@ -313,7 +329,6 @@ commit เดียว 4 เรื่อง:
 
 - **ไม่บันทึกว่าใครเป็นคนกดขอ void/comp** — มีแค่ผู้อนุมัติ (`*_by`); ถ้าต้องการ audit เต็มต้องเพิ่มคอลัมน์ `requested_by` (ต้อง ALTER TABLE)
 - **ร้านที่สมัครก่อนแก้บั๊ก `createOwner`** มี bcrypt hash ใน `display_name` และ PIN ใช้ไม่ได้ — ซ่อมข้อมูลเดิมอัตโนมัติไม่ได้
-- `ShiftEscalationService` ยังไม่ทำงาน (ไม่มี tenant context) — ดู 5/P1-1
 - `inventory_transactions` ไม่มี `shift_id` → ผูกการปรับวัตถุดิบกับกะไม่ได้ตรง ๆ
 - `record_stock_count()` ไม่บันทึกแถวเมื่อ delta = 0
 - Reports ที่ไม่ระบุ `shiftId` ใช้ `CURRENT_DATE` ของ DB ไม่ใช่ business date
@@ -325,10 +340,9 @@ commit เดียว 4 เรื่อง:
 
 ## 9. ลำดับที่แนะนำถัดไป
 
-1. **commit + PR งาน void/comp + PIN lock ของ shifts** (branch `feat-aod` → `main`) — อย่าเผลอ commit ไฟล์ที่ไม่เกี่ยว (`CategoryCard.tsx`, `MenuSidebar.tsx`, `package-lock.json`)
-2. **แก้ `ShiftEscalationService` ให้รันได้จริง** (P1-1) — ตอนนี้ระบบ escalation ตายเงียบ
-3. **P1 ที่เหลือ**: `/orders/sync` DTO + user จาก JWT, login lockout/audit, `GET /users/me`, `POST /auth/pin-login`
-4. **P2**: PWA offline (outbox) → Reports รายกะ/ตัวกรองวันที่ → Dashboard → Audit log → Menu reorder
-5. ย้าย E2E 4 ตัวจาก `%TEMP%\opencode\` เข้า repo และเพิ่ม E2E ของ PIN ผ่าน UI (ตั้ง PIN → void/comp → verify กะ)
+1. **เปิด PR `feat-aod` → `main`** — งาน void/comp + PIN lock + escalation commit แล้ว (อย่าเผลอ commit ไฟล์ที่ไม่เกี่ยว: `CategoryCard.tsx`, `MenuSidebar.tsx`, `package-lock.json` ที่ยังค้างใน working tree)
+2. **P1 ที่เหลือ**: `/orders/sync` DTO + user จาก JWT, login lockout/audit, `GET /users/me`, `POST /auth/pin-login`
+3. **P2**: offline data layer (Dexie + outbox) → Reports รายกะ/ตัวกรองวันที่ → Dashboard → Audit log → Menu reorder
+4. ย้าย E2E 4 ตัวจาก `%TEMP%\opencode\` เข้า repo และเพิ่ม E2E ของ PIN ผ่าน UI (ตั้ง PIN → void/comp → verify กะ) + E2E escalation (ต้องต่อ DB เพื่อย้อน `closed_at`)
 
 > ก่อนเริ่มงานทุกครั้ง: ดู `git status`, รัน `npx tsc --noEmit` (backend) และ `npx tsc -b` (frontend) ให้ผ่านก่อน commit
