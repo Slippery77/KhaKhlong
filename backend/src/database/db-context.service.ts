@@ -54,6 +54,10 @@ export class DbContextService {
      * เหตุที่ต้องมี: งานตอน boot เช่น PermissionCacheService.onModuleInit
      * ยังไม่มี request จึงยังไม่มี context แต่ต้องอ่านข้อมูลกลางพวกนี้
      *
+     * อนุญาตเพิ่มอีกกรณีเดียว: ฟังก์ชันระบบที่เป็น SECURITY DEFINER และตั้งใจ
+     * ทำงานข้าม tenant ด้วยตัวเอง (เช่น escalate_overdue_shifts()) — cron ไม่มี
+     * request จนไม่มี context ให้ตั้ง RLS
+     *
      * ห้ามใช้กับตารางที่มี tenant_id เด็ดขาด — RLS จะคืน 0 แถวแบบเงียบ
      * ไม่ throw ไม่เตือน ทำให้ bug ซ่อนตัว
      */
