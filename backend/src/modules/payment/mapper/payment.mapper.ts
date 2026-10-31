@@ -47,7 +47,8 @@ export interface PaymentResponse{
     paidAt:Date;
 }
 
-export function toPaymentResponse(rows:any):PaymentResponse{
+export function toPaymentResponse(rows: any): PaymentResponse {
+    if (!rows) throw new Error('toPaymentResponse: payment row is null or undefined');
     return {
         paymentId:rows.payment_id,
         paymentAttemptId:rows.payment_attempt_id,

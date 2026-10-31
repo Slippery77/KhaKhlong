@@ -421,6 +421,15 @@ export class OrdersService {
     if (new Set(items.map((item) => item.order_id)).size > 1) {
       throw new BadRequestException('รายการที่เลือกต้องอยู่ในบิลเดียวกัน');
     }
+
+    const orderId = items[0].order_id;
+    const openAttempt = await this.ordersRepository.findOpenPaymentAttempt(orderId);
+    if (openAttempt) {
+      throw new ConflictException({
+        code: 'PAYMENT_ATTEMPT_OPEN',
+        message: 'บิลนี้มีรายการชำระเงินค้างอยู่ กรุณายกเลิกรายการชำระก่อนดำเนินการ',
+      });
+    }
     if (items.some((item) => item.closed_at)) {
       throw new ConflictException('บิลนี้ปิดแล้ว ไม่สามารถดำเนินการได้');
     }

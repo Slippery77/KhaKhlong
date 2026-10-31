@@ -1,5 +1,5 @@
-﻿import { lazy, Suspense } from 'react';
-import { Route, Routes } from 'react-router-dom';
+import { lazy, Suspense } from 'react';
+import { Navigate, Route, Routes } from 'react-router-dom';
 import { LoginPage } from '../features/auth/pages/login_pages';
 import StoreFinderPage from '../features/auth/pages/store_finder_page';
 import Register_page from '../features/registerOwner/pages/register_pages';
@@ -15,6 +15,16 @@ import EditVat from '../features/editVat/pages/editVat';
 import UsersPage from '../features/users/pages/UsersPage';
 import TableSettingPage from '../features/tableSetting/pages/TableSettingPage';
 import StoreSettingPage from '../features/store/pages/StoreSettingPage';
+import { SettingRouteGuard } from './SettingRouteGuard';
+import { useAuth } from '../features/auth/context/AuthContext';
+
+// นำทางหน้าเริ่มต้นตามบทบาท: เจ้าของร้านไป 'store', ผู้จัดการไป 'tables'
+function SettingIndexRedirect() {
+    const { user } = useAuth();
+    const role = user?.role?.toLowerCase();
+    const defaultSubpath = role === 'manager' ? 'tables' : 'store';
+    return <Navigate to={defaultSubpath} replace />;
+}
 
 // [ใหม่] วางก่อน export function AppRouter
 // หน้าทดสอบ outbox — มีเฉพาะตอน npm run dev
@@ -35,15 +45,23 @@ export function AppRouter() {
             <Route path='/:tenantSlug/tables' element={<TablesPage />} />
             <Route path='/:tenantSlug/mainpos' element={<MainPOS />} />
             <Route path='/:tenantSlug/kds' element={<KDSPage />} />
-            <Route path='/:tenantSlug/setting/menu' element={<MenuEdit />} />
-            <Route path='/:tenantSlug/setting/modifier' element={<EditModiferPage />} />
-            <Route path='/:tenantSlug/setting/users' element={<UsersPage />} />
-            <Route path='/:tenantSlug/setting/tables' element={<TableSettingPage />} />
-            <Route path='/:tenantSlug/setting/store' element={<StoreSettingPage />} />
+
+            {/* เส้นทางตั้งค่าระบบ — เฉพาะเจ้าของร้านและผู้จัดการเท่านั้น (พนักงานถูกบล็อกด้วย SettingRouteGuard) */}
+            <Route path='/:tenantSlug/setting' element={<SettingRouteGuard />}>
+                <Route index element={<SettingIndexRedirect />} />
+                <Route path='store' element={<StoreSettingPage />} />
+                <Route path='vat' element={<EditVat />} />
+                <Route path='tables' element={<TableSettingPage />} />
+                <Route path='menu' element={<MenuEdit />} />
+                <Route path='modifier' element={<EditModiferPage />} />
+                <Route path='users' element={<UsersPage />} />
+                <Route path='*' element={<SettingIndexRedirect />} />
+            </Route>
+
             <Route path='/:tenantSlug/siftwork' element={<ShiftPage />} />
             <Route path='/:tenantSlug/stock' element={<StockPage />} />
             <Route path='/:tenantSlug/sale-report' element={<SaleReportPage />} />
-            <Route path='/:tenantSlug/setting/vat' element={<EditVat/>}/>
+
             {/* URL ที่ไม่รู้จัก: กลับไปหน้าเลือกร้าน ดีกว่าปล่อยจอขาว */}
             {OutboxDevPage && (
                 <Route

@@ -26,7 +26,7 @@ function mapModifierGroup(apiGroup: ApiModifierGroup): ModifierGroup {
 // เนื้อในเหมือนเดิมทุกบรรทัด — แค่ "ย้ายที่" (refactor แบบ extract function)
 // เหตุผล: ต้องใช้ทั้งกับข้อมูลสดและข้อมูลจาก snapshot (แนวคิด 1.2)
 // อยู่นอก hook → ไม่ถูกสร้างใหม่ทุก render และทดสอบแยกได้
-function buildMenu(data: FullMenuData): Menu[] {
+export function buildMenu(data: FullMenuData): Menu[] {
     const modGroupMap = new Map<string, ModifierGroup>()
     for (const apiGroup of data.modifier_groups ?? []) {
         modGroupMap.set(apiGroup.modifier_group_id, mapModifierGroup(apiGroup))
@@ -42,6 +42,8 @@ function buildMenu(data: FullMenuData): Menu[] {
             allMenus.push({
                 id: item.menu_item_id,
                 name: item.name,
+                description: item.description,
+                imageUrl: item.image_url ?? null,
                 price: item.price,
                 categoryId: item.category_id,
                 isAvailable: item.is_available,
@@ -111,7 +113,7 @@ export function useFullMenu() {
                 setIsLoading(false)
             }
         },
-        [accessToken,user?.tenantSlug],
+        [accessToken, user],
     )
 
     useEffect(() => {
