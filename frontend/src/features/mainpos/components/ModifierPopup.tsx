@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react"
 import type { Menu, ModifierGroup, ModifierOption } from "../types/pos.types"
-import { X, Minus, Plus, Check, AlertCircle } from "lucide-react"
+import { X, Minus, Plus, Check, AlertCircle, Utensils } from "lucide-react"
 
 interface ModifierPopupProps {
     menu: Menu
@@ -23,8 +23,10 @@ export default function ModifierPopup({ menu, onClose, onConfirm }: ModifierPopu
     const [note, setNote] = useState<string>("")
     const [quantity, setQuantity] = useState<number>(1)
     const [submitted, setSubmitted] = useState<boolean>(false)
+    const [failedUrl, setFailedUrl] = useState<string | null>(null)
 
-    const modifiers = menu.modifiers ?? []
+    const hasImage = Boolean(menu.imageUrl && menu.imageUrl !== failedUrl)
+    const modifiers = useMemo(() => menu.modifiers ?? [], [menu.modifiers])
 
     // กลุ่มที่ required แต่ยังไม่เลือก
     const requiredUnfilled = useMemo(() =>
@@ -45,8 +47,9 @@ export default function ModifierPopup({ menu, onClose, onConfirm }: ModifierPopu
         setSingleChoices((prev) => {
             // กลุ่มไม่บังคับ: กดตัวเดิมซ้ำ = ยกเลิกการเลือก
             if (!group.isRequired && prev[group.id]?.id === option.id) {
-                const { [group.id]: _removed, ...rest } = prev
-                return rest
+                const next = { ...prev }
+                delete next[group.id]
+                return next
             }
             return { ...prev, [group.id]: option }
         })
@@ -197,20 +200,40 @@ export default function ModifierPopup({ menu, onClose, onConfirm }: ModifierPopu
     return (
         <div className="w-full h-full flex flex-col justify-between font-kanit bg-[#FAF7F2]">
             {/* Header */}
-            <div className="p-6 border-b border-stone-200 bg-white/70 shrink-0">
-                <div className="flex items-center justify-between">
-                    <span className="text-xs text-stone-400 font-medium">เพิ่มรายการ</span>
+            <div className="p-5 border-b border-stone-200 bg-white/80 shrink-0">
+                <div className="flex items-center justify-between mb-3">
+                    <span className="text-xs text-stone-400 font-medium">ปรับแต่งรายการอาหาร</span>
                     <button
                         type="button"
                         onClick={onClose}
-                        className="text-stone-400 hover:text-stone-700 transition-colors p-1 -mr-2 cursor-pointer"
+                        className="text-stone-400 hover:text-stone-700 transition-colors p-1 -mr-1 rounded-lg hover:bg-stone-100 cursor-pointer"
                         title="ปิด"
                     >
                         <X className="w-5 h-5" />
                     </button>
                 </div>
-                <h2 className="text-2xl font-bold text-[#2D241E] mt-1">{menu.name}</h2>
-                <p className="text-base font-semibold text-[#A68874] mt-1">฿{menu.price}</p>
+                <div className="flex items-center gap-3.5">
+                    <div className="h-16 w-16 shrink-0 overflow-hidden rounded-xl border border-[#E5D9C8] bg-[#F3ECE1] flex items-center justify-center">
+                        {hasImage ? (
+                            <img
+                                src={menu.imageUrl!}
+                                alt={menu.name}
+                                onError={() => setFailedUrl(menu.imageUrl ?? null)}
+                                className="h-full w-full object-cover"
+                            />
+                        ) : (
+                            <Utensils className="h-6 w-6 text-[#9C8671]" aria-hidden="true" />
+                        )}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                        <h2 className="text-lg font-bold text-[#2D241E] leading-snug line-clamp-2">
+                            {menu.name}
+                        </h2>
+                        <p className="text-base font-bold text-[#8C6D58] mt-0.5 tabular-nums">
+                            ฿{menu.price.toLocaleString()}
+                        </p>
+                    </div>
+                </div>
             </div>
 
             {/* Modifier List */}

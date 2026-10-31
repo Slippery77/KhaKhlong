@@ -5,7 +5,7 @@ import { CreateOrderItemDto } from './dto/add-order-items.dto';
 import { CloseUnpaidDto } from './dto/close-unpaid.dto';
 
 const ORDERS_COL = `order_id, tenant_id, order_number, business_date, table_id,
-  payment_id, created_by, closed_at, closed_by, close_reason, created_at, updated_at`;
+  payment_id, created_by, closed_at, closed_by, close_reason, close_note, created_at, updated_at`;
 
 const ORDER_ITEMS_COL = `order_item_id , menu_item_id ,unit_price_snapshot , item_name_snapshot
   , status , special_request`
@@ -249,18 +249,95 @@ export class OrdersRepository {
    *  - เขียน audit log 'order_closed_unpaid' อัตโนมัติ
    *  - เรียก sync_table_status() โต๊ะกลับเป็น available
    */
-  async closeUnpaid(orderId: string, dto: CloseUnpaidDto, closedBy: string) {
+  async closeUnpaid(orderId: string, dto: CloseUnpaidDto, approverId: string) {
     const sql = `
       UPDATE orders
       SET close_reason = $1,
-          closed_by    = $2,
+          close_note   = $2,
+          closed_by    = $3,
           closed_at    = now()
-      WHERE order_id = $3
+      WHERE order_id = $4
         AND closed_at IS NULL
       RETURNING ${ORDERS_COL};
     `;
-    const result = await this.db.query(sql, [dto.closeReason, closedBy, orderId]);
+    const result = await this.db.query(sql, [
+      dto.closeReason,
+      dto.note ?? null,
+      approverId,
+      orderId,
+    ]);
     return result.rows[0] ?? null;
+  }
+
+  /** ล็อกแถวบิลไว้กันสองเครื่องปิด/แก้บิลเดียวกันพร้อมกัน */
+  async lockOrderForUpdate(orderId: string) {
+    const sql = `
+      SELECT order_id, table_id, closed_at, payment_id
+      FROM orders
+      WHERE order_id = $1
+        AND tenant_id = app_tenant_id()
+      FOR UPDATE;
+    `;
+    const result = await this.db.query(sql, [orderId]);
+    return result.rows[0] ?? null;
+  }
+
+  /** มีรายการชำระเงินที่ยังเปิดค้างอยู่หรือไม่ (ปิดบิลตอนนี้จะทิ้ง attempt ค้าง) */
+  async findOpenPaymentAttempt(orderId: string) {
+    const sql = `
+      SELECT payment_attempt_id
+      FROM payment_attempt_orders
+      WHERE order_id = $1
+        AND tenant_id = app_tenant_id()
+        AND is_open = true
+      LIMIT 1;
+    `;
+    const result = await this.db.query(sql, [orderId]);
+    return result.rows[0] ?? null;
+  }
+
+  /**
+   * นับรายการที่ยังไม่ถูก void
+   * - total = รายการที่ยังคิดเงินอยู่
+   * - blocked = รายการที่เสิร์ฟ/พร้อมเสิร์ฟแล้ว (void ไม่ได้ → ต้องใช้ walkout)
+   */
+  async countNonVoidedItems(orderId: string) {
+    const sql = `
+      SELECT COUNT(*)::int AS total,
+             COUNT(*) FILTER (WHERE status IN ('ready','served'))::int AS blocked
+      FROM order_items
+      WHERE order_id = $1
+        AND tenant_id = app_tenant_id()
+        AND status <> 'voided';
+    `;
+    const result = await this.db.query(sql, [orderId]);
+    return result.rows[0] ?? { total: 0, blocked: 0 };
+  }
+
+  /** void ทุกรายการที่ยังไม่เสิร์ฟของบิล (ใช้ตอนยกเลิกทั้งบิล) */
+  async voidAllItems(orderId: string, approverId: string, reason: string) {
+    const sql = `
+      UPDATE order_items
+      SET status      = 'voided',
+          voided_by   = $2,
+          void_reason = $3,
+          updated_at  = now()
+      WHERE order_id = $1
+        AND tenant_id = app_tenant_id()
+        AND status IN ('draft','queued','preparing')
+      RETURNING order_item_id;
+    `;
+    const result = await this.db.query(sql, [orderId, approverId, reason]);
+    return result.rows.length;
+  }
+
+  /** ผู้อนุมัติคนนี้มีสิทธิ์จริงหรือไม่ (ใช้ตรวจ void:approve เพิ่มจาก PIN) */
+  async hasPermission(userId: string, permissionKey: string) {
+    const result = await this.db.query<{ ok: boolean }>(
+      `SELECT has_permission($1, $2) AS ok`,
+      [userId, permissionKey],
+    );
+    return result.rows[0]?.ok === true;
   }
 
   /**
@@ -269,43 +346,95 @@ export class OrdersRepository {
    * - ส่ง order_id จาก client (idempotent)
    * - ส่ง items ต่อบิลได้เลยในครั้งเดียว
    */
-  async syncOrders(orders: any[]) {
+  async syncOrders(orders: any[], createdBy: string) {
     const results: any[] = [];
 
     for (const orderDto of orders) {
-      // INSERT order (idempotent)
-      const orderSql = `
-        INSERT INTO orders (order_id, tenant_id, table_id, created_by)
-        VALUES ($1, app_tenant_id(), $2, $3)
-        ON CONFLICT (order_id) DO NOTHING
-        RETURNING ${ORDERS_COL};
-      `;
-      const orderResult = await this.db.query(orderSql, [
-        orderDto.orderId,
-        orderDto.tableId,
-        orderDto.createdBy,
-      ]);
-
-      const createdOrder = orderResult.rows[0];
-
-      // INSERT items ถ้ามี (ไม่ว่าจะสร้าง order ใหม่หรือมีอยู่แล้ว)
-      let insertedItems: any[] = [];
-      if (orderDto.items && orderDto.items.length > 0) {
-        insertedItems = await this.addOrderItems(
+      // ทั้ง request อยู่ใน transaction เดียว (TenantContextInterceptor) — ถ้า statement ใดพัง
+      // transaction จะกลายเป็น aborted (25P02) ทั้ง batch จึงต้องกันด้วย SAVEPOINT ต่อใบ
+      await this.db.query('SAVEPOINT sync_order');
+      try {
+        // INSERT order (idempotent) — created_by มาจาก token ไม่ใช่ body
+        const orderSql = `
+          INSERT INTO orders (order_id, tenant_id, table_id, created_by)
+          VALUES ($1, app_tenant_id(), $2, $3)
+          ON CONFLICT (order_id) DO NOTHING
+          RETURNING ${ORDERS_COL};
+        `;
+        const orderResult = await this.db.query(orderSql, [
           orderDto.orderId,
-          orderDto.items,
-        );
-      }
+          orderDto.tableId,
+          createdBy,
+        ]);
 
-      results.push({
-        orderId: orderDto.orderId,
-        isNew: !!createdOrder,
-        order: createdOrder ?? null,
-        items: insertedItems,
-      });
+        const createdOrder = orderResult.rows[0];
+
+        // INSERT items ถ้ามี (ไม่ว่าจะสร้าง order ใหม่หรือมีอยู่แล้ว)
+        let insertedItems: any[] = [];
+        if (orderDto.items && orderDto.items.length > 0) {
+          insertedItems = await this.addOrderItems(
+            orderDto.orderId,
+            orderDto.items,
+          );
+        }
+
+        await this.db.query('RELEASE SAVEPOINT sync_order');
+
+        results.push({
+          orderId: orderDto.orderId,
+          status: 'ok',
+          isNew: !!createdOrder,
+          order: createdOrder ?? null,
+          items: insertedItems,
+        });
+      } catch (err: any) {
+        await this.db.query('ROLLBACK TO SAVEPOINT sync_order');
+        await this.db.query('RELEASE SAVEPOINT sync_order');
+
+        // ปัญหาที่กระทบทั้งร้าน (เช่น ยังไม่เปิดกะ) ต้องล้มทั้ง batch
+        if (
+          err?.code === 'P0001' &&
+          String(err.message ?? '').includes('no open shift')
+        ) {
+          throw err;
+        }
+
+        results.push({
+          orderId: orderDto.orderId,
+          status: 'conflict',
+          ...this.mapSyncOrderError(err),
+        });
+      }
     }
 
     return results;
+  }
+
+  /** แปลง error ระดับ DB ของการซิงค์ออฟไลน์เป็นรหัสที่ client เอาไปแสดงได้ */
+  private mapSyncOrderError(err: any): { code: string; message: string } {
+    const msg: string = err?.message ?? '';
+    if (err?.code === '23505' || msg.includes('table has active order')) {
+      return { code: 'TABLE_OCCUPIED', message: 'โต๊ะนี้มีบิลเปิดอยู่แล้ว' };
+    }
+    if (
+      msg.includes('closed order is immutable') ||
+      msg.includes('order is closed')
+    ) {
+      return { code: 'ORDER_CLOSED', message: 'บิลนี้ปิดแล้ว' };
+    }
+    if (msg.includes('table is out_of_service')) {
+      return { code: 'TABLE_OUT_OF_SERVICE', message: 'โต๊ะนี้ปิดใช้งานอยู่' };
+    }
+    if (msg.includes('target table must be available')) {
+      return { code: 'TABLE_OCCUPIED', message: 'โต๊ะปลายทางไม่ว่าง' };
+    }
+    if (err?.code === '23503') {
+      return {
+        code: 'INVALID_REFERENCE',
+        message: 'ข้อมูลอ้างอิง (โต๊ะ/เมนู/ผู้ใช้) ไม่ถูกต้อง',
+      };
+    }
+    return { code: 'SYNC_FAILED', message: msg || 'ซิงค์บิลนี้ไม่สำเร็จ' };
   }
 
   async hasPendingOrders(){
@@ -321,6 +450,76 @@ export class OrdersRepository {
         ORDER BY o.order_number;
     `;
     const result = await this.db.query(sql);
+    return result.rows;
+  }
+
+  // ------------------------------------------------------------------
+  // Void / Comp (ORD-04) — ทุกครั้งต้องมีผู้จัดการ/เจ้าของร้านอนุมัติด้วย PIN
+  // ------------------------------------------------------------------
+
+  /** ผู้ใช้ในร้านนี้ที่ตั้ง PIN ไว้และมีสิทธิ์ตาม permissionKey (ใช้ตรวจ PIN ผู้อนุมัติ) */
+  async findPinApprovers(permissionKey: string) {
+    const sql = `
+      SELECT u.users_id, u.display_name, u.pin_hash
+      FROM users u
+      JOIN role_permissions rp ON rp.role_id = u.role_id
+      JOIN permissions p ON p.permission_id = rp.permission_id
+      WHERE p.permission_key = $1
+        AND u.tenant_id = app_tenant_id()
+        AND u.pin_hash IS NOT NULL
+        AND u.is_active
+        AND (u.pin_locked_until IS NULL OR u.pin_locked_until <= now())
+    `;
+    const result = await this.db.query(sql, [permissionKey]);
+    return result.rows as { users_id: string; display_name: string; pin_hash: string }[];
+  }
+
+  async getOrderItemsForUpdate(orderItemIds: string[]) {
+    const sql = `
+      SELECT oi.order_item_id, oi.order_id, oi.status, oi.is_comped,
+             o.closed_at, o.payment_id
+      FROM order_items oi
+      JOIN orders o ON o.order_id = oi.order_id AND o.tenant_id = oi.tenant_id
+      WHERE oi.order_item_id = ANY($1::uuid[])
+        AND oi.tenant_id = app_tenant_id()
+      ORDER BY oi.order_item_id
+      FOR UPDATE OF oi
+    `;
+    const result = await this.db.query(sql, [orderItemIds]);
+    return result.rows;
+  }
+
+  async voidOrderItems(orderItemIds: string[], approverId: string, reason: string) {
+    const sql = `
+      UPDATE order_items
+      SET status = 'voided',
+          voided_by = $2,
+          void_reason = $3,
+          updated_at = now()
+      WHERE order_item_id = ANY($1::uuid[])
+        AND tenant_id = app_tenant_id()
+        AND status IN ('queued', 'preparing')
+        AND is_comped = false
+      RETURNING order_item_id, order_id, status, voided_by, voided_at, void_reason
+    `;
+    const result = await this.db.query(sql, [orderItemIds, approverId, reason]);
+    return result.rows;
+  }
+
+  async compOrderItems(orderItemIds: string[], approverId: string, reason: string) {
+    const sql = `
+      UPDATE order_items
+      SET is_comped = true,
+          comp_reason = $3,
+          comped_by = $2,
+          updated_at = now()
+      WHERE order_item_id = ANY($1::uuid[])
+        AND tenant_id = app_tenant_id()
+        AND status = 'served'
+        AND is_comped = false
+      RETURNING order_item_id, order_id, status, is_comped, comped_by, comped_at, comp_reason
+    `;
+    const result = await this.db.query(sql, [orderItemIds, approverId, reason]);
     return result.rows;
   }
 }

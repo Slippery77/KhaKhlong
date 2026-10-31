@@ -10,8 +10,9 @@ export interface MenuItem{
     menu_item_id: string;
     category_id: string;
     name: string;
-    description:string | null;
-    price:number; 
+    description: string | null;
+    image_url?: string | null;
+    price: number; 
     is_available: boolean;
     is_active: boolean;
     modifier_group_ids: string[];   // UUID ของ modifier_groups ที่ผูกกับเมนูนี้

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { UtensilsCrossed, Store, UserRound, Check } from "lucide-react";
+import { UtensilsCrossed, Store, UserRound, Check, ArrowLeft } from "lucide-react";
 import { Register_RestaurantForm } from "../components/register_RestaurantForm";
 import { Register_OwnerForm, type RegisterOwnerInfo } from "../components/register_OwnerInfo";
 import useRegister from "../hooks/register";
@@ -56,7 +56,7 @@ export default function Register_page() {
     return (
         <div className="flex min-h-screen bg-[#FAF7F2] font-kanit">
             {/* ── แผงซ้าย: แบรนด์ + สถานะขั้นตอน (ซ่อนบนจอเล็ก) ─────── */}
-            <aside className="relative hidden w-[42%] max-w-xl flex-col justify-between overflow-hidden bg-gradient-to-br from-[#8C6D58] to-[#6B5140] p-10 text-white lg:flex">
+            <aside className="relative hidden w-[42%] max-w-xl flex-col justify-between overflow-hidden bg-linear-to-br from-[#8C6D58] to-[#6B5140] p-10 text-white lg:flex">
                 {/* วงกลมตกแต่งหลัง */}
                 <div className="pointer-events-none absolute -right-24 -top-24 h-72 w-72 rounded-full bg-white/10" />
                 <div className="pointer-events-none absolute -bottom-32 -left-20 h-80 w-80 rounded-full bg-white/5" />
@@ -81,7 +81,7 @@ export default function Register_page() {
                         สมัครใช้งานฟรี ใช้เวลาไม่ถึง 2 นาที
                         แล้วเริ่มขายได้ทันทีทั้งบิล ครัว และรายงาน
                     </p>
-
+                    
                     {/* indicator ขั้นตอน */}
                     <ol className="space-y-4 pt-2">
                         {steps.map((s) => {
@@ -137,7 +137,20 @@ export default function Register_page() {
                         </span>
                     </span>
                 </div>
-
+                {/* ปุ่มกลับ — จัดแนวเดียวกับการ์ดฟอร์ม */}
+                <div className="mb-3 flex w-full max-w-lg">
+                    <button
+                        type="button"
+                        onClick={() => navigate(`/login`)}
+                        className="group inline-flex cursor-pointer items-center gap-1.5 rounded-xl px-3 py-2 text-sm font-medium text-[#8C6D58] transition-colors duration-200 hover:bg-[#F3ECE4] hover:text-[#7a5c45] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#8C6D58]/40"
+                    >
+                        <ArrowLeft
+                            className="h-4 w-4 transition-transform duration-200 group-hover:-translate-x-0.5"
+                            aria-hidden="true"
+                        />
+                        กลับไปหน้าเข้าสู่ระบบ
+                    </button>
+                </div>
                 <div className="w-full max-w-lg rounded-2xl border border-[#E8DFD5] bg-white p-8 shadow-[0_4px_24px_rgba(45,36,30,0.07)]">
                     <h1 className="text-2xl font-bold text-[#2D241E]">สมัครสมาชิก</h1>
                     <p className="mt-1 text-sm text-[#7A6A5C]">

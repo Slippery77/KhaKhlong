@@ -78,7 +78,13 @@ export class MenuService {
     // สร้างเมนูใหม่
     async createMenu(dto:MenuItemDTO){
             try {
-            const result = await this.menuRepository.createMenuItem(dto.category_id,dto.name,dto.description??null,dto.price,);
+            const result = await this.menuRepository.createMenuItem(
+                dto.category_id,
+                dto.name,
+                dto.description ?? null,
+                dto.price,
+                dto.image_url ?? null,
+            );
             return { status: 'success', data: toMenuItemResponse(result) };
             } catch (err: any) {
             if (err.code === '23505') {

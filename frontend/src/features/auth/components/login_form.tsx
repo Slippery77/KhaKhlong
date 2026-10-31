@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useLogin } from "../hooks/useLogin";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import {
@@ -11,48 +11,84 @@ import {
   Store,
   Pencil,
   ArrowLeftRight,
+  ShieldAlert,
+  AlertCircle,
+  Clock,
 } from "lucide-react";
 
-{
-  /*สร้างโครงสร้าง object*/
-}
 interface loginFormState {
   tenantSlug: string;
   username: string;
   password: string;
 }
 
+function formatCountdown(totalSeconds: number): string {
+  const mins = Math.floor(totalSeconds / 60);
+  const secs = totalSeconds % 60;
+  return `${String(mins).padStart(2, "0")}:${String(secs).padStart(2, "0")}`;
+}
+
 export default function LoginForm() {
   const { tenantSlug } = useParams<{ tenantSlug: string }>();
-  // เก็บค่าฟอร์ม login ทั้ง 3 ช่องแบบ object เพื่อจัดการข้อมูลรวมกันง่าย
   const [formState, setFormState] = useState<loginFormState>({
     tenantSlug: tenantSlug ?? "",
     username: "",
     password: "",
   });
-  // แสดง/ซ่อนรหัสผ่าน (ใช้ไอคอน lucide ไม่ใช่ emoji)
   const [showPassword, setShowPassword] = useState(false);
-  // ช่องแก้รหัสร้านแบบพับเก็บ — เปิดไว้ก่อนถ้า URL ไม่ได้ระบุร้านมา
   const [slugEditorOpen, setSlugEditorOpen] = useState(!tenantSlug);
-  // error ของช่องรหัสร้าน (แยกจาก error ที่ backend ตอบกลับมา)
   const [slugError, setSlugError] = useState<string | null>(null);
+  const [nowMs, setNowMs] = useState<number>(() => Date.now());
+  const errorAlertRef = useRef<HTMLDivElement>(null);
 
-  // อัปเดตค่าในฟอร์มตาม field ที่ผู้ใช้พิมพ์เข้าไป
+  const {
+    login,
+    isSubmitting,
+    error,
+    isLocked,
+    lockedUntil,
+    remainingAttempts,
+    clearLock,
+  } = useLogin();
+  const navigate = useNavigate();
+
+  // นับถอยหลังเวลาปลดล็อกแบบเรียลไทม์เมื่อบัญชีถูกระงับชั่วคราว
+  useEffect(() => {
+    if (!isLocked || !lockedUntil) return;
+    const targetMs = new Date(lockedUntil).getTime();
+    if (Number.isNaN(targetMs)) return;
+
+    const timer = window.setInterval(() => {
+      const current = Date.now();
+      setNowMs(current);
+      if (current >= targetMs) {
+        window.clearInterval(timer);
+        clearLock();
+      }
+    }, 1000);
+
+    return () => window.clearInterval(timer);
+  }, [isLocked, lockedUntil, clearLock]);
+
+  const remainingLockSeconds =
+    isLocked && lockedUntil
+      ? Math.max(0, Math.ceil((new Date(lockedUntil).getTime() - nowMs) / 1000))
+      : 0;
+  const isCurrentlyLocked = isLocked && (lockedUntil ? remainingLockSeconds > 0 : true);
+
   const handleChange = (field: keyof loginFormState, value: string) => {
     setFormState((prevState) => ({
       ...prevState,
       [field]: value,
     }));
+    // หากผู้ใช้เปลี่ยนชื่อบัญชีหรือรหัสร้าน ให้ปลดสถานะล็อกของบัญชีเดิมบนหน้าจอเพื่อลองบัญชีอื่นได้
+    if ((field === "username" || field === "tenantSlug") && isLocked) {
+      clearLock();
+    }
   };
 
-  // ดึงฟังก์ชัน login และสถานะจาก custom hook เพื่อใช้ในการส่งข้อมูลเข้าสู่ระบบ
-  const { login, isSubmitting, error } = useLogin();
-  const navigate = useNavigate();
-
-  // เมื่อกด submit จะป้องกันการ refresh หน้า และเรียก login ด้วยข้อมูลจากฟอร์ม
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
-    // normalize รหัสร้านให้ตรงกับที่ระบบเก็บ (a-z 0-9 -) ก่อนส่งไป backend
     const slug = formState.tenantSlug.trim().toLowerCase();
 
     if (!slug) {
@@ -61,11 +97,16 @@ export default function LoginForm() {
       return;
     }
     setSlugError(null);
+    setNowMs(Date.now());
 
     const result = await login({ ...formState, tenantSlug: slug });
 
     if (result) {
-      navigate(`/${slug}/tables`); // ถ้า login สำเร็จให้ไปหน้าผังโต๊ะของร้านนั้น
+      navigate(`/${slug}/tables`);
+    } else {
+      window.requestAnimationFrame(() => {
+        errorAlertRef.current?.focus();
+      });
     }
   };
 
@@ -78,7 +119,7 @@ export default function LoginForm() {
 
   return (
     <div className="w-full">
-      <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+      <form onSubmit={handleSubmit} className="flex flex-col gap-4" noValidate>
         {/* ── ร้านที่กำลังจะเข้าสู่ระบบ + ช่องแก้รหัสร้านแบบพับเก็บ ── */}
         <div className="rounded-xl border border-[#E8DFD5] bg-[#FAF7F2] px-3 py-2.5">
           <div className="flex items-center gap-2">
@@ -154,6 +195,8 @@ export default function LoginForm() {
               autoComplete="username"
               value={formState.username}
               onChange={(e) => handleChange("username", e.target.value)}
+              aria-invalid={Boolean(error)}
+              aria-describedby={error ? "login-error-alert" : undefined}
             />
             <User className={iconClass} aria-hidden="true" />
           </div>
@@ -176,12 +219,15 @@ export default function LoginForm() {
               autoComplete="current-password"
               value={formState.password}
               onChange={(e) => handleChange("password", e.target.value)}
+              aria-invalid={Boolean(error)}
+              aria-describedby={error ? "login-error-alert" : undefined}
             />
             <Lock className={iconClass} aria-hidden="true" />
             <button
               type="button"
               onClick={() => setShowPassword((v) => !v)}
               aria-label={showPassword ? "ซ่อนรหัสผ่าน" : "แสดงรหัสผ่าน"}
+              aria-pressed={showPassword}
               className="absolute right-3 top-1/2 flex h-9 w-9 -translate-y-1/2 cursor-pointer items-center justify-center rounded-lg text-[#9B8E82] transition-colors duration-200 hover:bg-[#EFE8DC] hover:text-[#7a5c45] focus:outline-none focus:ring-2 focus:ring-[#8C6D58]/30"
             >
               {showPassword ? (
@@ -202,21 +248,75 @@ export default function LoginForm() {
               {slugError}
             </p>
           ) : null}
+
           {error ? (
-            <p
+            <div
+              id="login-error-alert"
+              ref={errorAlertRef}
               role="alert"
-              className="mb-3 rounded-xl border border-[#E8B4A8] bg-[#FBEAE6] px-4 py-3 text-sm text-[#A33B2A]"
+              aria-live="assertive"
+              tabIndex={-1}
+              className={`mb-3 rounded-xl border px-4 py-3.5 text-sm outline-none transition-colors duration-200 ${
+                isCurrentlyLocked
+                  ? "border-[#E5B887] bg-[#FDF5EB] text-[#7A4313]"
+                  : "border-[#E8B4A8] bg-[#FBEAE6] text-[#A33B2A]"
+              }`}
             >
-              {error}
-            </p>
+              <div className="flex items-start gap-2.5">
+                {isCurrentlyLocked ? (
+                  <ShieldAlert
+                    className="mt-0.5 h-5 w-5 shrink-0 text-[#B8621B]"
+                    aria-hidden="true"
+                  />
+                ) : (
+                  <AlertCircle
+                    className="mt-0.5 h-5 w-5 shrink-0 text-[#A33B2A]"
+                    aria-hidden="true"
+                  />
+                )}
+                <div className="min-w-0 flex-1 space-y-1.5">
+                  <p className="font-semibold leading-snug">
+                    {isCurrentlyLocked ? "บัญชีถูกระงับชั่วคราว" : error}
+                  </p>
+                  {isCurrentlyLocked ? (
+                    <>
+                      <p className="text-xs leading-relaxed text-[#8C5220]">
+                        {error}
+                      </p>
+                      {remainingLockSeconds > 0 ? (
+                        <div className="mt-2 inline-flex items-center gap-1.5 rounded-lg border border-[#E5B887]/80 bg-white/80 px-2.5 py-1 text-xs font-medium text-[#7A4313]">
+                          <Clock className="h-3.5 w-3.5 text-[#B8621B]" aria-hidden="true" />
+                          <span>ลองใหม่ได้ในอีก</span>
+                          <span className="font-bold tabular-nums text-[#B8621B]">
+                            {formatCountdown(remainingLockSeconds)}
+                          </span>
+                          <span>นาที</span>
+                        </div>
+                      ) : null}
+                    </>
+                  ) : remainingAttempts !== null &&
+                    remainingAttempts > 0 &&
+                    remainingAttempts <= 2 ? (
+                    <p className="text-xs font-medium text-[#8B2E1E]">
+                      ระวัง: เหลือโอกาสลองอีก {remainingAttempts} ครั้ง ก่อนบัญชีจะถูกระงับชั่วคราว 5 นาที
+                    </p>
+                  ) : null}
+                </div>
+              </div>
+            </div>
           ) : null}
+
           <button
             className="flex h-14 w-full cursor-pointer items-center justify-center gap-2 rounded-2xl bg-[#8C6D58] text-lg font-semibold text-white transition-colors duration-200 hover:bg-[#7a5c45] focus:outline-none focus:ring-2 focus:ring-[#8C6D58]/40 focus:ring-offset-2 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60"
             type="submit"
-            disabled={isSubmitting}
+            disabled={isSubmitting || isCurrentlyLocked}
           >
             <LogIn className="h-5 w-5" aria-hidden="true" />
-            {isSubmitting ? "กำลังเข้าสู่ระบบ..." : "เข้าสู่ระบบ"}
+            {isSubmitting
+              ? "กำลังเข้าสู่ระบบ..."
+              : isCurrentlyLocked && remainingLockSeconds > 0
+                ? `บัญชีถูกล็อก (${formatCountdown(remainingLockSeconds)})`
+                : "เข้าสู่ระบบ"}
           </button>
         </div>
       </form>
@@ -248,64 +348,3 @@ export default function LoginForm() {
     </div>
   );
 }
-
-/* ── UI เดิม (feat-benz) — comment ไว้ ใช้ UI ของ feat-aod แทน ──────────
-import { Eye, EyeClosed } from "lucide-react";
-
-  const togglePasswordVisibility = () =>{
-    setShowPassword((prev)=> !prev);
-  }
-
-  return (
-    <div className="w-full max-w-md rounded-2xl border border-[#E6DCCF] bg-[#FDFBF7] p-10 shadow-sm">
-      <h1 className=" text-2xl text-[#4B3B2A] font-semibold">เข้าสู่ระบบ</h1>
-      <p className="text-sm text-[#4B3B2A] mb-6">เข้าสู่ระบบมาเริ่มค้าคล่องของคุณ</p>
-      <form onSubmit={handleSubmit} className="flex flex-col gap-5">
-        <div className ="mb-6">
-          <label className ="mb-2 block text-sm font-semibold text-[#4B3B2A]" htmlFor="username">ชื่อผู้ใช้</label>
-          <input
-            className="h-12 w-full rounded-lg border border-[#D8C9B6] bg-white px-5 text-[#3F3125] placeholder:text-[#9B8E82] focus:border-[#B59278] focus:outline-none focus:ring-2 focus:ring-[#E8D9C7]"
-            type="text"
-            placeholder="กรอกชื่อผู้ใช้"
-            value={formState.username}
-            onChange={(e) => handleChange("username", e.target.value)}
-          />
-        </div>
-        <div className="mb-8">
-          <label
-            className="mb-2 block font-semibold text-sm text-[#4B3B2A]"
-            htmlFor="password"
-          >
-            รหัสผ่าน
-          </label>
-
-        <div className="relative">
-            <input
-              className="h-12 w-full rounded-lg border border-[#D8C9B6] bg-white px-5 pr-14 text-[#3F3125] placeholder:text-[#9B8E82] focus:border-[#B59278] focus:outline-none focus:ring-2 focus:ring-[#E8D9C7]"
-              type={showPassword ? 'text' : 'password'}
-              placeholder="กรอกรหัสผ่าน"
-              value={formState.password}
-              onChange={(e) => handleChange("password", e.target.value)}
-            />
-
-            <button
-              type="button"
-              onClick={togglePasswordVisibility}
-              className="absolute right-5 top-1/2 -translate-y-1/2 text-[#8C7B6A] hover:text-[#6E5C4C]">
-                {showPassword ? <Eye size={20}/> : <EyeClosed size={20}/>}
-            </button>
-          </div>
-        </div>
-        <div>
-          {error ?(<p role='alert'>{error}</p>) : null}
-          <button 
-          className = "h-12 w-full rounded-lg bg-[#5C4330] text-lg font-semibold text-white transition hover:bg-[#4B3B2A] active:scale-[0.98]"
-          type="submit" 
-          disabled={isSubmitting}>เข้าสู่ระบบ</button>
-        </div>
-      </form>
-    </div>
-  );
-}
-
-*/

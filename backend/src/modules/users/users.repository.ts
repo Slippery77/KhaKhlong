@@ -1,4 +1,4 @@
-﻿import { Injectable } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { DbContextService } from '../../database/db-context.service';
 
 @Injectable()
@@ -22,8 +22,8 @@ export class UsersRepository {
         username: string,
         email: string,
         password: string,
+        pin: string,
         display_name: string,
-        pin:string
     ) {
         const sql = `INSERT INTO users (tenant_id, role_id, username, email, password_hash, pin_hash, display_name)
                     VALUES ($1,$2,$3,$4,$5,$6,$7)
@@ -44,9 +44,10 @@ export class UsersRepository {
 
     async findUsernameAndTenantID(tenantID: string, username: string) {
         const sql = `
-            SELECT u.users_id, u.role_id, u.tenant_id, u.username, u.display_name, u.password_hash, u.is_active, u.token_version
+            SELECT u.users_id, u.role_id, u.tenant_id, u.username, u.display_name, u.password_hash,
+                   u.is_active, u.token_version, u.password_failed_attempts, u.password_locked_until
             FROM users u
-            WHERE tenant_id = $1 AND lower(username) = lower($2);
+            WHERE tenant_id = $1 AND lower(username) = lower($2)
         `;
         const result = await this.db.query(sql, [tenantID, username]);
         return result.rows[0] ?? null;
@@ -64,9 +65,9 @@ export class UsersRepository {
     }
 
     /**
-     * เธ”เธถเธเธฃเธฒเธขเธเธทเนเธญเธเธนเนเนเธเนเธ—เธฑเนเธเธซเธกเธ”เธเธญเธเธฃเนเธฒเธ
-     * RLS เธเธฃเธญเธ tenant เนเธซเนเธญเธขเธนเนเนเธฅเนเธง เนเธ•เนเนเธชเนเน€เธเธทเนเธญเธเนเธเธเนเธณเนเธงเนเธเธฑเธเน€เธซเธเธตเธขเธง
-     * เน€เธฃเธตเธขเธ: เธ—เธตเนเธขเธฑเธเนเธเนเธเธฒเธเธญเธขเธนเนเธเนเธญเธ โ’ เธ•เธฒเธกเธ•เธณเนเธซเธเนเธ โ’ เธ•เธฒเธกเธเธทเนเธญ
+     * ดึงรายชื่อผู้ใช้ทั้งหมดของร้าน
+     * RLS กรอง tenant ให้อยู่แล้ว แต่ใส่เงื่อนไขซ้ำไว้กันเหนียว
+     * เรียง: ที่ยังใช้งานอยู่ก่อน -> ตามตำแหน่ง -> ตามชื่อ
      */
     async findAllByTenant() {
         const sql = `
@@ -90,8 +91,8 @@ export class UsersRepository {
     }
 
     /**
-     * เธซเธฒเธเธนเนเนเธเนเธเธเน€เธ”เธตเธขเธงเธเธญเธเธฃเนเธฒเธ
-     * เธเธทเธ null = เนเธกเนเธเธ เธซเธฃเธทเธญเน€เธเนเธเธเธญเธเธฃเนเธฒเธเธญเธทเนเธ (RLS เธ•เธฑเธ”เนเธซเนเน€เธเธตเธขเธ เน โ€” เนเธกเนเธเธญเธเธงเนเธฒเธกเธตเธญเธขเธนเนเธเธฃเธดเธ)
+     * หาผู้ใช้คนเดียวของร้าน
+     * คืน null = ไม่พบ หรือเป็นของร้านอื่น (RLS ตัดให้เงียบ ๆ — ไม่บอกว่ามีอยู่จริง)
      */
     async findById(id: string) {
         const sql = `
@@ -115,8 +116,55 @@ export class UsersRepository {
     }
 
     /**
-     * เนเธเนเนเธเธเนเธญเธกเธนเธฅเธเธนเนเนเธเน โ€” เธชเนเธเน€เธเธเธฒเธฐเธเนเธญเธเธ—เธตเนเน€เธเธฅเธตเนเธขเธ (null = เนเธกเนเนเธ•เธฐ)
-     * เน€เธเธฅเธตเนเธขเธเธฃเธซเธฑเธชเธเนเธฒเธ = เธเธฑเธเธเธฑเธเน€เธเธดเนเธก token_version เน€เธเธทเนเธญเนเธซเน session เน€เธเนเธฒเธ—เธตเนเธขเธฑเธเธเนเธฒเธเธญเธขเธนเนเนเธเนเนเธกเนเนเธ”เน
+     * ดึงข้อมูลโปรไฟล์ของผู้ใช้ปัจจุบัน พร้อมรายการสิทธิ์ (permissions) และข้อมูลร้าน (tenants)
+     */
+    async findMeById(userId: string) {
+        const sql = `
+            SELECT
+                u.users_id,
+                u.username,
+                u.display_name,
+                r.role_name,
+                u.is_active,
+                u.created_at,
+                u.last_login_at,
+                u.deactivated_at,
+                (u.pin_hash IS NOT NULL) AS has_pin,
+                t.tenant_id,
+                t.restaurant_name,
+                t.tenant_slug,
+                COALESCE(
+                    array_agg(p.permission_key ORDER BY p.permission_key) FILTER (WHERE p.permission_key IS NOT NULL),
+                    '{}'
+                ) AS permissions
+            FROM users u
+            JOIN roles r ON r.role_id = u.role_id
+            JOIN tenants t ON t.tenant_id = u.tenant_id
+            LEFT JOIN role_permissions rp ON rp.role_id = r.role_id
+            LEFT JOIN permissions p ON p.permission_id = rp.permission_id
+            WHERE u.users_id = $1 AND u.tenant_id = app_tenant_id()
+            GROUP BY
+                u.users_id,
+                u.username,
+                u.display_name,
+                r.role_name,
+                u.is_active,
+                u.created_at,
+                u.last_login_at,
+                u.deactivated_at,
+                (u.pin_hash IS NOT NULL),
+                t.tenant_id,
+                t.restaurant_name,
+                t.tenant_slug;
+        `;
+        const result = await this.db.query(sql, [userId]);
+        return result.rows[0] ?? null;
+    }
+
+    /**
+     * แก้ไขข้อมูลผู้ใช้ — ส่งเฉพาะช่องที่เปลี่ยน (null = ไม่แตะ)
+     * เปลี่ยนรหัสผ่าน = บังคับเพิ่ม token_version เพื่อให้ session เก่าที่ยังค้างอยู่ใช้ไม่ได้
+     * และปลดล็อกรหัสผ่าน / PIN ให้ด้วยทันทีเมื่อตั้งค่าใหม่
      */
     async updateUser(id: string, data: {
         display_name?: string | null;
@@ -134,7 +182,19 @@ export class UsersRepository {
                 pin_hash = COALESCE($6::varchar, pin_hash),
                 token_version = CASE WHEN $5::varchar IS NULL
                                      THEN token_version
-                                     ELSE token_version + 1 END
+                                     ELSE token_version + 1 END,
+                password_failed_attempts = CASE WHEN $5::varchar IS NULL
+                                                THEN password_failed_attempts
+                                                ELSE 0 END,
+                password_locked_until = CASE WHEN $5::varchar IS NULL
+                                             THEN password_locked_until
+                                             ELSE NULL END,
+                pin_failed_attempts = CASE WHEN $6::varchar IS NULL
+                                           THEN pin_failed_attempts
+                                           ELSE 0 END,
+                pin_locked_until = CASE WHEN $6::varchar IS NULL
+                                        THEN pin_locked_until
+                                        ELSE NULL END
             WHERE users_id = $1 AND tenant_id = app_tenant_id()
             RETURNING users_id, username, display_name, is_active, created_at, last_login_at, deactivated_at,
                       (pin_hash IS NOT NULL) AS has_pin;
@@ -151,8 +211,8 @@ export class UsersRepository {
     }
 
     /**
-     * เธเธดเธ”เนเธเนเธเธฒเธเธเธฑเธเธเธต (soft delete โ€” USR-01)
-     * เธฅเธเธเธฃเธดเธเนเธกเนเนเธ”เน: pos_app เธ–เธนเธ REVOKE DELETE เธเธเธ•เธฒเธฃเธฒเธ users เธญเธขเธนเนเนเธฅเนเธง
+     * ปิดใช้งานบัญชี (soft delete — USR-01)
+     * ลบจริงไม่ได้: pos_app ถูก REVOKE DELETE บนตาราง users อยู่แล้ว
      */
     async deactivateUser(id: string) {
         const sql = `
@@ -169,7 +229,7 @@ export class UsersRepository {
     }
 
     /**
-     * เน€เธเธดเธ”เนเธเนเธเธฒเธเธเธฑเธเธเธตเธ—เธตเนเธ–เธนเธเธเธดเธ”เนเธงเนเธเธฅเธฑเธเธกเธฒ
+     * เปิดใช้งานบัญชีที่ถูกปิดไว้กลับมา
      */
     async reactivateUser(id: string) {
         const sql = `
@@ -186,8 +246,8 @@ export class UsersRepository {
     }
 
     /**
-     * เธ–เธญเธ refresh token เธ—เธดเนเธเธ—เธฑเนเธเธซเธกเธ”เธเธญเธเธเธนเนเนเธเน
-     * เน€เธฃเธตเธขเธเธ•เธญเธเธเธดเธ”เนเธเนเธเธฒเธ/เน€เธเธฅเธตเนเธขเธเธฃเธซเธฑเธชเธเนเธฒเธ เน€เธเธทเนเธญเนเธกเนเนเธซเน session เน€เธเนเธฒเธขเธฑเธเธขเธทเธ”เธญเธขเธนเน
+     * ถอน refresh token ทิ้งทั้งหมดของผู้ใช้
+     * เรียกตอนปิดใช้งาน/เปลี่ยนรหัสผ่าน เพื่อไม่ให้ session เก่ายังยืดอยู่
      */
     async revokeRefreshTokens(userId: string) {
         const sql = `
@@ -216,6 +276,27 @@ export class UsersRepository {
             WHERE users_id = $1 AND tenant_id = app_tenant_id()
         `;
         const result = await this.db.query(sql, [userId]);
+        return result.rows[0] ?? null;
+    }
+
+    /**
+     * นับ PIN ผิดแบบ "คงอยู่จริง" — เขียนนอก transaction ของ request
+     * (ถ้าเขียนใน transaction แล้วโยน 403 ตัวนับจะถูก rollback หายทั้งหมด)
+     * นับครบเพดานจะล็อกให้ใน statement เดียว กันสถานะค้างครึ่ง ๆ
+     */
+    async recordPinFailureDurable(userId: string, maxAttempts: number, lockMinutes: number) {
+        const sql = `
+            UPDATE users
+            SET pin_failed_attempts = pin_failed_attempts + 1,
+                pin_locked_until = CASE
+                    WHEN pin_failed_attempts + 1 >= $2
+                        THEN now() + make_interval(mins => $3)
+                    ELSE pin_locked_until
+                END
+            WHERE users_id = $1 AND tenant_id = app_tenant_id()
+            RETURNING pin_failed_attempts, pin_locked_until
+        `;
+        const result = await this.db.durableQuery(sql, [userId, maxAttempts, lockMinutes]);
         return result.rows[0] ?? null;
     }
 
@@ -264,5 +345,49 @@ export class UsersRepository {
         const result = await this.db.query(sql, [userId]);
         return result.rows[0] ?? null;
     }
-}
 
+    /**
+     * นับรหัสผ่านผิดแบบ "คงอยู่จริง" (เขียนนอก transaction ของ request หลัก)
+     * หากเคยถูกล็อกแล้วเวลาล็อกหมดอายุไปแล้ว (password_locked_until <= now())
+     * จะเริ่มนับรอบใหม่ที่ 1 เพื่อไม่ให้ผิดครั้งแรกหลังปลดล็อกแล้วถูกล็อกซ้ำทันที
+     */
+    async recordPasswordFailureDurable(userId: string, maxAttempts: number, lockMinutes: number) {
+        const sql = `
+            UPDATE users
+            SET password_failed_attempts = CASE
+                    WHEN password_locked_until IS NOT NULL AND password_locked_until <= now()
+                        THEN 1
+                    ELSE password_failed_attempts + 1
+                END,
+                password_locked_until = CASE
+                    WHEN (CASE
+                            WHEN password_locked_until IS NOT NULL AND password_locked_until <= now()
+                                THEN 1
+                            ELSE password_failed_attempts + 1
+                          END) >= $2
+                        THEN now() + make_interval(mins => $3)
+                    ELSE NULL
+                END
+            WHERE users_id = $1
+            RETURNING password_failed_attempts, password_locked_until
+        `;
+        const result = await this.db.durableQuery(sql, [userId, maxAttempts, lockMinutes]);
+        return result.rows[0] ?? null;
+    }
+
+    /**
+     * ล้างตัวนับรหัสผ่านผิดและอัปเดตเวลาเข้าสู่ระบบล่าสุดเมื่อ login สำเร็จ
+     */
+    async recordLoginSuccess(userId: string) {
+        const sql = `
+            UPDATE users
+            SET password_failed_attempts = 0,
+                password_locked_until = NULL,
+                last_login_at = now()
+            WHERE users_id = $1
+            RETURNING users_id, last_login_at
+        `;
+        const result = await this.db.query(sql, [userId]);
+        return result.rows[0] ?? null;
+    }
+}

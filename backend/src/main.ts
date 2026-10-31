@@ -11,6 +11,9 @@ async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
   const config = app.get(ConfigService);
 
+  // รองรับ JSON payload ขนาดสูงสุด 2MB (เช่น รูปเมนูอาหารที่ย่อขนาดเป็น Data URL)
+  app.useBodyParser('json', { limit: '2mb' });
+
   // security header พื้นฐาน — CSP, X-Frame-Options, HSTS
   app.use(helmet());
 
