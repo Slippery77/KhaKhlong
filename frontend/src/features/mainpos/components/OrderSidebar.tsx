@@ -14,6 +14,7 @@ interface PropsOrderSidebar {
     onPayment?: () => void
     onVoidItem?: (item: CartMenu) => void
     onCompItem?: (item: CartMenu) => void
+    onCancelBill?: () => void
 }
 
 // จำนวนที่ยังไม่ถูกส่งเข้าครัว (ส่งแล้วจะยังแสดงใน Sidebar จนกว่าจะชำระเงิน)
@@ -304,6 +305,22 @@ export default function OrderSidebar(props: PropsOrderSidebar) {
                         <p className="text-[11px] text-stone-400 text-center">
                             ส่งครัวรายการที่ยังไม่ส่งก่อน จึงจะชำระเงินได้
                         </p>
+                    )}
+                    {props.onCancelBill && (
+                        <button
+                            type="button"
+                            onClick={props.onCancelBill}
+                            disabled={!props.isOrdered || props.isSending}
+                            title={
+                                !props.isOrdered
+                                    ? 'ยังไม่มีรายการในบิลนี้'
+                                    : 'ยกเลิกทั้งบิล — ต้องมี PIN ผู้จัดการหรือเจ้าของร้าน'
+                            }
+                            className="w-full py-2.5 px-4 rounded-full border border-rose-200 text-rose-600 font-medium text-sm hover:bg-rose-50 active:scale-[0.99] transition-all cursor-pointer flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-rose-400 focus-visible:ring-offset-1 focus-visible:ring-offset-[#FAF7F2]"
+                        >
+                            <Trash2 className="w-4 h-4" strokeWidth={1.75} />
+                            <span>ยกเลิกทั้งบิล</span>
+                        </button>
                     )}
                 </div>
             </div>

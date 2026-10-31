@@ -47,3 +47,63 @@ export async function compOrderItems(
     payload,
   )
 }
+
+export type CloseReason = 'voided_all' | 'empty' | 'walkout'
+
+export interface CancelOrderPayload {
+  /** เหตุผลที่ยกเลิกทั้งบิล (เก็บใน void_reason ของทุกรายการ) */
+  reason: string
+  note?: string
+  /** PIN 6 หลักของผู้จัดการ/เจ้าของร้านที่อนุมัติ */
+  approverPin: string
+}
+
+export interface CancelOrderResult {
+  order: {
+    order_id: string
+    table_id: string
+    closed_at: string | null
+    closed_by: string | null
+    close_reason: CloseReason | 'paid' | null
+    close_note: string | null
+  }
+  voidedCount: number
+  closeReason: CloseReason
+  approvedBy: { usersId: string; displayName: string }
+}
+
+/**
+ * ยกเลิกทั้งบิล — void ทุกรายการที่ยังไม่เสิร์ฟแล้วปิดบิลในครั้งเดียว
+ * โต๊ะจะกลับเป็นว่างทันที (ผ่าน DB trigger) · ต้องมี PIN ผู้อนุมัติ
+ */
+export async function cancelOrder(
+  orderId: string,
+  payload: CancelOrderPayload,
+  accessToken: string | null,
+) {
+  return apiFetch<{ status: string; data: CancelOrderResult }>(
+    `/orders/${orderId}/cancel`,
+    accessToken,
+    'POST',
+    payload,
+  )
+}
+
+export interface CloseUnpaidPayload {
+  closeReason: CloseReason
+  /** บังคับเมื่อ walkout และบิลยังมีรายการ */
+  note?: string
+  approverPin: string
+}
+
+/** ปิดบิลโดยไม่เก็บเงิน (walkout/voided_all/empty) — ต้องมี PIN ผู้อนุมัติ */
+export async function closeUnpaid(
+  orderId: string,
+  payload: CloseUnpaidPayload,
+  accessToken: string | null,
+) {
+  return apiFetch<{
+    status: string
+    data: { order: CancelOrderResult['order']; approvedBy: { usersId: string; displayName: string } }
+  }>(`/orders/${orderId}/close-unpaid`, accessToken, 'POST', payload)
+}

@@ -1,13 +1,19 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import Header from '../../../components/Header'
 import { useTables } from '../hooks/useTables'
 import TableCard from '../components/TableCard'
 import type { DiningTable } from '../types/table.types'
 import { useAuth } from '../../auth/context/AuthContext'
-import { RefreshCw } from 'lucide-react'
+import { CheckCircle2, RefreshCw, X } from 'lucide-react'
 import OpenShiftCard from '../../shifts/components/OpenShiftCard'
 import { useShift } from '../../shifts/hooks/useShift'
+import CancelBillModal, {
+    type BillActionMode,
+    type BillActionPayload,
+} from '../../mainpos/components/CancelBillModal'
+import { cancelOrder, closeUnpaid } from '../../mainpos/api/orders.api'
+import { syncTableStatus } from '../api/tables.api'
 
 // จัดกลุ่มโต๊ะตามชั้น (floor_no มาจาการ JOIN floors — null แปลว่าชั้นถูกลบไปแล้ว ให้ไป"group อื่น")
 function groupByFloor(tables: DiningTable[]): Map<number, DiningTable[]> {
@@ -23,9 +29,14 @@ function groupByFloor(tables: DiningTable[]): Map<number, DiningTable[]> {
 export default function TablesPage() {
     const { tables, isLoading, error, reload } = useTables()
     const navigate = useNavigate()
-    const { user } = useAuth()
+    const { user, accessToken } = useAuth()
     // null = แสดงทุกชั้น, ตัวเลข = แสดงเฉพาะชั้นที่เลือกจาก sidebar
     const [selectedFloor, setSelectedFloor] = useState<number | null>(null)
+    // modal ยกเลิกทั้งบิล / ปิดบิลลูกค้าหนี (ใช้ component เดียวกับหน้า POS)
+    const [billTarget, setBillTarget] = useState<{ table: DiningTable; mode: BillActionMode } | null>(null)
+    const [billLoading, setBillLoading] = useState(false)
+    const [billError, setBillError] = useState<string | null>(null)
+    const [toast, setToast] = useState<string | null>(null)
 
     const occupiedCount = tables.filter((t) => t.status === 'occupied').length
     const floors = groupByFloor(tables)
@@ -45,6 +56,81 @@ export default function TablesPage() {
                 table.open_order_id ? `&orderId=${table.open_order_id}` : ''
             }`,
         )
+    }
+
+    // แจ้งผลแล้วหายเองใน 5 วินาที
+    useEffect(() => {
+        if (!toast) return
+        const timer = window.setTimeout(() => setToast(null), 5000)
+        return () => window.clearTimeout(timer)
+    }, [toast])
+
+    function openBillModal(table: DiningTable, mode: BillActionMode) {
+        if (!table.open_order_id) {
+            setToast('โต๊ะนี้ไม่มีบิลเปิดอยู่ — ลองกด "ซิงค์สถานะโต๊ะ" ก่อน')
+            return
+        }
+        setBillError(null)
+        setToast(null)
+        setBillTarget({ table, mode })
+    }
+
+    async function handleBillConfirm(payload: BillActionPayload) {
+        if (!billTarget) return
+        const orderId = billTarget.table.open_order_id
+        if (!orderId) {
+            setBillError('ไม่พบบิลเปิดของโต๊ะนี้ กรุณาซิงค์สถานะโต๊ะก่อน')
+            return
+        }
+        setBillLoading(true)
+        setBillError(null)
+        try {
+            if (billTarget.mode === 'cancel') {
+                const res = await cancelOrder(
+                    orderId,
+                    { reason: payload.reason, note: payload.note, approverPin: payload.approverPin },
+                    accessToken,
+                )
+                setToast(
+                    `ยกเลิกบิล ${billTarget.table.table_number} แล้ว ${res.data.voidedCount} รายการ · อนุมัติโดย ${res.data.approvedBy.displayName}`,
+                )
+            } else {
+                const res = await closeUnpaid(
+                    orderId,
+                    {
+                        closeReason: payload.closeReason ?? 'walkout',
+                        note: payload.note,
+                        approverPin: payload.approverPin,
+                    },
+                    accessToken,
+                )
+                setToast(
+                    `ปิดบิล ${billTarget.table.table_number} โดยไม่เก็บเงินแล้ว · อนุมัติโดย ${res.data.approvedBy.displayName}`,
+                )
+            }
+            setBillTarget(null)
+            await reload()
+        } catch (err) {
+            setBillError(err instanceof Error ? err.message : 'ดำเนินการไม่สำเร็จ กรุณาลองใหม่')
+        } finally {
+            setBillLoading(false)
+        }
+    }
+
+    async function handleSyncStatus(table: DiningTable) {
+        try {
+            const res = await syncTableStatus(table.table_id, accessToken)
+            const label =
+                res.data.status === 'occupied'
+                    ? 'มีลูกค้า'
+                    : res.data.status === 'out_of_service'
+                        ? 'ปิดใช้งาน'
+                        : 'ว่าง'
+            setToast(`ซิงค์สถานะโต๊ะ ${table.table_number} แล้ว: ${label}`)
+            await reload()
+        } catch (err) {
+            setToast(err instanceof Error ? err.message : 'ซิงค์สถานะโต๊ะไม่สำเร็จ')
+        }
     }
 
     return (
@@ -171,6 +257,9 @@ export default function TablesPage() {
                                                             key={table.table_id}
                                                             table={table}
                                                             onClick={handleTableClick}
+                                                            onCancelBill={(target) => openBillModal(target, 'cancel')}
+                                                            onCloseUnpaid={(target) => openBillModal(target, 'closeUnpaid')}
+                                                            onSyncStatus={handleSyncStatus}
                                                         />
                                                     ))}
                                                 </div>
@@ -189,6 +278,7 @@ export default function TablesPage() {
                                                             key={table.table_id}
                                                             table={table}
                                                             onClick={handleTableClick}
+                                                            onSyncStatus={handleSyncStatus}
                                                         />
                                                     ))}
                                                 </div>
@@ -201,6 +291,42 @@ export default function TablesPage() {
                     )}
                 </main>
             </div>
+            {billTarget && (
+                <CancelBillModal
+                    isOpen={true}
+                    mode={billTarget.mode}
+                    itemCount={billTarget.table.item_count}
+                    total={billTarget.table.total_amount}
+                    loading={billLoading}
+                    error={billError}
+                    onClose={() => {
+                        if (billLoading) return
+                        setBillTarget(null)
+                        setBillError(null)
+                    }}
+                    onConfirm={handleBillConfirm}
+                />
+            )}
+
+            {toast && (
+                <div
+                    role="status"
+                    aria-live="polite"
+                    className="fixed bottom-6 left-1/2 z-50 flex -translate-x-1/2 items-center gap-3 rounded-2xl bg-[#2D241E] px-5 py-3 font-kanit text-white shadow-xl"
+                >
+                    <CheckCircle2 className="h-5 w-5 shrink-0 text-emerald-400" aria-hidden="true" />
+                    <span className="text-sm font-medium">{toast}</span>
+                    <button
+                        type="button"
+                        onClick={() => setToast(null)}
+                        aria-label="ปิดการแจ้งเตือน"
+                        className="cursor-pointer rounded-lg p-1 text-white/70 transition-colors duration-200 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-white/60"
+                    >
+                        <X className="h-4 w-4" />
+                    </button>
+                </div>
+            )}
+
             {needOpenShift &&(
                 <div
                     role="dialog"

@@ -16,7 +16,8 @@ import { useOrderCartHydration, type ApiOrderDetail } from "../hooks/useOrderCar
 import type { Menu, CartMenu, ModifierOption } from "../types/pos.types"
 import { useAuth } from "../../auth/context/AuthContext"
 import { apiFetch,ApiError } from "../../../libs/appClient"
-import { voidOrderItems, compOrderItems } from "../api/orders.api"
+import { voidOrderItems, compOrderItems, cancelOrder } from "../api/orders.api"
+import CancelBillModal, { type BillActionPayload } from "../components/CancelBillModal"
 
 /** รายการที่ยกเลิกได้: ครัวยังไม่เสิร์ฟ (queued/preparing) */
 const getVoidableItemIds = (item: CartMenu) =>
@@ -78,6 +79,10 @@ export default function MainPOS() {
     const [compTarget, setCompTarget] = useState<CartMenu | null>(null)
     const [actionLoading, setActionLoading] = useState(false)
     const [actionError, setActionError] = useState<string | null>(null)
+    // ยกเลิกทั้งบิล (void ทั้งหมด + ปิดบิล) — ต้องมี PIN ผู้อนุมัติ
+    const [isCancelBillOpen, setIsCancelBillOpen] = useState(false)
+    const [cancelBillLoading, setCancelBillLoading] = useState(false)
+    const [cancelBillError, setCancelBillError] = useState<string | null>(null)
     // toast แจ้งผล void/comp สำเร็จ (aria-live)
     const [actionToast, setActionToast] = useState<string | null>(null)
 
@@ -118,6 +123,39 @@ export default function MainPOS() {
         setOrderId(null)
         setSentToast((prev) => ({ ...prev, show: false }))
         navigate(`/${user?.tenantSlug}/tables`)
+    }
+
+    // ยกเลิกทั้งบิล = void รายการที่ยังไม่เสิร์ฟ + ปิดบิลในครั้งเดียว (server ทำใน transaction เดียว)
+    async function handleCancelBill(payload: BillActionPayload) {
+        if (!orderId) {
+            setCancelBillError('ไม่พบบิลที่เปิดอยู่ กรุณากลับไปหน้าโต๊ะแล้วเข้าใหม่')
+            return
+        }
+        setCancelBillLoading(true)
+        setCancelBillError(null)
+        try {
+            const res = await cancelOrder(
+                orderId,
+                { reason: payload.reason, note: payload.note, approverPin: payload.approverPin },
+                accessToken,
+            )
+            setIsCancelBillOpen(false)
+            setcartMenu([])
+            setOrder(false)
+            setOrderId(null)
+            setSentToast((prev) => ({ ...prev, show: false }))
+            setActionToast(
+                `ยกเลิกบิลแล้ว ${res.data.voidedCount} รายการ · อนุมัติโดย ${res.data.approvedBy.displayName}`,
+            )
+            // ให้ผู้ใช้เห็น toast ก่อนกลับไปหน้าโต๊ะ (โต๊ะว่างแล้วจาก DB trigger)
+            window.setTimeout(() => navigate(`/${user?.tenantSlug}/tables`), 1400)
+        } catch (err) {
+            setCancelBillError(
+                err instanceof ApiError ? err.message : 'ยกเลิกบิลไม่สำเร็จ กรุณาลองใหม่',
+            )
+        } finally {
+            setCancelBillLoading(false)
+        }
     }
 
     // รายการโต๊ะสำหรับเลือก (ไม่ใช้แล้ว — เลือกจากหน้าโต๊ะแทน)
@@ -409,6 +447,21 @@ export default function MainPOS() {
         }
     }
 
+    // สรุปบิลฝั่ง server (นับเฉพาะรายการที่ส่งครัวแล้วและยังไม่ถูก void)
+    const billItemCount = cartMenu.reduce(
+        (count, item) =>
+            count +
+            (item.orderItemIds ?? []).filter(
+                (_, index) => item.orderItemStatuses?.[index] !== 'voided',
+            ).length,
+        0,
+    )
+    const billTotal = cartMenu.reduce((sum, item) => {
+        const comped = Math.min((item.orderItemComped ?? []).filter(Boolean).length, item.quantity)
+        const chargeable = Math.max((item.sentQuantity ?? 0) - comped, 0)
+        return sum + item.price * chargeable
+    }, 0)
+
     return (
         <div className="flex flex-col h-screen w-screen overflow-hidden">
             <Header />
@@ -509,6 +562,10 @@ export default function MainPOS() {
                                 setActionError(null)
                                 setCompTarget(item)
                             }}
+                            onCancelBill={() => {
+                                setCancelBillError(null)
+                                setIsCancelBillOpen(true)
+                            }}
                         />
                     )}
                 </aside>
@@ -522,6 +579,22 @@ export default function MainPOS() {
                         onPaymentSuccess={handlePaymentSuccess}
                     />
                 )}
+
+                {/* Modal ยกเลิกทั้งบิล (void ทั้งหมด + ปิดบิล) */}
+                <CancelBillModal
+                    isOpen={isCancelBillOpen}
+                    mode="cancel"
+                    itemCount={billItemCount}
+                    total={billTotal}
+                    loading={cancelBillLoading}
+                    error={cancelBillError}
+                    onClose={() => {
+                        if (cancelBillLoading) return
+                        setIsCancelBillOpen(false)
+                        setCancelBillError(null)
+                    }}
+                    onConfirm={handleCancelBill}
+                />
 
                 {voidTarget && (
                     <VoidItemModal

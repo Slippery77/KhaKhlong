@@ -17,7 +17,6 @@ interface KDSContextType {
     orders: KDSOrder[]           // legacy localStorage orders (ใช้ count badge บน Header)
     sendOrderToKitchen: (table: string, items: CartMenu[]) => KDSOrder
     updateOrderStatus: (orderId: string, newStatus: KDSStatus) => void
-    cancelOrder: (orderId: string) => void
     completeOrder: (orderId: string) => void
     clearAllOrders: () => void
 }
@@ -96,10 +95,6 @@ export function KDSProvider({ children }: { children: ReactNode }) {
         )
     }
 
-    const cancelOrder = (orderId: string) => {
-        setOrders((prev) => prev.filter((order) => order.id !== orderId))
-    }
-
     const completeOrder = (orderId: string) => {
         setOrders((prev) => prev.filter((order) => order.id !== orderId))
     }
@@ -115,7 +110,6 @@ export function KDSProvider({ children }: { children: ReactNode }) {
                 orders,
                 sendOrderToKitchen,
                 updateOrderStatus,
-                cancelOrder,
                 completeOrder,
                 clearAllOrders,
             }}
