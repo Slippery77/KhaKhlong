@@ -238,6 +238,7 @@ CREATE TABLE orders (
     closed_at    TIMESTAMPTZ,
     closed_by    UUID,
     close_reason VARCHAR(20) CHECK (close_reason IN ('paid','voided_all','empty','walkout')),
+    close_note   TEXT,                     -- หมายเหตุการปิดบิลโดยไม่เก็บเงิน (walkout ต้องมี)
     created_at   TIMESTAMPTZ NOT NULL DEFAULT now(),
     updated_at   TIMESTAMPTZ NOT NULL DEFAULT now(),
     FOREIGN KEY (tenant_id, table_id)   REFERENCES dining_tables (tenant_id, table_id),
@@ -769,7 +770,8 @@ BEGIN
      AND OLD.close_reason IS NULL THEN
     PERFORM audit_write(NEW.tenant_id, 'order_closed_unpaid',
       jsonb_build_object('order_id', NEW.order_id, 'order_number', NEW.order_number,
-                         'reason', NEW.close_reason));
+                         'reason', NEW.close_reason, 'note', NEW.close_note,
+                         'table_id', NEW.table_id));
   END IF;
   RETURN NEW;
 END $$;
@@ -834,6 +836,13 @@ CREATE TRIGGER guard_snapshots BEFORE UPDATE ON order_item_modifiers
 -- state machine + กฎ void/comp (ORD-04)
 CREATE FUNCTION trg_order_item_state() RETURNS trigger LANGUAGE plpgsql AS $$
 BEGIN
+  -- บิลที่ปิดแล้วห้ามแก้รายการย้อนหลัง (ยกเว้นแถวที่ voided อยู่แล้ว)
+  IF NEW.status = 'voided' AND OLD.status <> 'voided'
+     AND EXISTS (SELECT 1 FROM orders
+                  WHERE order_id = NEW.order_id AND closed_at IS NOT NULL) THEN
+    RAISE EXCEPTION 'order is closed';
+  END IF;
+
   IF NEW.status <> OLD.status THEN
     IF NOT ((OLD.status, NEW.status) IN (
         ('draft','queued'), ('draft','voided'),
