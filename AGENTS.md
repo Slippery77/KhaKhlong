@@ -24,6 +24,7 @@
 2. ~~Store finder + จำรหัสร้าน~~ เสร็จแล้ว — route `/`, `/login`, `GET /api/public/tenants/:slug`, จำใน `localStorage`, catch-all route
 3. ~~PIN ผู้ใช้งาน (สร้าง/แก้ไข)~~ เสร็จแล้ว — ช่อง PIN ใน `UserFormPopup`, badge `has_pin` ใน `UserTable`, backend hash เป็น `pin_hash`
 4. ~~Void / Comp รายการอาหารพร้อม PIN ผู้อนุมัติ~~ เสร็จแล้ว — `POST /orders/items/void` · `POST /orders/items/comp`, ดู `docs/void-comp-approval-guide.md`
+5. ~~ยกเลิกออเดอร์แล้วโต๊ะค้าง occupied~~ เสร็จแล้ว — `POST /orders/:id/cancel` · `POST /orders/:id/close-unpaid` (walkout) · `POST /tables/:id/sync-status`, ดู `docs/cancel-order-guide.md`
 
 ## กติกาที่ห้ามพลาด
 
@@ -41,7 +42,7 @@
 
 ## เทสต์และตรวจสอบ
 
-- E2E เขียนเป็น **Node `.mjs` เท่านั้น** (PowerShell ทำให้ UTF-8 เพี้ยน) → `backend/test/e2e/` (`e2e-reports.mjs`, `e2e-receipt.mjs`, `e2e-public-tenant.mjs`, `e2e-token-version.mjs`, `e2e-void-comp.mjs`)
+- E2E เขียนเป็น **Node `.mjs` เท่านั้น** (PowerShell ทำให้ UTF-8 เพี้ยน) → `backend/test/e2e/` (`e2e-reports.mjs`, `e2e-receipt.mjs`, `e2e-public-tenant.mjs`, `e2e-token-version.mjs`, `e2e-void-comp.mjs`, `e2e-cancel-order.mjs`)
 - `npx tsc --noEmit` (backend) และ `npx tsc -b` (frontend) **ต้องผ่าน** ก่อน commit
 - `npx jest` (backend) ยังมี spec boilerplate ที่แดงเพราะขาด DI mock — อย่าใช้ผลรวมทั้งชุดตัดสินงาน ให้รันเฉพาะ suite ที่แก้ (`npx jest <module>`) และดู `docs/HANDOFF.md`
 - `npx eslint` ยังแดงทั้งสองฝั่ง (ส่วนใหญ่เป็น prettier) — อย่าเพิ่ง auto-fix ปนกับ feature commit; ไฟล์ที่แตะต้อง lint สะอาด
@@ -51,6 +52,7 @@
 
 - สถานะ/งานค้าง: `docs/HANDOFF.md`
 - Void / Comp + PIN ผู้อนุมัติ: `docs/void-comp-approval-guide.md`
+- ยกเลิกทั้งบิล / ปิดบิลลูกค้าหนี (walkout): `docs/cancel-order-guide.md`
 - Endpoint guides: `docs/payment-module-guide.md`, `docs/inventory-endpoint-guide.md`, `docs/shifts-endpoint-guide.md`, `docs/orders-endpoint-guide.md`, `docs/system-config-guide.md`
 - กฎธุรกิจ/ขอบเขต: `docs/business-rules-pos-updated.md`, `docs/scope_pwa_pos_v2_2.md`
 - สิทธิ์ผู้ใช้: `docs/user-roles-permissions.md`

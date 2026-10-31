@@ -1,7 +1,7 @@
 ﻿# HANDOFF — PWA-POS (ค้าคล่อง / KhaKhlong)
 
 > ไฟล์นี้คือสรุปสถานะล่าสุดสำหรับ **เปิดแชทใหม่แล้วทำงานต่อ** โดยไม่ต้องเล่าบริบทใหม่
-> อัปเดต: **2026-10-30** · branch `feat-aod` · `origin/main` = `b352de6` (2026-10-28) · ดู `git log` สำหรับ hash ล่าสุด
+> อัปเดต: **2026-10-31** · branch `feat-aod` · `origin/main` = `b352de6` (2026-10-28) · ดู `git log` สำหรับ hash ล่าสุด
 > ใช้แทน `docs/backend-todo.md` และ `docs/daily-update-2026-10-21.md` (สองไฟล์นั้นล้าสมัยแล้ว)
 
 ## วิธีใช้ในแชทใหม่
@@ -26,7 +26,7 @@
 | Frontend | React + TypeScript + Vite + Tailwind v4 · dev port **5173** · proxy `/api` → `http://localhost:3000` |
 | Backend | NestJS 11 · port **3000** · prefix `/api` · Swagger เปิด |
 | Database | PostgreSQL 18 · db `pwa_pos` · user `pos_app` · รหัสผ่านอยู่ใน `.env` ของแต่ละเครื่อง (ห้ามเขียนรหัสจริงลงไฟล์นี้) |
-| เอกสารคู่มือ | `docs/setup-guide.md`, `docs/backend-dev-guide.md`, `docs/backend-coding-standard.md`, `docs/payment-module-guide.md`, `docs/void-comp-approval-guide.md`, `docs/system-config-guide.md`, `docs/edit-vat-frontend-guide.md`, `docs/inventory-endpoint-guide.md`, `docs/shifts-endpoint-guide.md`, `docs/orders-endpoint-guide.md`, `docs/user-roles-permissions.md` |
+| เอกสารคู่มือ | `docs/setup-guide.md`, `docs/backend-dev-guide.md`, `docs/backend-coding-standard.md`, `docs/payment-module-guide.md`, `docs/void-comp-approval-guide.md`, `docs/cancel-order-guide.md`, `docs/system-config-guide.md`, `docs/edit-vat-frontend-guide.md`, `docs/inventory-endpoint-guide.md`, `docs/shifts-endpoint-guide.md`, `docs/orders-endpoint-guide.md`, `docs/user-roles-permissions.md` |
 
 ### คำสั่งที่ใช้บ่อย
 
@@ -50,6 +50,7 @@ cd backend; npx jest src/modules/orders
 
 # E2E (ต้องมี backend + DB จริงรันอยู่)
 node backend/test/e2e/e2e-void-comp.mjs
+node backend/test/e2e/e2e-cancel-order.mjs
 node backend/test/e2e/e2e-reports.mjs
 
 # psql (ใส่รหัสผ่านของเครื่องตัวเองจาก .env)
@@ -67,7 +68,7 @@ $env:PGPASSWORD='<รหัสผ่าน pos_app จาก .env>'
 - **Register** — สมัครร้านใหม่ (throttle 3 ครั้ง / 5 นาที / IP) · ตั้ง PIN เจ้าของร้านได้ตอนสมัคร (`PinInput`) · **แก้บั๊กลำดับพารามิเตอร์แล้ว** (ดู 3.9)
 - **Menu** — หมวด/เมนู/ modifiers ครบ endpoint · ผูกเมนูกับกลุ่มตัวเลือกได้ (`linkModifier.tsx`)
 - **Floors / Tables** — พื้นที่ โต๊ะ ผังร้าน
-- **Orders** — create, list (open), get by id, add items (+kitchen ticket), move table, close-unpaid, sync (`sync` ยังรับ `any` — ดู P1) · **void / comp รายการพร้อม PIN ผู้อนุมัติ** (ดู 3.8)
+- **Orders** — create, list (open), get by id, add items (+kitchen ticket), move table, close-unpaid, sync · **void / comp รายการพร้อม PIN ผู้อนุมัติ** (ดู 3.8) · **ยกเลิกทั้งบิล + ปิดบิลลูกค้าหนี (walkout) พร้อม PIN และคืนโต๊ะได้จริง** (ดู 3.13 / `docs/cancel-order-guide.md`)
 - **Inventory** — stock view, movements (รับเข้า/ปรับ/ของเสีย), **count batch** (รอบล่าสุด)
 - **Shifts** — open, current, close, verify (PIN ผู้จัดการ/เจ้าของ), reopen, cashbook, list · **`GET /shifts` ใช้ `report:view_all` หรือ `report:view_own_shift` แล้ว** (employee เห็นกะตัวเอง) · **PIN lock เก็บใน DB** (คงทนข้าม restart) · **กะค้างรับรองเกิน `shift_escalation_hours` (default 4 ชม.) ถูก escalate หา owner อัตโนมัติ**
 - **KDS** — คิวครัว + mark ready
@@ -203,6 +204,21 @@ commit เดียว 4 เรื่อง:
   - E2E มือ: สร้างร้าน → เปิดกะ → ปิดด้วยยอดไม่ตรง (`pending_verification`) → ย้อน `closed_at` ไป 6 ชม. (เกณฑ์ 4 ชม.) → restart backend → 10 วินาทีถัดไป log `escalated 1 shift(s)` และ DB เป็น `status='escalated'`, `escalated_to` = owner ของร้าน
 - ข้อควรรู้: service ยังเป็น `setInterval` ในโปรเซส — ถ้ารันหลาย instance พร้อมกัน ทุก instance จะเรียกฟังก์ชัน (ปลอดภัยเพราะ `FOR UPDATE` + เงื่อนไขสถานะ) แต่ถ้าอยากได้คิวเดียวควรย้ายไป `pg_cron`
 
+### 3.13 ยกเลิกออเดอร์แล้วคืนโต๊ะ (Cancel Order / Walkout) — 2026-10-31
+
+- **อาการ**: กด "ยกเลิก" รายการอาหารแล้วโต๊ะยังขึ้น "มีลูกค้า" ตลอดไป — FE เรียกแค่ `POST /orders/items/void` ไม่เคยปิดบิล (`orders.closed_at` ยัง NULL)
+- **แนวทาง**: ไม่เปลี่ยน invariant "โต๊ะว่าง = ไม่มีบิลเปิด" (ไม่ให้สถานะโต๊ะอ้างอิง `order_items` เพราะเปิดช่อง double-booking) — เพิ่มเส้นทางปิดบิลที่ atomic + บังคับ PIN ผู้อนุมัติ
+- **DB**: `PATCH_08_cancel_order.sql` — `orders.close_note`, บล็อก void รายการของบิลปิด (`order is closed`), audit `order_closed_unpaid` เก็บ note (apply ด้วย user `postgres` แล้ว + mirror `FULL_INSTALL.sql`)
+- **Backend**:
+  - `POST /orders/:id/cancel` — void ทุกรายการที่ยังไม่เสิร์ฟ + ปิดบิลใน transaction เดียว (`voided_all` / `empty`); served → `409 ORDER_HAS_SERVED_ITEMS`; attempt เปิด → `409 PAYMENT_ATTEMPT_OPEN`; ผู้อนุมัติต้องมี `void:approve`
+  - `POST /orders/:id/close-unpaid` — route เปลี่ยนเป็น `order:create` และตรวจสิทธิ์ `order:close_unpaid` ที่ PIN ผู้อนุมัติ; `note` บังคับเมื่อ walkout และมีรายการ
+  - `closed_by` = **ผู้อนุมัติ** (คนกดอยู่ใน `audit_logs.user_id`) — ใช้ convention เดียวกับ void/comp
+  - `POST /tables/:id/sync-status` — เรียก `sync_table_status()` ตรง ๆ (`table:manage`)
+  - `syncOrders` — `SAVEPOINT` ต่อใบ + ตอบ conflict รายใบ, `createdBy` ใช้จาก token; `moveTable` map `23505` → 409
+- **Frontend**: `CancelBillModal` (โหมด cancel / closeUnpaid), ปุ่ม "ยกเลิกทั้งบิล" ใน `OrderSidebar`, เมนูจัดการโต๊ะใน `TableCard` (ยกเลิกทั้งบิล / walkout / sync), การ์ดโต๊ะแสดงจำนวนรายการ + ยอดค้าง, เอา KDS `cancelOrder` แบบ local-only ออก
+- **ทดสอบ**: unit `backend/src/modules/orders/orders-cancel.spec.ts` (11 tests) · E2E `backend/test/e2e/e2e-cancel-order.mjs`
+- **เอกสาร**: `docs/cancel-order-guide.md`
+
 ---
 
 ## 4. งานค้าง P0
@@ -220,7 +236,7 @@ commit เดียว 4 เรื่อง:
 
 ### P1 — ความถูกต้องและความปลอดภัย
 
-1. **`POST /orders/sync` รับ `@Body() dto: any`** — ValidationPipe ไม่ตรวจ และ `createdBy` มาจาก body (ปลอมผู้สร้างบิลได้) ควรมี DTO + ใช้ user จาก JWT เหมือน `POST /orders` หรือเลิกใช้ถ้า PWA ส่งผ่าน `POST /orders` + add items
+1. **`POST /orders/sync` ยังรับ `@Body() dto: any`** — ValidationPipe ไม่ตรวจ payload (แก้ `createdBy` ให้ใช้จาก JWT และตอบ conflict รายใบแล้ว) ควรมี DTO + จำกัดขนาด batch
 2. **ไม่มี login lockout / audit login** — `password_locked_until` ไม่ถูกใช้, `login_success` / `login_failed` ไม่ถูกเขียน (มีแค่ `logout`)
 3. **ไม่มี `GET /users/me`, `POST /auth/pin-login`**
 4. **`/:tenantSlug/homepage` ยังเป็น TODO**
@@ -243,6 +259,7 @@ commit เดียว 4 เรื่อง:
 - `token_version` ไม่ถูกตรวจใน JWT guard → `6b5c7d3`
 - ไม่มี cron `escalate_overdue_shifts()` → มี service แล้ว และ**ทำงานจริงแล้ว** 2026-10-30 (ดู 3.12)
 - ไม่มี void/comp → 2026-10-30 (`dc0bf7a`)
+- ยกเลิกออเดอร์แล้วโต๊ะค้าง occupied → 2026-10-31 (cancel/close-unpaid + PIN, ดู 3.13)
 
 ---
 
