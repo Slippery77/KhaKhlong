@@ -22,6 +22,14 @@ export class UsersService {
         return this.usersRepository.findUsernameAndTenantID(tenantID, username);
     }
 
+    async recordPasswordFailureDurable(userId: string, maxAttempts: number, lockMinutes: number) {
+        return this.usersRepository.recordPasswordFailureDurable(userId, maxAttempts, lockMinutes);
+    }
+
+    async recordLoginSuccess(userId: string) {
+        return this.usersRepository.recordLoginSuccess(userId);
+    }
+
     async createOwner(
         tenant_id: string,
         role_id: string,
@@ -121,7 +129,8 @@ export class UsersService {
             dto.display_name === undefined &&
             dto.username === undefined &&
             dto.role_name === undefined &&
-            dto.password === undefined
+            dto.password === undefined &&
+            dto.pin === undefined
         ) {
             throw new BadRequestException('ไม่มีข้อมูลที่เปลี่ยน');
         }
