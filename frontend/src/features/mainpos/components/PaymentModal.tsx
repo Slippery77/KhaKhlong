@@ -3,25 +3,37 @@ import { X, Banknote, QrCode, CheckCircle2, Loader2, Info, Printer } from 'lucid
 import { usePayment } from '../hooks/usePayment';
 import { ApiError } from '../../../libs/appClient';
 import { ReceiptModal } from '../../receipt';
-import type { OrderPaymentSummary } from '../hooks/usePayment';
 import type { PaymentAttempt, PaymentMethod, PaymentResult } from '../types/payment.type';
 import { QRCodeSVG } from 'qrcode.react';
 
 
 interface PaymentModalProps {
     table: string;
-    orderId: string;
+    /** บิลเดียว (หน้า POS) */
+    orderId?: string;
+    /** รวมโต๊ะคิดเงิน: บิลหลายใบในการชำระครั้งเดียว (ถ้ามีจะใช้แทน orderId) */
+    orderIds?: string[];
     onClose: () => void;
     onPaymentSuccess: (receiptNumber: string) => void;
 }
 
 type Step = 'choose' | 'confirm' | 'done';
 
+/** ยอดก่อนชำระที่ได้จาก server (บิลเดียวหรือหลายบิล) */
+interface PreviewSummary {
+    amount: number;
+    itemCount: number;
+}
+
 const baht = (n: number) =>
     `฿${n.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
-export default function PaymentModal({ table, orderId, onClose, onPaymentSuccess }: PaymentModalProps) {
-    const { createAttempt, pay, cancel, getOrderSummary } = usePayment();
+export default function PaymentModal({ table, orderId, orderIds, onClose, onPaymentSuccess }: PaymentModalProps) {
+    const { createAttempt, pay, cancel, getOrderSummary, getOrdersSummary } = usePayment();
+    // key แบบ string กัน effect วนซ้ำเมื่อ parent สร้าง array ใหม่ทุก render
+    const idsKey = (orderIds && orderIds.length > 0 ? orderIds : orderId ? [orderId] : []).join(',');
+    const ids = idsKey ? idsKey.split(',') : [];
+    const isMerged = ids.length > 1;
 
     const [step, setStep] = useState<Step>('choose');
     const [method, setMethod] = useState<PaymentMethod>('cash');
@@ -32,7 +44,7 @@ export default function PaymentModal({ table, orderId, onClose, onPaymentSuccess
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
     // ยอดรวมก่อนชำระเงิน — ดึงจาก server เท่านั้น (client ไม่คำนวณ VAT/ยอดรวมเอง)
-    const [summary, setSummary] = useState<OrderPaymentSummary | null>(null);
+    const [summary, setSummary] = useState<PreviewSummary | null>(null);
     const [summaryLoading, setSummaryLoading] = useState(true);
     // เพิ่มค่าเพื่อสั่งโหลดยอดใหม่จาก event handler (ไม่ setState ใน effect โดยตรง)
     const [summaryReloadKey, setSummaryReloadKey] = useState(0);
@@ -56,9 +68,12 @@ export default function PaymentModal({ table, orderId, onClose, onPaymentSuccess
     // โหลดยอดรวมล่าสุดของบิล (ทำใน promise callback เพื่อไม่ให้เกิด cascading render)
     useEffect(() => {
         let cancelled = false;
-        getOrderSummary(orderId)
+        const list = idsKey ? idsKey.split(',') : [];
+        const request: Promise<PreviewSummary> =
+            list.length > 1 ? getOrdersSummary(list) : getOrderSummary(list[0] ?? '');
+        request
             .then((data) => {
-                if (!cancelled) setSummary(data);
+                if (!cancelled) setSummary({ amount: data.amount, itemCount: data.itemCount });
             })
             .catch(() => {
                 // แสดงสถานะ "ดึงยอดไม่ได้" โดยไม่บล็อกการชำระ เพราะยอดจริงยืนยันตอนสร้าง attempt
@@ -70,7 +85,7 @@ export default function PaymentModal({ table, orderId, onClose, onPaymentSuccess
         return () => {
             cancelled = true;
         };
-    }, [getOrderSummary, orderId, summaryReloadKey]);
+    }, [getOrderSummary, getOrdersSummary, idsKey, summaryReloadKey]);
 
     // เรียกจาก event handler: แสดง loading แล้วให้ effect ด้านบนโหลดยอดใหม่
     const reloadSummary = () => {
@@ -84,7 +99,7 @@ export default function PaymentModal({ table, orderId, onClose, onPaymentSuccess
         setError(null);
         setPendingId(null);
         try {
-            const a = await createAttempt([orderId], method);
+            const a = await createAttempt(ids, method);
             setAttempt(a);
             setCashInput(String(a.amount));
             setStep('confirm');
@@ -165,7 +180,7 @@ export default function PaymentModal({ table, orderId, onClose, onPaymentSuccess
             <div className="bg-white rounded-3xl border border-stone-200/90 shadow-2xl w-full max-w-lg max-h-[calc(100dvh-2rem)] overflow-hidden flex flex-col">
                 {/* Header */}
                 <div className="px-6 py-4 border-b border-stone-100 flex items-center justify-between bg-[#FAF7F2]">
-                    <h3 className="font-semibold text-base text-[#2D241E]">ชำระเงิน ({table})</h3>
+                    <h3 className="font-semibold text-base text-[#2D241E]">{isMerged ? 'ชำระเงินรวม' : 'ชำระเงิน'} ({table})</h3>
                     <button type="button" onClick={handleClose} disabled={loading}
                         className="p-1.5 rounded-lg text-stone-400 hover:text-stone-700 hover:bg-stone-200/50 transition cursor-pointer">
                         <X className="w-5 h-5" />
@@ -186,7 +201,9 @@ export default function PaymentModal({ table, orderId, onClose, onPaymentSuccess
                                             {summaryLoading ? (
                                                 'กำลังคำนวณยอด...'
                                             ) : summary ? (
-                                                `${summary.itemCount.toLocaleString('th-TH')} รายการในบิล`
+                                                isMerged
+                                                    ? `${summary.itemCount.toLocaleString('th-TH')} รายการ · รวม ${ids.length} บิล`
+                                                    : `${summary.itemCount.toLocaleString('th-TH')} รายการในบิล`
                                             ) : (
                                                 <>
                                                     ดึงยอดรวมไม่สำเร็จ{' '}

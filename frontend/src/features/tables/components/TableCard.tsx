@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react"
-import { MoreVertical, RefreshCw, Trash2, UserX, Users, UtensilsCrossed } from 'lucide-react'
+import { Check, MoreVertical, RefreshCw, Trash2, UserX, Users, UtensilsCrossed } from 'lucide-react'
 import type { DiningTable } from '../types/table.types'
 
 interface TableCardProps {
@@ -11,6 +11,11 @@ interface TableCardProps {
     onCloseUnpaid?: (table: DiningTable) => void
     /** คำนวณสถานะโต๊ะใหม่จากบิลที่ยังเปิดอยู่ (ซ่อมสถานะเพี้ยน) */
     onSyncStatus?: (table: DiningTable) => void
+    /** โหมดรวมโต๊ะคิดเงิน: แตะการ์ด = เลือก/ยกเลิกเลือกแทนการเปิดหน้า POS */
+    selectionMode?: boolean
+    /** โต๊ะนี้ถูกเลือกไว้ในโหมดรวมโต๊ะ */
+    selected?: boolean
+    onToggleSelect?: (table: DiningTable) => void
 }
 
 export default function TableCard({
@@ -19,11 +24,18 @@ export default function TableCard({
     onCancelBill,
     onCloseUnpaid,
     onSyncStatus,
+    selectionMode = false,
+    selected = false,
+    onToggleSelect,
 }: TableCardProps) {
     const isOccupied = table.status === 'occupied'
     const isDisabled = table.status === 'out_of_service'
     // มีรายการค้างจริง (เอาไว้แสดงจำนวนรายการ + ยอดบิล)
     const hasOrder = isOccupied && table.item_count > 0
+    // รวมคิดเงินได้เฉพาะโต๊ะที่มีบิลเปิดอยู่
+    const isSelectable = selectionMode && isOccupied && Boolean(table.open_order_id)
+    // ในโหมดรวมโต๊ะ โต๊ะที่เลือกไม่ได้จะถูกหรี่และกดไม่ได้
+    const isBlockedBySelection = selectionMode && !isSelectable
     const [isMenuOpen, setIsMenuOpen] = useState(false)
     const menuRef = useRef<HTMLDivElement | null>(null)
 
@@ -49,36 +61,59 @@ export default function TableCard({
         action?.(table)
     }
 
+    const handleCardClick = () => {
+        if (isDisabled || isBlockedBySelection) return
+        if (isSelectable) {
+            onToggleSelect?.(table)
+            return
+        }
+        onClick(table)
+    }
+
+    const cardTone = isDisabled
+        ? 'border-stone-200 bg-stone-100 cursor-not-allowed opacity-50'
+        : isBlockedBySelection
+            ? 'border-stone-200 bg-white cursor-not-allowed opacity-40'
+            : selected
+                ? 'border-[#8C6D58] bg-[#F6EBDD] ring-2 ring-[#8C6D58]/40 shadow-md cursor-pointer active:scale-[0.98]'
+                : isOccupied
+                    ? 'border-[#C49A72] bg-[#FDF6EE] hover:bg-[#FAF0E4] cursor-pointer shadow-sm hover:shadow-md active:scale-[0.98]'
+                    : 'border-stone-200 bg-white hover:bg-[#FAF7F2] cursor-pointer hover:border-[#D4B896] active:scale-[0.98]'
+
     return (
         <div className="relative h-[140px] font-kanit">
             <button
                 type="button"
-                onClick={() => !isDisabled && onClick(table)}
-                disabled={isDisabled}
+                onClick={handleCardClick}
+                disabled={isDisabled || isBlockedBySelection}
+                aria-pressed={isSelectable ? selected : undefined}
+                aria-label={
+                    isSelectable
+                        ? `${selected ? 'ยกเลิกเลือก' : 'เลือก'}โต๊ะ ${table.table_number} เพื่อรวมคิดเงิน`
+                        : undefined
+                }
                 className={`
-                    flex h-full w-full flex-col overflow-hidden rounded-2xl border p-4 text-left transition-all duration-150 font-kanit
-                    ${isDisabled
-                        ? 'border-stone-200 bg-stone-100 cursor-not-allowed opacity-50'
-                        : isOccupied
-                            ? 'border-[#C49A72] bg-[#FDF6EE] hover:bg-[#FAF0E4] cursor-pointer shadow-sm hover:shadow-md active:scale-[0.98]'
-                            : 'border-stone-200 bg-white hover:bg-[#FAF7F2] cursor-pointer hover:border-[#D4B896] active:scale-[0.98]'
-                    }
+                    flex h-full w-full flex-col overflow-hidden rounded-2xl border p-4 text-left transition-all duration-200 font-kanit
+                    focus:outline-none focus-visible:ring-2 focus-visible:ring-[#8C6D58] focus-visible:ring-offset-2 focus-visible:ring-offset-[#FAF7F2]
+                    ${cardTone}
                 `}
             >
-                {/* สถานะจุดมุมขวาบน (เยื้องซ้ายให้พ้นปุ่มเมนูจัดการโต๊ะ) */}
-                <span
-                    className={`
-                        absolute top-3.5 right-12 w-2.5 h-2.5 rounded-full
-                        ${isDisabled ? 'bg-stone-300'
-                            : isOccupied ? 'bg-[#C27803]'
-                            : 'bg-emerald-400'}
-                    `}
-                    aria-hidden="true"
-                />
+                {/* สถานะจุดมุมขวาบน (เยื้องซ้ายให้พ้นปุ่มเมนูจัดการโต๊ะ / ช่องเลือก) */}
+                {!selectionMode && (
+                    <span
+                        className={`
+                            absolute top-3.5 right-12 w-2.5 h-2.5 rounded-full
+                            ${isDisabled ? 'bg-stone-300'
+                                : isOccupied ? 'bg-[#C27803]'
+                                : 'bg-emerald-400'}
+                        `}
+                        aria-hidden="true"
+                    />
+                )}
 
                 {/* ป้ายสถานะ */}
                 <span className={`text-[11px] font-medium mb-1 ${isOccupied ? 'text-[#A0732E]' : 'text-stone-400'}`}>
-                    {isDisabled ? 'ปิดใช้งาน' : isOccupied ? 'มีลูกค้า' : 'ว่าง'}
+                    {isDisabled ? 'ปิดใช้งาน' : isOccupied ? (selected ? 'เลือกรวมบิลแล้ว' : 'มีลูกค้า') : 'ว่าง'}
                 </span>
 
                 {/* เลขโต๊ะ */}
@@ -109,8 +144,22 @@ export default function TableCard({
                 </div>
             </button>
 
-            {/* เมนูจัดการโต๊ะ — วางซ้อนมุมขวาบน ไม่ซ้อนกับป้ายสถานะ (จุดสถานะย้ายไปมุมล่างของป้าย) */}
-            {!isDisabled && (
+            {/* ช่องเลือก (โหมดรวมโต๊ะ) — เป็นตัวบ่งชี้ภาพ ส่วนการกดอยู่ที่ทั้งการ์ด */}
+            {isSelectable && (
+                <span
+                    aria-hidden="true"
+                    className={`pointer-events-none absolute right-3 top-3 flex h-6 w-6 items-center justify-center rounded-lg border-2 transition-all duration-200 ${
+                        selected
+                            ? 'border-[#8C6D58] bg-[#8C6D58] text-white shadow-sm'
+                            : 'border-[#C49A72] bg-white text-transparent'
+                    }`}
+                >
+                    <Check className="h-4 w-4" strokeWidth={3} />
+                </span>
+            )}
+
+            {/* เมนูจัดการโต๊ะ — ซ่อนระหว่างโหมดรวมโต๊ะ เพื่อไม่ให้กดผิดปุ่ม */}
+            {!isDisabled && !selectionMode && (
                 <div ref={menuRef} className="absolute right-2 top-2 z-20">
                     <button
                         type="button"
