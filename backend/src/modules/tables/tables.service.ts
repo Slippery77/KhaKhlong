@@ -137,6 +137,23 @@ export class TablesService {
   }
 
   /**
+   * คำนวณสถานะโต๊ะใหม่จากบิลที่ยังเปิดอยู่ (ไม่มีผลข้างเคียงถ้ามีบิลเปิด)
+   * ใช้ซ่อมกรณีสถานะเพี้ยน — ห้าม UPDATE dining_tables.status ตรง ๆ
+   */
+  async syncStatus(id: string) {
+    const table = await this.tablesRepository.findById(id);
+    if (!table) throw new NotFoundException('ไม่พบข้อมูลโต๊ะ');
+
+    await this.tablesRepository.syncStatus(id);
+
+    const updated = await this.tablesRepository.findById(id);
+    return {
+      status: 'success',
+      data: { tableId: id, status: updated?.status ?? table.status },
+    };
+  }
+
+  /**
    * TODO: ปรับสถานะเปิด/ปิดการใช้งานโต๊ะ (is_active)
    */
   async setStatus(id: string, isActive: boolean) {

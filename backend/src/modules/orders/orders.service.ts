@@ -16,6 +16,7 @@ import { MoveTableDto } from './dto/move-table.dto';
 import { CloseUnpaidDto } from './dto/close-unpaid.dto';
 import { VoidOrderItemDto } from './dto/void-order-item.dto';
 import { CompOrderItemDto } from './dto/comp-order-item.dto';
+import { CancelOrderDto } from './dto/cancel-order.dto';
 
 @Injectable()
 export class OrdersService {
@@ -99,6 +100,13 @@ export class OrdersService {
       return { status: 'success', data: order };
     } catch (err: any) {
       if (err instanceof NotFoundException) throw err;
+      if (err.code === '23505') {
+        // uq_orders_one_active_per_table — มีบิลเปิดของโต๊ะปลายทางอยู่แล้ว
+        throw new ConflictException({
+          code: 'TABLE_OCCUPIED',
+          message: 'โต๊ะปลายทางมีบิลเปิดอยู่แล้ว',
+        });
+      }
       if (err.code === 'P0001') {
         const msg: string = err.message ?? '';
         if (msg.includes('target table must be available')) {
@@ -112,30 +120,201 @@ export class OrdersService {
     }
   }
 
-  async closeUnpaid(orderId: string, dto: CloseUnpaidDto, userId: string) {
+  async closeUnpaid(orderId: string, dto: CloseUnpaidDto, requesterId: string) {
+    const approver = await this.verifyApproverPin(
+      dto.approverPin,
+      'order:close_unpaid',
+      requesterId,
+    );
+
+    const order = await this.ordersRepository.lockOrderForUpdate(orderId);
+    if (!order || order.closed_at) {
+      throw new NotFoundException('ไม่พบบิล หรือบิลปิดแล้ว');
+    }
+
+    const attempt = await this.ordersRepository.findOpenPaymentAttempt(orderId);
+    if (attempt) {
+      throw new ConflictException({
+        code: 'PAYMENT_ATTEMPT_OPEN',
+        message:
+          'บิลนี้มีรายการชำระเงินค้างอยู่ กรุณายกเลิกรายการชำระก่อนปิดบิล',
+      });
+    }
+
+    const counts = await this.ordersRepository.countNonVoidedItems(orderId);
+    if (
+      dto.closeReason === 'walkout' &&
+      counts.total > 0 &&
+      !dto.note?.trim()
+    ) {
+      throw new BadRequestException('การปิดบิลแบบลูกค้าหนีต้องระบุหมายเหตุ');
+    }
+
     try {
-      const order = await this.ordersRepository.closeUnpaid(orderId, dto, userId);
-      if (!order) throw new NotFoundException('ไม่พบบิล หรือบิลปิดแล้ว');
-      return { status: 'success', data: order };
+      // closed_by = ผู้อนุมัติ (คนกดอยู่ใน audit_logs.user_id จาก app_user_id())
+      const closed = await this.ordersRepository.closeUnpaid(
+        orderId,
+        dto,
+        approver.users_id,
+      );
+      if (!closed)
+        throw new ConflictException('ปิดบิลไม่สำเร็จ กรุณารีเฟรชหน้าจอ');
+      return {
+        status: 'success',
+        data: {
+          order: closed,
+          approvedBy: {
+            usersId: approver.users_id,
+            displayName: approver.display_name,
+          },
+        },
+      };
     } catch (err: any) {
-      if (err instanceof NotFoundException) throw err;
-      if (err.code === 'P0001') {
-        const msg: string = err.message ?? '';
-        if (msg.includes('cannot close as')) {
-          throw new ConflictException('ยังมีรายการที่ยังไม่ถูกยกเลิก ไม่สามารถปิดบิลด้วยเหตุผลนี้ได้');
-        }
-        if (msg.includes('closed order is immutable')) {
-          throw new ConflictException('บิลนี้ปิดแล้ว');
-        }
-      }
-      throw err;
+      throw this.mapCloseError(err);
     }
   }
 
-  async syncOrders(dto: any) {
-    const orders = Array.isArray(dto) ? dto : dto.orders ?? [];
+  /**
+   * ยกเลิกทั้งบิล: void ทุกรายการที่ยังไม่เสิร์ฟ แล้วปิดบิลใน transaction เดียว
+   * (ทั้ง request อยู่ใน transaction ของ TenantContextInterceptor)
+   */
+  async cancelOrder(orderId: string, dto: CancelOrderDto, requesterId: string) {
+    const approver = await this.verifyApproverPin(
+      dto.approverPin,
+      'order:close_unpaid',
+      requesterId,
+    );
+
+    const order = await this.ordersRepository.lockOrderForUpdate(orderId);
+    if (!order || order.closed_at) {
+      throw new NotFoundException('ไม่พบบิล หรือบิลปิดแล้ว');
+    }
+
+    const attempt = await this.ordersRepository.findOpenPaymentAttempt(orderId);
+    if (attempt) {
+      throw new ConflictException({
+        code: 'PAYMENT_ATTEMPT_OPEN',
+        message: 'บิลนี้มีรายการชำระเงินค้างอยู่ กรุณายกเลิกรายการชำระก่อน',
+      });
+    }
+
+    const counts = await this.ordersRepository.countNonVoidedItems(orderId);
+    if (counts.blocked > 0) {
+      throw new ConflictException({
+        code: 'ORDER_HAS_SERVED_ITEMS',
+        message:
+          'บิลนี้มีรายการที่เสิร์ฟ/พร้อมเสิร์ฟแล้ว ยกเลิกทั้งบิลไม่ได้ — ใช้ "ปิดบิลลูกค้าหนี (walkout)" แทน',
+      });
+    }
+
+    if (counts.total > 0) {
+      const canVoid = await this.ordersRepository.hasPermission(
+        approver.users_id,
+        'void:approve',
+      );
+      if (!canVoid) {
+        throw new ConflictException({
+          code: 'APPROVER_LACKS_VOID',
+          message: 'ผู้อนุมัติไม่มีสิทธิ์ยกเลิกรายการ (void:approve)',
+        });
+      }
+    }
+
     try {
-      const results = await this.ordersRepository.syncOrders(orders);
+      const voidedCount =
+        counts.total > 0
+          ? await this.ordersRepository.voidAllItems(
+              orderId,
+              approver.users_id,
+              dto.reason,
+            )
+          : 0;
+
+      if (voidedCount !== counts.total) {
+        // มีรายการใหม่แทรกเข้ามาระหว่างทำ (เครื่องอื่นส่งครัว) — ให้กดใหม่
+        throw new ConflictException({
+          code: 'ORDER_CHANGED',
+          message: 'มีรายการใหม่เข้ามาในบิลนี้ กรุณาตรวจสอบแล้วกดอีกครั้ง',
+        });
+      }
+
+      const closeReason = counts.total > 0 ? 'voided_all' : 'empty';
+      const closed = await this.ordersRepository.closeUnpaid(
+        orderId,
+        { closeReason, approverPin: dto.approverPin, note: dto.note },
+        approver.users_id,
+      );
+      if (!closed)
+        throw new ConflictException('ปิดบิลไม่สำเร็จ กรุณารีเฟรชหน้าจอ');
+
+      return {
+        status: 'success',
+        data: {
+          order: closed,
+          voidedCount,
+          closeReason,
+          approvedBy: {
+            usersId: approver.users_id,
+            displayName: approver.display_name,
+          },
+        },
+      };
+    } catch (err: any) {
+      throw this.mapCloseError(err);
+    }
+  }
+
+  /** แปลง error จาก trigger ให้ FE จัดการได้ */
+  private mapCloseError(err: any) {
+    if (err instanceof HttpException) return err;
+    if (err?.code === 'P0001') {
+      const msg: string = err.message ?? '';
+      if (msg.includes('cannot close as')) {
+        return new ConflictException({
+          code: 'ORDER_HAS_ITEMS',
+          message:
+            'ยังมีรายการที่ยังไม่ถูกยกเลิก ไม่สามารถปิดบิลด้วยเหตุผลนี้ได้',
+        });
+      }
+      if (
+        msg.includes('closed order is immutable') ||
+        msg.includes('order already closed')
+      ) {
+        return new ConflictException({
+          code: 'ORDER_CLOSED',
+          message: 'บิลนี้ปิดแล้ว',
+        });
+      }
+      if (msg.includes('lacks permission order:close_unpaid')) {
+        return new ForbiddenException(
+          'ผู้อนุมัติไม่มีสิทธิ์ปิดบิลโดยไม่เก็บเงิน',
+        );
+      }
+      if (msg.includes('order is closed')) {
+        return new ConflictException({
+          code: 'ORDER_CLOSED',
+          message: 'บิลนี้ปิดแล้ว',
+        });
+      }
+      if (msg.includes('no open shift')) {
+        return new ConflictException('ยังไม่มีกะเปิดอยู่ กรุณาเปิดกะก่อน');
+      }
+    }
+    return err;
+  }
+
+  async syncOrders(dto: any, requesterId: string) {
+    const orders = Array.isArray(dto) ? dto : (dto.orders ?? []);
+    if (orders.length > 0 && !requesterId) {
+      throw new BadRequestException(
+        'ไม่พบผู้ใช้ที่ทำรายการ (token ไม่ถูกต้อง)',
+      );
+    }
+    try {
+      const results = await this.ordersRepository.syncOrders(
+        orders,
+        requesterId,
+      );
       return { status: 'success', data: results };
     } catch (err: any) {
       if (err.code === 'P0001') {

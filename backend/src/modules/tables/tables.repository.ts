@@ -64,6 +64,14 @@ export class TablesRepository {
   }
 
   /**
+   * คำนวณสถานะโต๊ะใหม่จากบิลที่ยังเปิดอยู่ — ใช้ฟังก์ชันกลางของ DB
+   * (ห้ามเขียน UPDATE dining_tables.status ตรง ๆ หรือลอกสูตรมาไว้ใน NestJS)
+   */
+  async syncStatus(id: string) {
+    await this.db.query('SELECT sync_table_status($1)', [id]);
+  }
+
+  /**
    * TODO: ค้นหาโต๊ะตาม ID
    */
   async findById(id: string) {

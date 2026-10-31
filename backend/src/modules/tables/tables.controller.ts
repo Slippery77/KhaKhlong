@@ -224,4 +224,25 @@ export class TablesController {
   async enable(@Param('id', ParseUUIDPipe) id: string) {
     return this.tablesService.setStatus(id, true);
   }
+
+  /**
+   * POST /tables/:id/sync-status
+   * คำนวณสถานะโต๊ะใหม่จากบิลที่ยังเปิดอยู่ (ซ่อมสถานะเพี้ยน)
+   * Permission ที่ต้องใช้: table:manage
+   */
+  @ApiOperation({
+    summary: 'ซิงค์สถานะโต๊ะจากบิลที่ยังเปิดอยู่',
+    description:
+      'เรียก sync_table_status() ของ DB — ถ้ามีบิลเปิดอยู่สถานะจะเป็น occupied ถ้าไม่มีจะเป็น available ' +
+      'ใช้ซ่อมกรณีสถานะเพี้ยนโดยไม่ต้องแก้สถานะมือ (โต๊ะ out_of_service จะไม่ถูกแตะ)',
+  })
+  @ApiParam({ name: 'id', description: 'รหัสโต๊ะ (UUID)', format: 'uuid' })
+  @ApiOkResponse({ description: 'ซิงค์สถานะสำเร็จ' })
+  @ApiForbiddenResponse({ description: 'ไม่มีสิทธิ์ table:manage' })
+  @ApiNotFoundResponse({ description: 'ไม่พบข้อมูลโต๊ะ' })
+  @RequirePermissions('table:manage')
+  @Post(':id/sync-status')
+  async syncStatus(@Param('id', ParseUUIDPipe) id: string) {
+    return this.tablesService.syncStatus(id);
+  }
 }
