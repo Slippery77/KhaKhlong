@@ -11,9 +11,10 @@
     "generate-pwa-assets": "pwa-assets-generator"
   },
   "dependencies": {
-    "dexie": "4.4.6",
+    "dexie": "^4.4.6",
     "dexie-react-hooks": "^4.4.0",
     "lucide-react": "^1.47.0",
+    "promptpay-qr": "^0.5.0",
     "qrcode.react": "^4.2.0",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
