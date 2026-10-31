@@ -166,6 +166,7 @@ CREATE TABLE menu_items (
     category_id  UUID NOT NULL,
     name         VARCHAR(150) NOT NULL,
     description  TEXT,
+    image_url    TEXT,
     -- ราคานี้คือ "ราคาที่ลูกค้าจ่าย" เสมอ (ดู vat_mode ใน config_definitions)
     price        DECIMAL(10,2) NOT NULL CHECK (price >= 0),
     is_available BOOLEAN NOT NULL DEFAULT true,   -- หมดวันนี้ (บังคับด้วย trigger)

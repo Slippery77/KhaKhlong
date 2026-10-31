@@ -53,6 +53,8 @@ export function useFullMenu() {
                         allMenus.push({
                             id: item.menu_item_id,
                             name: item.name,
+                            description: item.description ?? null,
+                            imageUrl: item.image_url ?? null,
                             price: item.price,
                             categoryId: item.category_id,
                             isAvailable: item.is_available,
@@ -73,7 +75,10 @@ export function useFullMenu() {
     )
 
     useEffect(() => {
-        load()
+        const timer = window.setTimeout(() => {
+            void load()
+        }, 0)
+        return () => window.clearTimeout(timer)
     }, [load])
 
     return { categories, menu, isLoading, error, reload: () => load(true) }

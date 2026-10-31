@@ -501,7 +501,7 @@ export default function MainPOS() {
                         </div>
                     </div>
 
-                    <div className="grid grid-cols-4 gap-4 overflow-y-auto p-6 flex-1 content-start">
+                    <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4 overflow-y-auto p-6 flex-1 content-start">
                         {isLoading ? (
                             <p className="col-span-4 py-20 text-center text-sm text-stone-400 font-kanit">กำลังโหลดเมนู...</p>
                         ) : error ? (
@@ -516,9 +516,19 @@ export default function MainPOS() {
                                 </button>
                             </div>
                         ) : isMenuExist ? (
-                            filteredMenu.map((m) => (
-                                <MenuCard key={m.id} menu={m} onClickMenuCard={handleMenuClick} />
-                            ))
+                            filteredMenu.map((m) => {
+                                const countInCart = cartMenu
+                                    .filter((c) => c.id === m.id)
+                                    .reduce((sum, c) => sum + c.quantity, 0);
+                                return (
+                                    <MenuCard
+                                        key={m.id}
+                                        menu={m}
+                                        cartCount={countInCart}
+                                        onClickMenuCard={handleMenuClick}
+                                    />
+                                );
+                            })
                         ) : (
                             <div className="col-span-4 flex flex-col items-center justify-center py-20 text-center select-none font-kanit">
                                 <div className="w-16 h-16 rounded-full bg-[#EFE8DC]/80 flex items-center justify-center mb-3 text-[#A89887]">

@@ -1,4 +1,4 @@
-﻿# HANDOFF — PWA-POS (ค้าคล่อง / KhaKhlong)
+# HANDOFF — PWA-POS (ค้าคล่อง / KhaKhlong)
 
 > ไฟล์นี้คือสรุปสถานะล่าสุดสำหรับ **เปิดแชทใหม่แล้วทำงานต่อ** โดยไม่ต้องเล่าบริบทใหม่
 > อัปเดต: **2026-10-31** · branch `feat-aod` · `origin/main` = `b352de6` (2026-10-28) · ดู `git log` สำหรับ hash ล่าสุด
@@ -66,7 +66,7 @@ $env:PGPASSWORD='<รหัสผ่าน pos_app จาก .env>'
 
 - **Auth** — login/logout/refresh token, JWT guard, permission guard, RLS + tenant isolation · **store finder ที่ `/`** · **ตรวจ `token_version` ใน JWT guard แล้ว** (เปลี่ยนรหัสผ่าน = token เก่าใช้ไม่ได้)
 - **Register** — สมัครร้านใหม่ (throttle 3 ครั้ง / 5 นาที / IP) · ตั้ง PIN เจ้าของร้านได้ตอนสมัคร (`PinInput`) · **แก้บั๊กลำดับพารามิเตอร์แล้ว** (ดู 3.9)
-- **Menu** — หมวด/เมนู/ modifiers ครบ endpoint · ผูกเมนูกับกลุ่มตัวเลือกได้ (`linkModifier.tsx`)
+- **Menu** — หมวด/เมนู/ modifiers ครบ endpoint · ผูกเมนูกับกลุ่มตัวเลือกได้ (`linkModifier.tsx`) · **รองรับรูปภาพเมนู (`menu_items.image_url`) ทั้งอัปโหลดไฟล์บีบอัด/URL พร้อมแสดงบนการ์ด POS และตารางตั้งค่าเมนู** (ดู 3.15)
 - **Floors / Tables** — พื้นที่ โต๊ะ ผังร้าน
 - **Orders** — create, list (open), get by id, add items (+kitchen ticket), move table, close-unpaid, sync · **void / comp รายการพร้อม PIN ผู้อนุมัติ** (ดู 3.8) · **ยกเลิกทั้งบิล + ปิดบิลลูกค้าหนี (walkout) พร้อม PIN และคืนโต๊ะได้จริง** (ดู 3.13 / `docs/cancel-order-guide.md`)
 - **Inventory** — stock view, movements (รับเข้า/ปรับ/ของเสีย), **count batch** (รอบล่าสุด)
@@ -219,6 +219,29 @@ commit เดียว 4 เรื่อง:
 - **ทดสอบ**: unit `backend/src/modules/orders/orders-cancel.spec.ts` (11 tests) · E2E `backend/test/e2e/e2e-cancel-order.mjs`
 - **เอกสาร**: `docs/cancel-order-guide.md`
 
+### 3.14 Login Lockout + Audit `login_success` / `login_failed` — 2026-10-31
+
+- **Backend**:
+  - `UsersRepository.recordPasswordFailureDurable` — นับรหัสผ่านผิดด้วย `durableQuery` ครบ 5 ครั้งติดกัน → ตั้ง `password_locked_until = now() + 5 mins` (หากล็อกเดิมหมดเวลาแล้วเริ่มนับรอบใหม่ที่ 1)
+  - `UsersRepository.recordLoginSuccess` — ล้าง `password_failed_attempts = 0, password_locked_until = NULL` และอัปเดต `last_login_at = now()`
+  - `UsersRepository.updateUser` — รีเซ็ตตัวนับและปลดล็อกรหัสผ่าน/PIN ทันทีเมื่อผู้จัดการ/เจ้าของร้านตั้งรหัสใหม่ให้พนักงาน
+  - `AuthRepository.writeLoginSuccessAudit` / `writeLoginFailedAuditDurable` — บันทึก `login_success` และ `login_failed` (`user_not_found`, `account_deactivated`, `account_locked`, `invalid_password`) พร้อม IP และ User-Agent จริงจาก `AuthController`
+  - `DbContextService.durableQuery` — คัดลอก context ทั้ง 5 ค่า (`tenant_id`, `user_id`, `role`, `client_ip`, `device_info`) ไปยัง durable connection
+  - ขณะติดล็อก (`password_locked_until > now()`): ตอบ `429 Too Many Requests` (`code: 'ACCOUNT_LOCKED'`, `lockedUntil`, `remainingSeconds`)
+- **Frontend**:
+  - `useLogin.ts` + `login_form.tsx` — รองรับ `429 ACCOUNT_LOCKED` พร้อมตัวนับเวลาถอยหลังแบบเรียลไทม์ (`mm:ss`), ปิดปุ่มชั่วคราวจนกว่าจะครบกำหนดหรือเปลี่ยนชื่อผู้ใช้, แจ้งเตือนเมื่อเหลือโอกาสลอง ≤ 2 ครั้ง, และโฟกัสกล่องแจ้งเตือนอัตโนมัติตามหลัก Accessibility
+- **ทดสอบ**: unit `backend/src/modules/auth/auth.service.spec.ts` (6 tests) · E2E `backend/test/e2e/e2e-login-lockout.mjs` (15/15 ผ่าน)
+
+### 3.15 รูปภาพเมนูอาหาร (`menu_items.image_url`) + ปรับปรุง UX/UI POS & ตั้งค่าเมนู — 2026-10-31
+
+- **DB**: `PATCH_09_menu_image.sql` (`ALTER TABLE menu_items ADD COLUMN IF NOT EXISTS image_url TEXT;`) + อัปเดต `FULL_INSTALL.sql`
+- **Backend**:
+  - `main.ts`: ตั้ง `app.useBodyParser('json', { limit: '2mb' })` เพื่อรองรับรูปบีบอัดแบบ Data URL
+  - `CreateMenuItemDto` / `UpdateMenuItemDto` / `MenuItemResponse` / `MenuRepository` / `MenuService`: รองรับ `image_url?: string | null` ทั้งสร้าง แก้ไข ลบรูป (`null`) และส่งออกใน `GET /menu/full` กับ `GET /menu/admin`
+- **Frontend**:
+  - **หน้า POS (`MenuCard.tsx`, `MainPOS.tsx`, `ModifierPopup.tsx`)**: การ์ดเมนูแนวตั้งสัดส่วนรูป `4:3`, placeholder โทนอุ่นเมื่อไม่มีรูปหรือลิงก์เสีย, badge จำนวนในตะกร้า (`×N`), badge "ตัวเลือกเสริม", สถานะ "หมดวันนี้" (`!menu.isAvailable`) พร้อม overlay, และรูป thumbnail ใน `ModifierPopup`
+  - **หน้าตั้งค่าเมนู (`menuFormPopup.tsx`, `listMenu.tsx`, `menu_edit.tsx`, `useAdminMenu.ts`)**: อัปโหลดไฟล์/ลากวางพร้อมย่อขนาดด้วย HTML5 Canvas (`<= 600x450px`, WebP/JPEG `0.82`) หรือวาง URL, live preview 4:3 + ปุ่มลบรูป, เลือกเปลี่ยนหมวดหมู่เมนูได้ตอนแก้ไข, รูป thumbnail `52x52px` หน้าชื่อเมนูในตาราง, และปุ่มกรองสถานะด่วน (`ทั้งหมด`, `พร้อมขาย`, `หมดวันนี้`, `เลิกขาย`)
+
 ---
 
 ## 4. งานค้าง P0
@@ -237,9 +260,8 @@ commit เดียว 4 เรื่อง:
 ### P1 — ความถูกต้องและความปลอดภัย
 
 1. **`POST /orders/sync` ยังรับ `@Body() dto: any`** — ValidationPipe ไม่ตรวจ payload (แก้ `createdBy` ให้ใช้จาก JWT และตอบ conflict รายใบแล้ว) ควรมี DTO + จำกัดขนาด batch
-2. **ไม่มี login lockout / audit login** — `password_locked_until` ไม่ถูกใช้, `login_success` / `login_failed` ไม่ถูกเขียน (มีแค่ `logout`)
-3. **ไม่มี `GET /users/me`, `POST /auth/pin-login`**
-4. **`/:tenantSlug/homepage` ยังเป็น TODO**
+2. **ไม่มี `GET /users/me`** (ส่วน `POST /auth/pin-login` ตัดออก/ย้ายเป็น future work เพราะเปลี่ยนกะด้วย login ปกติเพียงพอ)
+3. **`/:tenantSlug/homepage` ยังเป็น TODO**
 
 ### P2 — ฟีเจอร์ตาม scope
 
@@ -260,6 +282,7 @@ commit เดียว 4 เรื่อง:
 - ไม่มี cron `escalate_overdue_shifts()` → มี service แล้ว และ**ทำงานจริงแล้ว** 2026-10-30 (ดู 3.12)
 - ไม่มี void/comp → 2026-10-30 (`dc0bf7a`)
 - ยกเลิกออเดอร์แล้วโต๊ะค้าง occupied → 2026-10-31 (cancel/close-unpaid + PIN, ดู 3.13)
+- ไม่มี login lockout / audit login → 2026-10-31 (5 ครั้งล็อก 5 นาที + `login_success`/`login_failed` durable audit, ดู 3.14)
 
 ---
 
