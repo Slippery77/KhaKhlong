@@ -42,7 +42,7 @@
 
 ## เทสต์และตรวจสอบ
 
-- E2E เขียนเป็น **Node `.mjs` เท่านั้น** (PowerShell ทำให้ UTF-8 เพี้ยน) → `backend/test/e2e/` (`e2e-reports.mjs`, `e2e-receipt.mjs`, `e2e-public-tenant.mjs`, `e2e-token-version.mjs`, `e2e-void-comp.mjs`, `e2e-cancel-order.mjs`, `e2e-login-lockout.mjs`, `e2e-users-me.mjs`)
+- E2E เขียนเป็น **Node `.mjs` เท่านั้น** (PowerShell ทำให้ UTF-8 เพี้ยน) → `backend/test/e2e/` (`e2e-reports.mjs`, `e2e-receipt.mjs`, `e2e-public-tenant.mjs`, `e2e-token-version.mjs`, `e2e-void-comp.mjs`, `e2e-cancel-order.mjs`, `e2e-login-lockout.mjs`, `e2e-users-me.mjs`, `e2e-merge-tables-payment.mjs`)
 - `npx tsc --noEmit` (backend) และ `npx tsc -b` (frontend) **ต้องผ่าน** ก่อน commit
 - `npx jest` (backend) ยังมี spec boilerplate ที่แดงเพราะขาด DI mock — อย่าใช้ผลรวมทั้งชุดตัดสินงาน ให้รันเฉพาะ suite ที่แก้ (`npx jest <module>`) และดู `docs/HANDOFF.md`
 - `npx eslint` ยังแดงทั้งสองฝั่ง (ส่วนใหญ่เป็น prettier) — อย่าเพิ่ง auto-fix ปนกับ feature commit; ไฟล์ที่แตะต้อง lint สะอาด

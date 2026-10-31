@@ -5,6 +5,7 @@ import { RequirePermissions } from '../auth/guards/permissions.decorator';
 import { CreatePaymentAttemptDTO } from './dto/attempt.dto';
 import { PayAttemptDTO } from './dto/pay-attempt.dto';
 import { CancleAttempt } from './dto/canclePayment.dto';
+import { OrdersSummaryDTO } from './dto/orders-summary.dto';
 
 @ApiBearerAuth()
 @ApiTags('Payments')
@@ -79,6 +80,22 @@ export class PaymentController {
     async acceptPayments(@Param('id',ParseUUIDPipe) paymentAttemptId:string, @Body() dto:PayAttemptDTO, @Req() req:any){
       const userId = req.user?.sub;
       return this.paymentService.payAttempt(paymentAttemptId,dto,userId)
+    }
+
+    @ApiOperation({
+      summary: 'ดูยอดรวมก่อนชำระเงินของหลายบิล (รวมโต๊ะคิดเงิน)',
+      description:
+        'รวมยอดของบิลที่ยังเปิดอยู่หลายใบจาก v_order_item_totals ด้วยสูตรเดียวกับตอนสร้าง attempt ' +
+        'ไม่สร้าง attempt ไม่จองบิล และไม่รับยอดจาก client',
+    })
+    @ApiResponse({ status: 201, description: 'ยอดรวมและจำนวนรายการของทุกบิล' })
+    @ApiResponse({ status: 400, description: 'orderIds ว่าง ซ้ำ เกิน 10 หรือไม่ใช่ UUID' })
+    @ApiResponse({ status: 404, description: 'ไม่พบบิลบางใบ' })
+    @ApiResponse({ status: 409, description: 'มีบิลที่ปิดไปแล้ว' })
+    @RequirePermissions('payment:receive')
+    @Post('orders/summary')
+    async getOrdersSummary(@Body() dto: OrdersSummaryDTO) {
+      return this.paymentService.getOrdersSummary(dto.orderIds);
     }
 
     @ApiOperation({

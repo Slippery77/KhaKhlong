@@ -251,6 +251,20 @@ commit เดียว 4 เรื่อง:
   - `AuthContext.tsx` + `authStorage.ts` + `auth.types.ts`: ดึงข้อมูลสดจาก `/users/me` อัตโนมัติทั้งตอน restore session และหลัง login พร้อมเพิ่มฟังก์ชัน `hasPermission(permissionKey)` และ `refreshUser()` ใน `useAuth()`
 - **ทดสอบ**: unit `backend/src/modules/users/users.service.spec.ts` (3 tests) · E2E `backend/test/e2e/e2e-users-me.mjs` (20/20 ผ่าน)
 
+### 3.17 ฟีเจอร์รวมโต๊ะคิดเงิน (Combined Table Payment) — 2026-10-31
+
+- **ความต้องการ**: ลูกค้ามากลุ่มใหญ่ต้องแยกโต๊ะนั่ง สั่งอาหารแยกแต่ละโต๊ะ แต่ต้องการคิดเงินรวมเป็นบิลเดียว
+- **Backend**:
+  - `OrdersSummaryDTO` + `POST /payments/orders/summary`: ดึงยอดรวมและจำนวนรายการของหลายบิล (`orderIds: string[]`) จาก server ผ่าน `v_order_item_totals` ก่อนเริ่มชำระเงิน
+  - `POST /payments/attempts` + `POST /payments/attempts/:id/pay`: รองรับหลายบิลอยู่แล้ว เมื่อจ่ายสำเร็จ trigger `trg_payments_after` จะปิดทุกบิล และ `sync_table_status` จะคืนทุกโต๊ะที่รวมบิลกลับเป็น `available` พร้อมกัน
+  - `GET /payments/:id/receipt`: คืนข้อมูลโต๊ะทั้งหมด `tables: [{ orderNumber, tableNumber }]` บนใบเสร็จ
+- **Frontend** (ออกแบบตาม `ui-ux-pro-max`):
+  - **`TablesPage.tsx`**: ปุ่ม Toggle "รวมโต๊ะคิดเงิน" / "ยกเลิกรวมโต๊ะ", แถบลอยล่างจอ (Floating Action Bar) สรุปโต๊ะที่เลือก ดึงยอดรวมจาก server และปุ่ม "ชำระเงินรวม (N โต๊ะ)"
+  - **`TableCard.tsx`**: โหมด `selectionMode` แสดง Checkbox มุมการ์ดโต๊ะที่มีลูกค้า (`occupied`), ไฮไลท์การ์ดที่ถูกเลือกด้วยกรอบและเงาสีกาแฟ `#8C6D58`, โต๊ะว่างจะถูกหรี่แสงลงและกดไม่ได้
+  - **`PaymentModal.tsx`**: รองรับ prop `orderIds: string[]` และชื่อโต๊ะรวม เช่น "โต๊ะ 01 + 02", คำนวณยอดและชำระรวมได้โดยตรงบนหน้าผังโต๊ะ
+  - **`usePayment.ts`**: เพิ่มฟังก์ชัน `getOrdersSummary(orderIds: string[])`
+- **ทดสอบ**: E2E `backend/test/e2e/e2e-merge-tables-payment.mjs` (22/22 ผ่าน)
+
 ---
 
 ## 4. งานค้าง P0
@@ -306,7 +320,7 @@ commit เดียว 4 เรื่อง:
 | Backend `npx eslint "src/**/*.ts"` | ยังแดงหลายพัน problems (ส่วนใหญ่ prettier) — **อย่า auto-fix ปนกับ feature commit** |
 | Frontend `npx eslint src` | ~40 problems เดิม (`react-hooks/set-state-in-effect`, `no-explicit-any` ใน `libs/appClient.ts`) — ไฟล์ที่แตะในงาน void/comp สะอาด |
 | Backend e2e spec | `backend/test/app.e2e-spec.ts` ยังเป็น boilerplate (`"Hello World!"`) → ใช้ไม่ได้ |
-| E2E ใน repo | `backend/test/e2e/`: `e2e-reports.mjs`, `e2e-receipt.mjs`, `e2e-public-tenant.mjs`, `e2e-token-version.mjs`, `e2e-void-comp.mjs`, `e2e-cancel-order.mjs`, `e2e-login-lockout.mjs`, `e2e-users-me.mjs` |
+| E2E ใน repo | `backend/test/e2e/`: `e2e-reports.mjs`, `e2e-receipt.mjs`, `e2e-public-tenant.mjs`, `e2e-token-version.mjs`, `e2e-void-comp.mjs`, `e2e-cancel-order.mjs`, `e2e-login-lockout.mjs`, `e2e-users-me.mjs`, `e2e-merge-tables-payment.mjs` |
 | E2E ที่ยังไม่อยู่ใน repo | สคริปต์ใน `%TEMP%\opencode\` ของเครื่องที่เขียน: `e2e-shift.mjs`, `e2e-stock-count-batch.mjs`, `e2e-floors.mjs`, `e2e-kds-badge.mjs` |
 
 **ข้อควรระวังเวลาเทสต์**

@@ -9,6 +9,13 @@ export interface OrderPaymentSummary {
     itemCount: number
 }
 
+/** ยอดรวมก่อนชำระของหลายบิล (รวมโต๊ะคิดเงิน) — คำนวณบน server เท่านั้น */
+export interface OrdersPaymentSummary {
+    orderIds: string[]
+    amount: number
+    itemCount: number
+}
+
 export function usePayment(){
     const {accessToken} = useAuth();
 
@@ -25,6 +32,15 @@ export function usePayment(){
         [accessToken],
     )
 
+    // รวมโต๊ะคิดเงิน: ยอดรวมของหลายบิลจาก server (สูตรเดียวกับตอนสร้าง attempt)
+    const getOrdersSummary = useCallback(
+        (orderIds: string[]) =>
+            apiFetch<{ data: OrdersPaymentSummary }>(
+                '/payments/orders/summary', accessToken, 'POST', { orderIds },
+            ).then(r => r.data),
+        [accessToken],
+    )
+
     // หน้า 2: ยืนยันรับเงิน (QR ไม่ส่ง cashReceived)
     const pay = (attemptId: string, cashReceived?: number) =>
         apiFetch<{ data: PaymentResult }>(
@@ -37,5 +53,6 @@ export function usePayment(){
         apiFetch<{ data: PaymentAttempt }>(
         `/payments/attempts/${attemptId}/cancel`, accessToken, 'POST', { reason },
     ).then(r => r.data)
-    return {createAttempt,pay,cancel,getOrderSummary}
+
+    return {createAttempt, pay, cancel, getOrderSummary, getOrdersSummary}
 }

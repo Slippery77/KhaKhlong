@@ -36,6 +36,25 @@ export class PaymentService {
         }
     }
 
+    /**
+     * ยอดรวมก่อนชำระเงินของหลายบิล (รวมโต๊ะคิดเงิน)
+     * ใช้สูตรเดียวกับ createPaymentAttempt (computeAmount) เพื่อให้ยอดที่โชว์ตรงกับ attempt.amount
+     */
+    async getOrdersSummary(orderIds:string[]){
+        const orders = await this.paymentRepository.findOrders(orderIds)
+        if(orders.length !== orderIds.length){
+            throw new NotFoundException('ไม่พบบิลบางใบ')
+        }
+        if(orders.some(o => o.closed_at !== null)){
+            throw new ConflictException('มีบิลที่ปิดไปแล้ว')
+        }
+        const {gross,itemCount} = await this.paymentRepository.computeAmount(orderIds)
+        return {
+            status:'success',
+            data: { orderIds, amount: gross, itemCount },
+        }
+    }
+
     async createPaymentAttempt(dto:CreatePaymentAttemptDTO,userId:string){
         let promptpayId: string | null = null;
 
