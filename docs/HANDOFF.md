@@ -86,9 +86,9 @@ $env:PGPASSWORD='<รหัสผ่าน pos_app จาก .env>'
 
 - **Audit Logs** — ไม่มี endpoint/UI (DB trigger เขียน audit บางเหตุการณ์ แต่ยังไม่มีหน้าดู)
 - **Offline data layer** — PWA shell พร้อมแล้ว แต่ยังไม่มี Dexie/IndexedDB แคชเมนู/โต๊ะ/กะ และยังไม่มี outbox คิวออเดอร์ (service worker ไม่แคช `/api` โดยตั้งใจ)
-- **Dashboard** — `/:tenantSlug/homepage` ยังเป็น `<div>Dashboard (TODO)</div>`
 - **Reports เพิ่มเติม** — หน้ารายงานรายกะ, ตัวกรองช่วงวันที่บน UI, export
 - **Shift escalation อัตโนมัติ** — มี service แล้วแต่ยังไม่ทำงานจริง (ดู 5/P1-1)
+- *(หน้า Dashboard / Homepage `/:tenantSlug/homepage` ตัดออกจากขอบเขตแล้ว)*
 
 ---
 
@@ -259,9 +259,9 @@ commit เดียว 4 เรื่อง:
 
 ### P1 — ความถูกต้องและความปลอดภัย
 
-1. **`POST /orders/sync` ยังรับ `@Body() dto: any`** — ValidationPipe ไม่ตรวจ payload (แก้ `createdBy` ให้ใช้จาก JWT และตอบ conflict รายใบแล้ว) ควรมี DTO + จำกัดขนาด batch
-2. **ไม่มี `GET /users/me`** (ส่วน `POST /auth/pin-login` ตัดออก/ย้ายเป็น future work เพราะเปลี่ยนกะด้วย login ปกติเพียงพอ)
-3. **`/:tenantSlug/homepage` ยังเป็น TODO**
+1. **ไม่มี `GET /users/me`** — ดึงข้อมูลโปรไฟล์ของผู้ใช้ปัจจุบันจาก JWT payload / DB เพื่อให้ FE ใช้อ้างอิงและเช็คสิทธิ์ (ส่วน `POST /auth/pin-login` ตัดออก/ย้ายเป็น future work เพราะเปลี่ยนกะด้วย login ปกติเพียงพอ)
+
+*(หมายเหตุ: `/:tenantSlug/homepage` ตัดออกจากขอบเขตแล้ว ไม่ต้องทำ)*
 
 ### P2 — ฟีเจอร์ตาม scope
 
@@ -269,7 +269,6 @@ commit เดียว 4 เรื่อง:
   - **ยังเหลือ**: IndexedDB (Dexie) แคช `GET /menu/full` / โต๊ะ / กะปัจจุบัน + outbox คิวออเดอร์ออฟไลน์
 - **Reports ต่อยอด**: หน้ารายงานรายกะ/ประวัติกะ, ตัวกรอง `from`/`to`/`shiftId` บน UI (API รองรับแล้ว แต่ FE ส่งแค่ `period`), export
 - **System Config UI ที่เหลือ** (หน้า VAT กับ Store ทำแล้ว)
-- **Dashboard homepage**
 - **Menu reorder endpoint**
 - **Audit Log endpoint/UI**
 - **Inventory polish**: ช่องค้นหาในการ์ดนับวัตถุดิบ, ใช้ business date แทน local date, note ใน `record_stock_count()` มีช่องว่างนำหน้า + ทศนิยม 4 ตำแหน่ง
@@ -283,6 +282,7 @@ commit เดียว 4 เรื่อง:
 - ไม่มี void/comp → 2026-10-30 (`dc0bf7a`)
 - ยกเลิกออเดอร์แล้วโต๊ะค้าง occupied → 2026-10-31 (cancel/close-unpaid + PIN, ดู 3.13)
 - ไม่มี login lockout / audit login → 2026-10-31 (5 ครั้งล็อก 5 นาที + `login_success`/`login_failed` durable audit, ดู 3.14)
+- `POST /orders/sync` ขาด DTO → เพื่อนร่วมทีมทำให้เสร็จแล้ว (2026-10-31)
 
 ---
 
@@ -372,7 +372,6 @@ commit เดียว 4 เรื่อง:
 - `inventory_transactions` ไม่มี `shift_id` → ผูกการปรับวัตถุดิบกับกะไม่ได้ตรง ๆ
 - `record_stock_count()` ไม่บันทึกแถวเมื่อ delta = 0
 - Reports ที่ไม่ระบุ `shiftId` ใช้ `CURRENT_DATE` ของ DB ไม่ใช่ business date
-- `POST /orders/sync` ยังไม่มี DTO
 - ไม่มี `.env` ใน repo (มี `.env.example`)
 - ประวัติ git ของไฟล์นี้เคยมีรหัสผ่าน DB ของเครื่อง dev — ถ้า repo เป็น public ให้ถือว่ารหัสนั้นรั่วแล้ว และเปลี่ยนรหัสผ่าน `pos_app` บนเครื่องที่ใช้รหัสนั้น
 
@@ -380,9 +379,9 @@ commit เดียว 4 เรื่อง:
 
 ## 9. ลำดับที่แนะนำถัดไป
 
-1. **เปิด PR `feat-aod` → `main`** — งาน void/comp + PIN lock + escalation commit แล้ว (อย่าเผลอ commit ไฟล์ที่ไม่เกี่ยว: `CategoryCard.tsx`, `MenuSidebar.tsx`, `package-lock.json` ที่ยังค้างใน working tree)
-2. **P1 ที่เหลือ**: `/orders/sync` DTO + user จาก JWT, login lockout/audit, `GET /users/me`, `POST /auth/pin-login`
-3. **P2**: offline data layer (Dexie + outbox) → Reports รายกะ/ตัวกรองวันที่ → Dashboard → Audit log → Menu reorder
+1. **เปิด PR `feat-aod` → `main`** — งาน void/comp + PIN lock + escalation + login lockout + menu image commit แล้ว (อย่าเผลอ commit ไฟล์ที่ไม่เกี่ยว: `CategoryCard.tsx`, `MenuSidebar.tsx`, `package-lock.json` ที่ยังค้างใน working tree)
+2. **P1 ที่เหลือ**: `GET /users/me`
+3. **P2**: offline data layer (Dexie + outbox) → Reports รายกะ/ตัวกรองวันที่ → Audit log → Menu reorder
 4. ย้าย E2E 4 ตัวจาก `%TEMP%\opencode\` เข้า repo และเพิ่ม E2E ของ PIN ผ่าน UI (ตั้ง PIN → void/comp → verify กะ) + E2E escalation (ต้องต่อ DB เพื่อย้อน `closed_at`)
 
 > ก่อนเริ่มงานทุกครั้ง: ดู `git status`, รัน `npx tsc --noEmit` (backend) และ `npx tsc -b` (frontend) ให้ผ่านก่อน commit
