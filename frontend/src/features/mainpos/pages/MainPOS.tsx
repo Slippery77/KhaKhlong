@@ -562,10 +562,14 @@ export default function MainPOS() {
                                 setActionError(null)
                                 setCompTarget(item)
                             }}
-                            onCancelBill={() => {
-                                setCancelBillError(null)
-                                setIsCancelBillOpen(true)
-                            }}
+                            onCancelBill={
+                                orderId
+                                    ? () => {
+                                          setCancelBillError(null)
+                                          setIsCancelBillOpen(true)
+                                      }
+                                    : undefined
+                            }
                         />
                     )}
                 </aside>
