@@ -16,9 +16,9 @@
 | Backend | NestJS 11 · port 3000 · prefix `/api` |
 | Database | PostgreSQL 18 · db `pwa_pos` · user `pos_app` · รหัสผ่านอยู่ใน `.env` |
 
-## งานด่วนปัจจุบัน (P0)
+## งานด่วนปัจจุบัน (P0 / P1)
 
-**ไม่มี P0 ค้าง** — งานที่เหลือเป็น P1 / P2 ดู `docs/HANDOFF.md`
+**ไม่มี P0 และ P1 ค้าง** — งานที่เหลือเป็น P2 ดู `docs/HANDOFF.md`
 
 1. ~~หน้าพิมพ์ใบเสร็จ/พิมพ์ซ้ำฝั่ง FE~~ เสร็จแล้ว — `frontend/src/features/receipt/` + ปุ่มใน `PaymentModal` / `BillDetailModal`
 2. ~~Store finder + จำรหัสร้าน~~ เสร็จแล้ว — route `/`, `/login`, `GET /api/public/tenants/:slug`, จำใน `localStorage`, catch-all route
@@ -42,7 +42,7 @@
 
 ## เทสต์และตรวจสอบ
 
-- E2E เขียนเป็น **Node `.mjs` เท่านั้น** (PowerShell ทำให้ UTF-8 เพี้ยน) → `backend/test/e2e/` (`e2e-reports.mjs`, `e2e-receipt.mjs`, `e2e-public-tenant.mjs`, `e2e-token-version.mjs`, `e2e-void-comp.mjs`, `e2e-cancel-order.mjs`, `e2e-login-lockout.mjs`)
+- E2E เขียนเป็น **Node `.mjs` เท่านั้น** (PowerShell ทำให้ UTF-8 เพี้ยน) → `backend/test/e2e/` (`e2e-reports.mjs`, `e2e-receipt.mjs`, `e2e-public-tenant.mjs`, `e2e-token-version.mjs`, `e2e-void-comp.mjs`, `e2e-cancel-order.mjs`, `e2e-login-lockout.mjs`, `e2e-users-me.mjs`)
 - `npx tsc --noEmit` (backend) และ `npx tsc -b` (frontend) **ต้องผ่าน** ก่อน commit
 - `npx jest` (backend) ยังมี spec boilerplate ที่แดงเพราะขาด DI mock — อย่าใช้ผลรวมทั้งชุดตัดสินงาน ให้รันเฉพาะ suite ที่แก้ (`npx jest <module>`) และดู `docs/HANDOFF.md`
 - `npx eslint` ยังแดงทั้งสองฝั่ง (ส่วนใหญ่เป็น prettier) — อย่าเพิ่ง auto-fix ปนกับ feature commit; ไฟล์ที่แตะต้อง lint สะอาด

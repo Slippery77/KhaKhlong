@@ -74,7 +74,7 @@ $env:PGPASSWORD='<รหัสผ่าน pos_app จาก .env>'
 - **KDS** — คิวครัว + mark ready
 - **System Config** — GET/PATCH (หน้า UI ใช้เฉพาะ VAT)
 - **Tenants / Store** — GET/PATCH + หน้า `setting/store`
-- **Users** — list, create, update, deactivate, reactivate · ตั้ง PIN ได้ทั้งสร้างและแก้ไข (`UpdateUserDTO.pin` ตรวจ `/^\d{6}$/` + bcrypt) · `UserTable` แสดง badge `has_pin` (ไม่ส่ง `pin_hash` ออก API)
+- **Users** — **`GET /users/me` (`@AnyAuthenticated` คืนโปรไฟล์ + `permissions: string[]` + ข้อมูลร้าน `store`)** · list, create, update, deactivate, reactivate · ตั้ง PIN ได้ทั้งสร้างและแก้ไข (`UpdateUserDTO.pin` ตรวจ `/^\d{6}$/` + bcrypt) · `UserTable` แสดง badge `has_pin` (ไม่ส่ง `pin_hash` ออก API)
 - **Roles / Permissions** — seed ครบ, employee 9 สิทธิ์
 - **Payment** — `attempts` → `pay` → `cancel`; ออกเลขใบเสร็จ, ดู/พิมพ์ใบเสร็จ; UI `PaymentModal` 3 ขั้น ใช้ยอดจาก server เท่านั้น
 - **Receipt (FE)** — `features/receipt/` พรีวิว 80mm + พิมพ์จริง, ป้าย "สำเนา" ตาม `isCopy`, เคารพ `max_reprints` (409)
@@ -242,6 +242,15 @@ commit เดียว 4 เรื่อง:
   - **หน้า POS (`MenuCard.tsx`, `MainPOS.tsx`, `ModifierPopup.tsx`)**: การ์ดเมนูแนวตั้งสัดส่วนรูป `4:3`, placeholder โทนอุ่นเมื่อไม่มีรูปหรือลิงก์เสีย, badge จำนวนในตะกร้า (`×N`), badge "ตัวเลือกเสริม", สถานะ "หมดวันนี้" (`!menu.isAvailable`) พร้อม overlay, และรูป thumbnail ใน `ModifierPopup`
   - **หน้าตั้งค่าเมนู (`menuFormPopup.tsx`, `listMenu.tsx`, `menu_edit.tsx`, `useAdminMenu.ts`)**: อัปโหลดไฟล์/ลากวางพร้อมย่อขนาดด้วย HTML5 Canvas (`<= 600x450px`, WebP/JPEG `0.82`) หรือวาง URL, live preview 4:3 + ปุ่มลบรูป, เลือกเปลี่ยนหมวดหมู่เมนูได้ตอนแก้ไข, รูป thumbnail `52x52px` หน้าชื่อเมนูในตาราง, และปุ่มกรองสถานะด่วน (`ทั้งหมด`, `พร้อมขาย`, `หมดวันนี้`, `เลิกขาย`)
 
+### 3.16 Endpoint `GET /users/me` + Sync โปรไฟล์และสิทธิ์ใน `AuthContext` — 2026-10-31
+
+- **Backend**:
+  - `UsersController.getMe` (`GET /api/users/me` พร้อม `@AnyAuthenticated()`)
+  - `UsersRepository.findMeById` + `UsersService.getMe`: คืนข้อมูลโปรไฟล์ผู้ใช้ปัจจุบัน (`user_id`, `username`, `display_name`, `role_name`, `has_pin`, `is_active`, `created_at`, `last_login_at`), รายการสิทธิ์ทั้งหมด (`permissions: string[]`), และข้อมูลร้าน (`store: { tenant_id, restaurant_name, tenant_slug }`) ภายใต้ RLS `app_tenant_id()`
+- **Frontend**:
+  - `AuthContext.tsx` + `authStorage.ts` + `auth.types.ts`: ดึงข้อมูลสดจาก `/users/me` อัตโนมัติทั้งตอน restore session และหลัง login พร้อมเพิ่มฟังก์ชัน `hasPermission(permissionKey)` และ `refreshUser()` ใน `useAuth()`
+- **ทดสอบ**: unit `backend/src/modules/users/users.service.spec.ts` (3 tests) · E2E `backend/test/e2e/e2e-users-me.mjs` (20/20 ผ่าน)
+
 ---
 
 ## 4. งานค้าง P0
@@ -259,9 +268,7 @@ commit เดียว 4 เรื่อง:
 
 ### P1 — ความถูกต้องและความปลอดภัย
 
-1. **ไม่มี `GET /users/me`** — ดึงข้อมูลโปรไฟล์ของผู้ใช้ปัจจุบันจาก JWT payload / DB เพื่อให้ FE ใช้อ้างอิงและเช็คสิทธิ์ (ส่วน `POST /auth/pin-login` ตัดออก/ย้ายเป็น future work เพราะเปลี่ยนกะด้วย login ปกติเพียงพอ)
-
-*(หมายเหตุ: `/:tenantSlug/homepage` ตัดออกจากขอบเขตแล้ว ไม่ต้องทำ)*
+**ไม่มีงาน P1 ค้าง** — เคลียร์ครบทุกข้อแล้ว (ดูรายการด้านล่าง)
 
 ### P2 — ฟีเจอร์ตาม scope
 
@@ -283,21 +290,23 @@ commit เดียว 4 เรื่อง:
 - ยกเลิกออเดอร์แล้วโต๊ะค้าง occupied → 2026-10-31 (cancel/close-unpaid + PIN, ดู 3.13)
 - ไม่มี login lockout / audit login → 2026-10-31 (5 ครั้งล็อก 5 นาที + `login_success`/`login_failed` durable audit, ดู 3.14)
 - `POST /orders/sync` ขาด DTO → เพื่อนร่วมทีมทำให้เสร็จแล้ว (2026-10-31)
+- ไม่มี `GET /users/me` → 2026-10-31 (`@AnyAuthenticated` + `permissions: string[]` + `store` + sync เข้า `AuthContext`, ดู 3.16)
+- `/:tenantSlug/homepage` และ `POST /auth/pin-login` → ตัดออกจากขอบเขตแล้ว
 
 ---
 
 ## 6. คุณภาพ / เทสต์ / เอกสาร
 
-| รายการ | สถานะล่าสุด (2026-10-30, branch `feat-aod`) |
+| รายการ | สถานะล่าสุด (2026-10-31, branch `feat-aod`) |
 |---|---|
 | Backend `npx tsc --noEmit` | **ผ่าน** |
 | Frontend `npx tsc -b` | **ผ่าน** |
 | Frontend `npx vite build` | **ผ่าน** (มีคำเตือน chunk size) |
-| Backend `npx jest` | **9 suites failed / 7 passed (9 tests failed / 22 passed / 31 total)** — ทั้งหมดที่แดงเป็น spec boilerplate เดิม (`app.controller` คาด `"Hello World!"`, `menu.*`, `payment.*`, `system-config.*`, `tenants.controller`, `permission-cache.*` ขาด DI mock) · ชุดที่แก้ต้องเขียว: `npx jest src/modules/shifts`, `npx jest src/common` |
+| Backend `npx jest` | **9 suites failed / 7 passed (9 tests failed / 22 passed / 31 total)** — ทั้งหมดที่แดงเป็น spec boilerplate เดิม (`app.controller` คาด `"Hello World!"`, `menu.*`, `payment.*`, `system-config.*`, `tenants.controller`, `permission-cache.*` ขาด DI mock) · ชุดที่แก้ต้องเขียว: `npx jest src/modules/shifts`, `npx jest src/common`, `npx jest src/modules/auth`, `npx jest src/modules/users` |
 | Backend `npx eslint "src/**/*.ts"` | ยังแดงหลายพัน problems (ส่วนใหญ่ prettier) — **อย่า auto-fix ปนกับ feature commit** |
 | Frontend `npx eslint src` | ~40 problems เดิม (`react-hooks/set-state-in-effect`, `no-explicit-any` ใน `libs/appClient.ts`) — ไฟล์ที่แตะในงาน void/comp สะอาด |
 | Backend e2e spec | `backend/test/app.e2e-spec.ts` ยังเป็น boilerplate (`"Hello World!"`) → ใช้ไม่ได้ |
-| E2E ใน repo | `backend/test/e2e/`: `e2e-reports.mjs`, `e2e-receipt.mjs`, `e2e-public-tenant.mjs`, `e2e-token-version.mjs`, `e2e-void-comp.mjs` |
+| E2E ใน repo | `backend/test/e2e/`: `e2e-reports.mjs`, `e2e-receipt.mjs`, `e2e-public-tenant.mjs`, `e2e-token-version.mjs`, `e2e-void-comp.mjs`, `e2e-cancel-order.mjs`, `e2e-login-lockout.mjs`, `e2e-users-me.mjs` |
 | E2E ที่ยังไม่อยู่ใน repo | สคริปต์ใน `%TEMP%\opencode\` ของเครื่องที่เขียน: `e2e-shift.mjs`, `e2e-stock-count-batch.mjs`, `e2e-floors.mjs`, `e2e-kds-badge.mjs` |
 
 **ข้อควรระวังเวลาเทสต์**
@@ -379,9 +388,8 @@ commit เดียว 4 เรื่อง:
 
 ## 9. ลำดับที่แนะนำถัดไป
 
-1. **เปิด PR `feat-aod` → `main`** — งาน void/comp + PIN lock + escalation + login lockout + menu image commit แล้ว (อย่าเผลอ commit ไฟล์ที่ไม่เกี่ยว: `CategoryCard.tsx`, `MenuSidebar.tsx`, `package-lock.json` ที่ยังค้างใน working tree)
-2. **P1 ที่เหลือ**: `GET /users/me`
-3. **P2**: offline data layer (Dexie + outbox) → Reports รายกะ/ตัวกรองวันที่ → Audit log → Menu reorder
+1. **เปิด PR `feat-aod` → `main`** — งาน P0 และ P1 ทั้งหมด (`void/comp`, `PIN lock`, `escalation`, `cancel/walkout`, `login lockout`, `menu image`, `GET /users/me`) เสร็จครบแล้ว
+2. **P2**: offline data layer (Dexie + outbox) → Reports รายกะ/ตัวกรองวันที่ → Audit log → Menu reorder
 4. ย้าย E2E 4 ตัวจาก `%TEMP%\opencode\` เข้า repo และเพิ่ม E2E ของ PIN ผ่าน UI (ตั้ง PIN → void/comp → verify กะ) + E2E escalation (ต้องต่อ DB เพื่อย้อน `closed_at`)
 
 > ก่อนเริ่มงานทุกครั้ง: ดู `git status`, รัน `npx tsc --noEmit` (backend) และ `npx tsc -b` (frontend) ให้ผ่านก่อน commit

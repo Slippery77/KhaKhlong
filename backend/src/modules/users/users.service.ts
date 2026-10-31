@@ -59,6 +59,28 @@ export class UsersService {
     }
 
     /**
+     * ดึงข้อมูลโปรไฟล์ของผู้ใช้ปัจจุบัน พร้อมรายการสิทธิ์และข้อมูลร้าน
+     */
+    async getMe(userId: string) {
+        const row = await this.usersRepository.findMeById(userId);
+        if (!row) {
+            throw new NotFoundException('ไม่พบข้อมูลผู้ใช้');
+        }
+        return {
+            status: 'success',
+            data: {
+                ...this.toUserResponse(row),
+                permissions: Array.isArray(row.permissions) ? row.permissions : [],
+                store: {
+                    tenant_id: row.tenant_id,
+                    restaurant_name: row.restaurant_name,
+                    tenant_slug: row.tenant_slug,
+                },
+            },
+        };
+    }
+
+    /**
      * ดึงรายชื่อผู้ใช้ทั้งหมดของร้าน
      */
     async listUsers() {

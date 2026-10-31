@@ -116,6 +116,52 @@ export class UsersRepository {
     }
 
     /**
+     * ดึงข้อมูลโปรไฟล์ของผู้ใช้ปัจจุบัน พร้อมรายการสิทธิ์ (permissions) และข้อมูลร้าน (tenants)
+     */
+    async findMeById(userId: string) {
+        const sql = `
+            SELECT
+                u.users_id,
+                u.username,
+                u.display_name,
+                r.role_name,
+                u.is_active,
+                u.created_at,
+                u.last_login_at,
+                u.deactivated_at,
+                (u.pin_hash IS NOT NULL) AS has_pin,
+                t.tenant_id,
+                t.restaurant_name,
+                t.tenant_slug,
+                COALESCE(
+                    array_agg(p.permission_key ORDER BY p.permission_key) FILTER (WHERE p.permission_key IS NOT NULL),
+                    '{}'
+                ) AS permissions
+            FROM users u
+            JOIN roles r ON r.role_id = u.role_id
+            JOIN tenants t ON t.tenant_id = u.tenant_id
+            LEFT JOIN role_permissions rp ON rp.role_id = r.role_id
+            LEFT JOIN permissions p ON p.permission_id = rp.permission_id
+            WHERE u.users_id = $1 AND u.tenant_id = app_tenant_id()
+            GROUP BY
+                u.users_id,
+                u.username,
+                u.display_name,
+                r.role_name,
+                u.is_active,
+                u.created_at,
+                u.last_login_at,
+                u.deactivated_at,
+                (u.pin_hash IS NOT NULL),
+                t.tenant_id,
+                t.restaurant_name,
+                t.tenant_slug;
+        `;
+        const result = await this.db.query(sql, [userId]);
+        return result.rows[0] ?? null;
+    }
+
+    /**
      * แก้ไขข้อมูลผู้ใช้ — ส่งเฉพาะช่องที่เปลี่ยน (null = ไม่แตะ)
      * เปลี่ยนรหัสผ่าน = บังคับเพิ่ม token_version เพื่อให้ session เก่าที่ยังค้างอยู่ใช้ไม่ได้
      * และปลดล็อกรหัสผ่าน / PIN ให้ด้วยทันทีเมื่อตั้งค่าใหม่
