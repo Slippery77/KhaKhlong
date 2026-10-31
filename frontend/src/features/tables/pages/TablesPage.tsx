@@ -8,6 +8,7 @@ import { useAuth } from '../../auth/context/AuthContext'
 import { CheckCircle2, Link2, Loader2, RefreshCw, Wallet, X } from 'lucide-react'
 import OpenShiftCard from '../../shifts/components/OpenShiftCard'
 import { useShift } from '../../shifts/hooks/useShift'
+import StaleDataBanner from '../../offline/components/StaleDataBanner'
 import CancelBillModal, {
     type BillActionMode,
     type BillActionPayload,
@@ -43,7 +44,7 @@ interface MergeSummaryState {
 }
 
 export default function TablesPage() {
-    const { tables, isLoading, error, reload } = useTables()
+    const { tables, isLoading, error, staleSince, reload } = useTables()
     const navigate = useNavigate()
     const { user, accessToken } = useAuth()
     const { getOrdersSummary } = usePayment()
@@ -69,8 +70,9 @@ export default function TablesPage() {
         : Array.from(floors.entries()).filter(([floor]) => floor === selectedFloor)
     const visibleTables = visibleFloors.flatMap(([, floorTables]) => floorTables)
     const visibleOccupied = visibleTables.filter((t) => t.status === 'occupied').length
-    const { shift, isLoading:isShiftLoading, isSubmitting, error:shiftError, openShift} = useShift()
-    const needOpenShift = !isShiftLoading && !shiftError && shift === null
+    const { shift, isLoading:isShiftLoading, isSubmitting, error:shiftError, staleSince: shiftStaleSince, openShift} = useShift()
+    // ออฟไลน์ (ข้อมูลกะมาจาก cache) ห้ามเด้งให้เปิดกะ — เปิดกะต้องใช้ server เสมอ
+    const needOpenShift = !isShiftLoading && !shiftError && shiftStaleSince === null && shift === null
 
     // ตัดโต๊ะที่ไม่มีบิลเปิดแล้วออกเอง (เช่น เครื่องอื่นชำระไปแล้วหลังรีเฟรช) — คงลำดับที่เลือก
     const selectedTables = selectedTableIds
@@ -371,6 +373,10 @@ export default function TablesPage() {
                                     แตะโต๊ะที่มีลูกค้าตั้งแต่ 2 โต๊ะขึ้นไป แต่ละโต๊ะยังสั่งอาหารแยกกันตามปกติ แล้วชำระเงินรวมเป็นใบเสร็จเดียว · กด Esc เพื่อยกเลิก
                                 </p>
                             </div>
+                    {/* ติดต่อ server ไม่ได้ — กำลังแสดงผังโต๊ะล่าสุดที่บันทึกไว้ในเครื่อง */}
+                    {!isLoading && !error && staleSince !== null && (
+                        <div className="mb-4 font-kanit">
+                            <StaleDataBanner label="ข้อมูลโต๊ะ" savedAt={staleSince} onRetry={reload} />
                         </div>
                     )}
 

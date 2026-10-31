@@ -49,6 +49,7 @@ export function Register_OwnerForm({
     });
     // แสดง/ซ่อนรหัสผ่าน (ใช้ไอคอน lucide ไม่ใช่ emoji)
     const [showPassword, setShowPassword] = useState(false);
+    const [showConfirmPassword, setShowConfirmPassword] =useState(false);
     const [errors, setErrors] = useState<Record<string, string>>({});
 
     const handleChange = (field: keyof RegisterOwnerInfo, value: string) => {
@@ -201,7 +202,7 @@ export function Register_OwnerForm({
                 <div className="relative">
                     <input
                         id="owner-confirm-password"
-                        type={showPassword ? "text" : "password"}
+                        type={showConfirmPassword ? "text" : "password"}
                         autoComplete="new-password"
                         placeholder="กรอกรหัสผ่านอีกครั้ง"
                         value={fromState.confirm_password}
@@ -211,11 +212,11 @@ export function Register_OwnerForm({
                     <Lock className={iconClass} aria-hidden="true" />
                     <button
                         type="button"
-                        onClick={() => setShowPassword((v) => !v)}
-                        aria-label={showPassword ? "ซ่อนรหัสผ่าน" : "แสดงรหัสผ่าน"}
+                        onClick={() => setShowConfirmPassword((v) => !v)}
+                        aria-label={showConfirmPassword ? "ซ่อนรหัสผ่าน" : "แสดงรหัสผ่าน"}
                         className="absolute right-3 top-1/2 flex h-9 w-9 -translate-y-1/2 cursor-pointer items-center justify-center rounded-lg text-[#9B8E82] transition-colors duration-200 hover:bg-[#EFE8DC] hover:text-[#7a5c45] focus:outline-none focus:ring-2 focus:ring-[#8C6D58]/30"
                     >
-                        {showPassword ? (
+                        {showConfirmPassword ? (
                             <EyeOff className="h-4 w-4" aria-hidden="true" />
                         ) : (
                             <Eye className="h-4 w-4" aria-hidden="true" />
