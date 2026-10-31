@@ -135,19 +135,41 @@ export class ShiftsService {
         return {status:'success', data:toShiftResponse(result)}
     }
     
-    // PIN lock แบบคงทน: นับที่ผู้ใช้ verifier (5 ครั้งใน 5 นาที)
+    // PIN lock แบบคงทน: นับที่ "บัญชีที่กดขอรับรอง" (5 ครั้งใน 5 นาที)
     private static readonly PIN_MAX_ATTEMPTS = 5;
     private static readonly PIN_LOCK_MINUTES = 5;
 
-    async verifyShift(shift_id:string, pin:string){
-        let result;
+    /**
+     * รับรองยอดกะด้วย PIN ผู้จัดการ/เจ้าของร้าน
+     * - PIN ของใครก็ได้ในร้านที่มีสิทธิ์ shift:verify (ไม่ต้องสลับ login)
+     * - นับ PIN ผิดที่บัญชีผู้ขอ (requesterId) จึงเดา PIN ข้ามบัญชีไม่ได้
+     * - ตัวนับต้อง commit นอก transaction ของ request (403 จะ rollback ทิ้ง)
+     */
+    async verifyShift(shift_id:string, pin:string, requesterId?:string){
+        if (!/^\d{6}$/.test(pin ?? '')) {
+            throw new BadRequestException('PIN ต้องเป็นตัวเลข 6 หลัก');
+        }
+
+        if (requesterId) {
+            const lockState = await this.usersRepository.getPinLockState(requesterId);
+            if (lockState?.pin_locked_until) {
+                const lockedUntil = new Date(lockState.pin_locked_until);
+                if (lockedUntil > new Date()) {
+                    throw new HttpException(
+                        'กรอก PIN ผิดหลายครั้งเกินไป กรุณารอ 5 นาทีแล้วลองใหม่',
+                        HttpStatus.TOO_MANY_REQUESTS,
+                    );
+                }
+            }
+        }
+
         const shift = await this.shiftRepository.getShiftStatusForUpdate(shift_id);
         if (!shift) throw new NotFoundException('ไม่พบกะนี้');
         if (!['pending_verification', 'escalated'].includes(shift.status)) {
             throw new ConflictException('กะนี้ไม่ต้องรับรอง หรือรับรองไปแล้ว');
         }
 
-        // หาเจ้าของ PIN ในกลุ่มผู้จัดการ/เจ้าของร้านของร้านนี้ (PIN ของใครก็ได้ ไม่ต้องสลับ login)
+        // หาเจ้าของ PIN ในกลุ่มผู้จัดการ/เจ้าของร้านของร้านนี้ (เว้นคนที่ถูกล็อกอยู่)
         const verifiers = await this.shiftRepository.findPinVerifiers();
         let verifierId: string | null = null;
         for (const verifier of verifiers) {
@@ -156,30 +178,35 @@ export class ShiftsService {
                 break;
             }
         }
-        if (!verifierId) {
-            // ถ้า PIN ตรงกับ verifier คนใดที่ยังไม่ถูกล็อก เรานับที่ verifier นั้น
-            // ถ้าไม่มี verifier ตรงเลย อาจนับรวมไม่ได้แน่ชัด แต่ยังคงปฏิเสธ
-            // หาคนที่อาจเป็นเจ้าของ PIN นี้ - แต่เราไม่รู้; ในที่นี้ให้ปฏิเสธตามเดิม
-            throw new ForbiddenException('PIN ไม่ถูกต้อง หรือผู้ใช้นี้ไม่มีสิทธิ์รับรองยอด');
-        }
 
-        // ตรวจสอบสถานะล็อกของ verifier นี้
-        const lockState = await this.usersRepository.getPinLockState(verifierId);
-        if (lockState?.pin_locked_until) {
-            const lockedUntil = new Date(lockState.pin_locked_until);
-            if (lockedUntil > new Date()) {
+        if (!verifierId) {
+            let lockedUntil: Date | null = null;
+            if (requesterId) {
+                try {
+                    const updated = await this.usersRepository.recordPinFailureDurable(
+                        requesterId,
+                        ShiftsService.PIN_MAX_ATTEMPTS,
+                        ShiftsService.PIN_LOCK_MINUTES,
+                    );
+                    const lock = updated?.pin_locked_until ? new Date(updated.pin_locked_until) : null;
+                    if (lock && lock > new Date()) lockedUntil = lock;
+                } catch {
+                    // นับครั้งผิดไม่สำเร็จก็ยังต้องปฏิเสธ PIN นี้
+                }
+            }
+            if (lockedUntil) {
                 throw new HttpException(
                     'กรอก PIN ผิดหลายครั้งเกินไป กรุณารอ 5 นาทีแล้วลองใหม่',
                     HttpStatus.TOO_MANY_REQUESTS,
                 );
             }
+            throw new ForbiddenException('PIN ไม่ถูกต้อง หรือผู้ใช้นี้ไม่มีสิทธิ์รับรองยอด');
         }
 
+        let result;
         try {
             result = await this.shiftRepository.verifyShift(shift_id, verifierId);
             if (!result) throw new NotFoundException('ไม่พบกะนี้');
-            // สำเร็จ - รีเซ็ตจำนวนครั้งผิด
-            await this.usersRepository.clearPinFailuresForUser(verifierId).catch(() => undefined);
         } catch (err:any) {
             const msg:string = err.message??'';
             if(err.code === 'P0001'){
@@ -187,16 +214,13 @@ export class ShiftsService {
                 if (msg.includes('must be verified by owner')) throw new ForbiddenException('กะที่ส่งต่อแล้วต้องให้เจ้าของร้านรับรอง');
                 if (msg.includes('lacks permission')) throw new ForbiddenException('ไม่มีสิทธิ์รับรองยอด');
             }
-            // นับความพยายามที่ผิดของ verifier นี้
-            try {
-                const updated = await this.usersRepository.recordPinFailure(verifierId);
-                const failed = Number(updated?.pin_failed_attempts ?? 0);
-                if (failed >= ShiftsService.PIN_MAX_ATTEMPTS) {
-                    const lockUntil = new Date(Date.now() + ShiftsService.PIN_LOCK_MINUTES * 60 * 1000);
-                    await this.usersRepository.lockPinUser(verifierId, lockUntil);
-                }
-            } catch {}
+            // PIN ถูกต้องแล้ว แต่ตัว transition ล้มเหลว — ไม่ใช่การเดา PIN จึงไม่นับครั้งผิด
             throw err;
+        }
+
+        // สำเร็จ - รีเซ็ตจำนวนครั้งผิดของบัญชีผู้ขอ
+        if (requesterId) {
+            await this.usersRepository.clearPinFailuresForUser(requesterId).catch(() => undefined);
         }
         return {status:'success', data:toShiftResponse(result)};
     }

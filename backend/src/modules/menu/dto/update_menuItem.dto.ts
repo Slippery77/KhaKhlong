@@ -12,6 +12,11 @@ export class UpdateMenuItemDTO {
     @IsString() @MaxLength(1000)
     description?: string | null;
 
+    @ApiPropertyOptional({ description: 'ลิงก์รูปภาพเมนู หรือ Data URL (ส่ง null เพื่อลบรูป)', nullable: true })
+    @IsOptional()
+    @IsString() @MaxLength(500000)
+    image_url?: string | null;
+
     @ApiPropertyOptional({ description: 'ราคา', example: 80 })
     @ValidateIf((o) => o.price !== undefined)
     @IsNumber({ maxDecimalPlaces: 2 }) @Min(0) @Max(99999999.99)

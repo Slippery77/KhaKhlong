@@ -24,6 +24,7 @@ export interface MenuItemResponse {
     category_id: string;
     name: string;
     description: string | null;
+    image_url: string | null;
     price: number;
     is_available: boolean;
     is_active: boolean;
@@ -37,6 +38,7 @@ export function toMenuItemResponse(row: any): MenuItemResponse {
         category_id: row.category_id,
         name: row.name,
         description: row.description,
+        image_url: row.image_url ?? null,
         price: Number(row.price),   // ← DECIMAL(10,2) มาเป็น string ต้องแปลง
         is_available: row.is_available,
         is_active: row.is_active,

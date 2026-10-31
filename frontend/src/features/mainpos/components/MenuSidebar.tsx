@@ -1,5 +1,4 @@
 import CategoryCard from "./CategoryCard"
-import { UtensilsCrossed } from "lucide-react"
 import type { Category } from "../types/item.types";
 
 // TODO (หมวดจริงจาก API)
@@ -26,7 +25,6 @@ export default function MenuSidebar({categories,seletedCategory,onSelectCategory
                 <CategoryCard 
                 key={c.category_id} 
                 name={c.name} 
-                icon={<UtensilsCrossed/>}
                 isActive={seletedCategory === c.category_id} 
                 onClick={() => onSelectCategory(c.category_id)} />
             ))}

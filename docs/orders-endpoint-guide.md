@@ -1,7 +1,8 @@
 # Orders Module — คู่มือ Endpoint
 
-อัปเดต: 2026-10-17
-สถานะ: **พักไว้** รอทำ Shift module ก่อน แล้วกลับมาทำต่อ
+อัปเดต: 2026-10-31
+สถานะ: **ใช้งานจริง** — void/comp และ cancel/close-unpaid ต้องมี PIN ผู้อนุมัติ
+(ดู `docs/cancel-order-guide.md` และ `docs/void-comp-approval-guide.md`)
 
 เอกสารนี้สรุปว่าแต่ละ endpoint ของโมดูล Order ทำอะไร รับอะไร ส่งอะไร และต้องระวังอะไร อ้างอิง `backend-todo.md` (โมดูล 5), `business-rules-pos-updated.md` (ORD-*, KDS-04, COMP-*, TBL-*) และโค้ดใน `backend/src/modules/orders` ณ วันที่เขียน
 
@@ -77,28 +78,38 @@
 - สถานะโต๊ะทั้งสองใบเปลี่ยนเองผ่าน `sync_table_status()`
 
 ### 2.9 `POST /orders/:id/close-unpaid` — ปิดบิลโดยไม่เก็บเงิน
-- สิทธิ์: `order:close_unpaid`
-- Body: `{ closeReason: 'voided_all' | 'empty' | 'walkout' }` (`paid` เป็นของ Payment)
-- DB เขียน `closed_at`, `closed_by`, `close_reason` และ audit `order_closed_unpaid` เอง
-- `note?` ใน DTO ไม่เห็นคอลัมน์รองรับใน `ORDERS_COL` ต้องเช็ค schema ถ้าไม่มีให้ตัดออก
+- สิทธิ์ที่ route: `order:create` — สิทธิ์จริง `order:close_unpaid` ตรวจที่ **PIN ของผู้อนุมัติ**
+- Body: `{ closeReason: 'voided_all' | 'empty' | 'walkout', approverPin: '123456', note?: string }` (`paid` เป็นของ Payment)
+- `note` **บังคับ** เมื่อ `walkout` และบิลยังมีรายการ → เก็บใน `orders.close_note` + audit
+- ถ้ามี payment attempt เปิดอยู่ → `409 PAYMENT_ATTEMPT_OPEN`
+- DB เขียน `closed_at`, `closed_by` (= ผู้อนุมัติ), `close_reason` และ audit `order_closed_unpaid` เอง
+- trigger `trg_orders_after` เรียก `sync_table_status()` → โต๊ะกลับเป็น `available`
 
-### 2.10 `POST /orders/sync` — ซิงค์บิลออฟไลน์
+### 2.10 `POST /orders/:id/cancel` — ยกเลิกทั้งบิล
+- สิทธิ์ที่ route: `order:create` — ผู้อนุมัติต้องมี `order:close_unpaid` (+ `void:approve` ถ้าต้อง void)
+- Body: `{ reason: string, approverPin: '123456', note?: string }`
+- void ทุกรายการที่ `draft/queued/preparing` แล้วปิดบิลเป็น `voided_all` (หรือ `empty` ถ้าไม่มีรายการ) ใน transaction เดียว
+- มีรายการ `ready/served` → `409 ORDER_HAS_SERVED_ITEMS` (ให้ใช้ walkout), มี attempt เปิด → `409 PAYMENT_ATTEMPT_OPEN`
+- รายละเอียด + error codes ครบ: `docs/cancel-order-guide.md`
+
+### 2.11 `POST /orders/sync` — ซิงค์บิลออฟไลน์
 - สิทธิ์: `order:create`
-- Body: array ของ `{ order, items[] }` ต้องมี DTO จริง (ตอนนี้ `@Body() dto: any` ข้าม validation) และจำกัดขนาด batch
-- ตอบ **รายตัว**: `[{ orderId, result: 'created' | 'exists' | 'rejected', reason? }]`
-- แต่ละบิลเป็น transaction ของตัวเอง บิลเดียวพังต้องไม่ล้มทั้งชุด
+- Body: array (หรือ `{ orders: [...] }`) ของ `{ orderId, tableId, items[] }` — **`createdBy` จาก body ถูกเมิน** ใช้ผู้ใช้จาก token
+- ตอบ **รายตัว**: `{ orderId, status: 'ok' | 'conflict', code?, message?, isNew?, order?, items? }`
+- แต่ละบิลมี `SAVEPOINT` ของตัวเอง — บิลเดียวพังไม่ทำให้ทั้ง batch เป็น aborted transaction (25P02)
+- conflict codes: `TABLE_OCCUPIED`, `ORDER_CLOSED`, `TABLE_OUT_OF_SERVICE`, `INVALID_REFERENCE`, `SYNC_FAILED`
+- ปัญหาระดับร้าน (เช่น `no open shift`) ยังล้มทั้ง batch
 - `order_number` ออกตอน sync ถึง server ไม่ใช่ตอนสร้างบนเครื่อง
-- ทำเป็น endpoint สุดท้ายของโมดูล เพราะใช้ logic ของตัวอื่นซ้ำ
 
 ---
 
 ## 3. ความเสี่ยงและประเด็นที่ยังไม่ปิด
 
 1. **`business_date` ของบิลออฟไลน์:** `trg_orders_before` คำนวณจาก `now()` ตอน INSERT บิลที่สร้างก่อนปิดกะแต่ sync หลังปิดกะจะถูกปฏิเสธ (`no open shift`) หรือได้วันผิด ต้องตัดสินใจ (ก) ปฏิเสธ (ข) รับแล้วลงวันตามเวลาที่สร้างจริง (ต้องส่ง `created_at` จาก client และแก้ trigger) (ค) รับเข้ากะวันใหม่ ผู้เขียนเอนไปทาง (ข) ตรงกับประเด็นค้างใน business-rules 15.2
-2. **ชนกันตอน sync:** เครื่องออฟไลน์เปิดโต๊ะที่เครื่องออนไลน์เปิดไปแล้ว จะชน `uq_orders_one_active_per_table` (23505 คนละตัวกับ conflict ของ `order_id`) `/sync` ต้องตอบเป็น `rejected` ไม่ใช่ error ทั้งชุด
+2. **ชนกันตอน sync:** เครื่องออฟไลน์เปิดโต๊ะที่เครื่องออนไลน์เปิดไปแล้ว จะชน `uq_orders_one_active_per_table` (23505) — `/sync` ตอบเป็น `conflict` code `TABLE_OCCUPIED` รายใบแล้ว (ไม่ล้มทั้งชุด)
 3. **`orderId` ซ้ำแต่ `tableId` ต่างกัน:** `DO NOTHING` คืนบิลเดิมโดยไม่แจ้งความต่าง client ควรเทียบเอง
-4. **comp และ void ตอน `preparing`** พึ่ง `pin-login` / `verifyPin` ที่ยังไม่มี
-5. **ทดสอบ happy path ผ่าน API ไม่ได้** ถ้าไม่มี Shift module
+4. **comp และ void ตอน `preparing`** — ใช้ PIN ผู้อนุมัติแล้ว (ดู `docs/void-comp-approval-guide.md`)
+5. **`/sync` ยังรับ `any`** — ยังไม่มี DTO validation เต็มรูปแบบ ควรทำเมื่อมีเวลาจัดการ payload ออฟไลน์จริง
 
 ## 4. ลำดับการทำ (เมื่อกลับมา)
 

@@ -9,11 +9,17 @@ export class MenuItemDTO {
     @MaxLength(150)
     name!: string;
 
-    @ApiPropertyOptional({ description: 'คำอธิบายเมนู', example: 'ข้าวผัดกุ้งสด ใส่ไข่' })
+    @ApiPropertyOptional({ description: 'คำอธิบายเมนู', example: 'ข้าวผัดกุ้งสด ใส่ไข่', nullable: true })
     @IsOptional()
     @IsString()
     @MaxLength(1000)
-    description?: string;
+    description?: string | null;
+
+    @ApiPropertyOptional({ description: 'ลิงก์รูปภาพเมนู หรือ Data URL ของรูปภาพ', nullable: true })
+    @IsOptional()
+    @IsString()
+    @MaxLength(500000)
+    image_url?: string | null;
 
     @ApiProperty({ description: 'ราคาที่ลูกค้าจ่าย หน่วยบาท ทศนิยม 2 ตำแหน่ง', example: 80 })
     @IsNumber({ maxDecimalPlaces: 2 })

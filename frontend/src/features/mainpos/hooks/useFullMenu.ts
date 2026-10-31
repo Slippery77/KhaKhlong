@@ -115,7 +115,10 @@ export function useFullMenu() {
     )
 
     useEffect(() => {
-        load()
+        const timer = window.setTimeout(() => {
+            void load()
+        }, 0)
+        return () => window.clearTimeout(timer)
     }, [load])
 
     return { categories, menu, isLoading, error,staleSince, reload: () => load(true) }

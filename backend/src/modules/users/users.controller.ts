@@ -21,10 +21,13 @@ import {
   ApiConflictResponse,
   ApiParam,
 } from '@nestjs/swagger';
-import { RequirePermissions } from '../auth/guards/permissions.decorator';
+import {
+  AnyAuthenticated,
+  RequirePermissions,
+} from '../auth/guards/permissions.decorator';
 import { CreateUserDTO } from './dto/createUser.dto';
 import { UpdateUserDTO } from './dto/updateUser.dto';
-import { UserResponseDto } from './dto/user-response.dto';
+import { UserMeResponseDto, UserResponseDto } from './dto/user-response.dto';
 import { UsersService } from './users.service';
 
 @ApiBearerAuth()
@@ -33,6 +36,28 @@ import { UsersService } from './users.service';
 @Controller('users')
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
+
+  /**
+   * GET /users/me
+   * ดึงโปรไฟล์ของผู้ใช้ปัจจุบันที่ล็อกอินอยู่ พร้อมรายการสิทธิ์และข้อมูลร้าน
+   */
+  @ApiOperation({
+    summary: 'ดึงข้อมูลโปรไฟล์ของผู้ใช้ปัจจุบัน',
+    description:
+      'ดึงข้อมูลบัญชีของผู้ใช้ที่ล็อกอินอยู่ พร้อมรายการสิทธิ์ทั้งหมด (permissions) และข้อมูลสรุปของร้าน',
+  })
+  @ApiOkResponse({
+    description: 'ดึงข้อมูลผู้ใช้ปัจจุบันสำเร็จ',
+    type: UserMeResponseDto,
+  })
+  @ApiNotFoundResponse({
+    description: 'ไม่พบข้อมูลผู้ใช้',
+  })
+  @AnyAuthenticated()
+  @Get('me')
+  async getMe(@Req() req) {
+    return this.usersService.getMe(req.user.sub);
+  }
 
   /**
    * GET /users

@@ -12,6 +12,43 @@ export class AuthRepository{
         await this.db.query(sql)
     }
 
+    /**
+     * บันทึก audit log เมื่อเข้าสู่ระบบสำเร็จ (อยู่ใน transaction เดียวกับ login)
+     */
+    async writeLoginSuccessAudit(userId: string, metadata: Record<string, unknown>) {
+        const sql = `
+            INSERT INTO audit_logs(tenant_id, user_id, action_type, ip_address, device_info, metadata)
+            VALUES (
+                app_tenant_id(),
+                $1::uuid,
+                'login_success',
+                COALESCE(NULLIF(current_setting('app.client_ip', true), ''), 'unknown'),
+                COALESCE(NULLIF(current_setting('app.device_info', true), ''), 'unknown'),
+                $2::jsonb
+            )
+        `;
+        await this.db.query(sql, [userId, JSON.stringify(metadata)]);
+    }
+
+    /**
+     * บันทึก audit log เมื่อเข้าสู่ระบบไม่สำเร็จแบบคงทน (durableQuery)
+     * เพื่อไม่ให้ถูก rollback ทิ้งเมื่อโยน 401 หรือ 429
+     */
+    async writeLoginFailedAuditDurable(userId: string | null, metadata: Record<string, unknown>) {
+        const sql = `
+            INSERT INTO audit_logs(tenant_id, user_id, action_type, ip_address, device_info, metadata)
+            VALUES (
+                app_tenant_id(),
+                $1::uuid,
+                'login_failed',
+                COALESCE(NULLIF(current_setting('app.client_ip', true), ''), 'unknown'),
+                COALESCE(NULLIF(current_setting('app.device_info', true), ''), 'unknown'),
+                $2::jsonb
+            )
+        `;
+        await this.db.durableQuery(sql, [userId, JSON.stringify(metadata)]);
+    }
+
     async resolveRefreshToken(hash:string){
         const sql = `
             SELECT tenant_id, user_id

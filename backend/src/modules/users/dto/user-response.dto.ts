@@ -28,3 +28,29 @@ export class UserResponseDto {
   @ApiProperty({ example: true, description: 'ตั้ง PIN แล้วหรือยัง' })
   has_pin!: boolean;
 }
+
+export class UserStoreInfoDto {
+  @ApiProperty({ example: 'a0b1c2d3-0000-4000-8000-000000000001' })
+  tenant_id!: string;
+
+  @ApiProperty({ example: 'ร้านอาหารข้าวมันไก่' })
+  restaurant_name!: string;
+
+  @ApiProperty({ example: 'kaomunkai' })
+  tenant_slug!: string;
+}
+
+export class UserMeResponseDto extends UserResponseDto {
+  @ApiProperty({
+    type: [String],
+    example: ['order:create', 'order:view', 'menu:view'],
+    description: 'รายการสิทธิ์ทั้งหมดของผู้ใช้ตามตำแหน่ง (role)',
+  })
+  permissions!: string[];
+
+  @ApiProperty({
+    type: UserStoreInfoDto,
+    description: 'ข้อมูลสรุปของร้านที่ผู้ใช้สังกัด',
+  })
+  store!: UserStoreInfoDto;
+}

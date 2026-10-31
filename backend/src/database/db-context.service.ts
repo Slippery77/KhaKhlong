@@ -54,6 +54,10 @@ export class DbContextService {
      * เหตุที่ต้องมี: งานตอน boot เช่น PermissionCacheService.onModuleInit
      * ยังไม่มี request จึงยังไม่มี context แต่ต้องอ่านข้อมูลกลางพวกนี้
      *
+     * อนุญาตเพิ่มอีกกรณีเดียว: ฟังก์ชันระบบที่เป็น SECURITY DEFINER และตั้งใจ
+     * ทำงานข้าม tenant ด้วยตัวเอง (เช่น escalate_overdue_shifts()) — cron ไม่มี
+     * request จนไม่มี context ให้ตั้ง RLS
+     *
      * ห้ามใช้กับตารางที่มี tenant_id เด็ดขาด — RLS จะคืน 0 แถวแบบเงียบ
      * ไม่ throw ไม่เตือน ทำให้ bug ซ่อนตัว
      */
@@ -63,6 +67,69 @@ export class DbContextService {
             return this.client.query<T>(sql, params);
         }
         return this.pool.query<T>(sql, params);
+    }
+
+    /**
+     * เขียนแบบ "แยกธุรกรรม" — commit ทันที ไม่ว่า request หลักจะ rollback ภายหลัง
+     *
+     * ใช้กับตัวนับด้านความปลอดภัย (เช่น นับ PIN ผิด / รหัสผ่านผิด / audit login_failed) ที่ต้องคงอยู่จริง
+     * ถ้าเขียนใน transaction ของ request แล้วโยน error เพื่อปฏิเสธคำขอ
+     * ตัวนับจะถูก rollback หายไปด้วย = ล็อกไม่ได้เลย
+     *
+     * หมายเหตุ: ดึง context (tenant, user, role, ip, device) จาก connection ของ request ปัจจุบัน
+     * ห้ามใช้กับงานธุรกิจปกติ (void/comp/ชำระเงิน) — พวกนั้นต้อง rollback ได้
+     */
+    async durableQuery<T extends QueryResultRow = any>(sql: string, params?: any[]) {
+        const store = this.als.getStore();
+        let tenantId = '';
+        let userId = '';
+        let role = '';
+        let clientIp = 'unknown';
+        let deviceInfo = 'unknown';
+        if (store) {
+            const ctx = await store.client.query<{
+                tid: string | null;
+                uid: string | null;
+                role: string | null;
+                ip: string | null;
+                dev: string | null;
+            }>(
+                `SELECT NULLIF(current_setting('app.current_tenant_id', true), '') AS tid,
+                        NULLIF(current_setting('app.current_user_id', true), '')   AS uid,
+                        NULLIF(current_setting('app.current_user_role', true), '') AS role,
+                        NULLIF(current_setting('app.client_ip', true), '')         AS ip,
+                        NULLIF(current_setting('app.device_info', true), '')       AS dev`,
+            );
+            const row = ctx.rows[0];
+            tenantId = row?.tid ?? '';
+            userId = row?.uid ?? '';
+            role = row?.role ?? '';
+            clientIp = row?.ip ?? 'unknown';
+            deviceInfo = row?.dev ?? 'unknown';
+        }
+
+        const client = await this.pool.connect();
+        try {
+            await client.query('BEGIN');
+            if (tenantId) {
+                await client.query(
+                    `SELECT set_config('app.current_tenant_id', $1, true),
+                            set_config('app.current_user_id',   $2, true),
+                            set_config('app.current_user_role', $3, true),
+                            set_config('app.client_ip',         $4, true),
+                            set_config('app.device_info',       $5, true)`,
+                    [tenantId, userId, role, clientIp, deviceInfo],
+                );
+            }
+            const result = await client.query<T>(sql, params);
+            await client.query('COMMIT');
+            return result;
+        } catch (err) {
+            await client.query('ROLLBACK').catch(() => undefined);
+            throw err;
+        } finally {
+            client.release();
+        }
     }
 
     /**

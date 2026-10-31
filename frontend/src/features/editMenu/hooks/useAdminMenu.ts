@@ -26,10 +26,14 @@ export function useAdminMenu(){
         }
     },[accessToken]);
 
-    useEffect(() => {load();},[load]);
+    useEffect(() => {
+        const timer = window.setTimeout(() => {
+            void load();
+        }, 0);
+        return () => window.clearTimeout(timer);
+    },[load]);
 
     return {categories,modifier,isLoading, error, reload:()=>load(true)};
-    //reload คือปุ่มโหลดใหม่ refresh ถ้าโหลดใหม่จะเอาข้อมูลมาแสดง
 }
 
 export function useCreateCategory(){
@@ -89,7 +93,6 @@ export function useMenuItemStatus(){
     };
 
     const enable = async (menuItemId: string): Promise<boolean> => {
-        // TODO
         setError(null);
         setIsSubmitting(true);
         try{
@@ -168,11 +171,22 @@ export function useCreateMenu(){
     const [error, setError] = useState<string|null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
 
-    const createMenuItem = async ( category_id:string,name:string, description:string|null, price:number) =>{
-        setError(null)
-        setIsSubmitting(true)
+    const createMenuItem = async (
+        category_id: string,
+        name: string,
+        description: string | null,
+        price: number,
+        image_url?: string | null,
+    ) => {
+        setError(null);
+        setIsSubmitting(true);
         try{
-            const res = await apiFetch<{data:{menu_item_id:string}}>('/menu/items',accessToken,'POST',{category_id,name,description,price});
+            const res = await apiFetch<{data:{menu_item_id:string}}>(
+                '/menu/items',
+                accessToken,
+                'POST',
+                { category_id, name, description, price, image_url: image_url ?? null },
+            );
             return res.data.menu_item_id;
         }catch(err){
             setError(err instanceof Error ? err.message:'บันทึกไม่สำเร็จ');
@@ -183,24 +197,21 @@ export function useCreateMenu(){
     return { createMenuItem ,isSubmitting ,error}
 }
 
-// ใช้กับปุ่มดินสอ (ข้อ 3 ทำทีหลัง)
 export function useEditMenu(){
-    // แก้ข้อมูลเมนู
-    // PATCH /menu/items/:menu_item_id
-    // body: ส่งเฉพาะช่องที่แก้ (ทุกช่องไม่บังคับ แต่ห้ามส่ง {} ว่าง → 400)
-    //   name?: string
-    //   description?: string | null   ← null = ล้างคำอธิบาย
-    //   price?: number
-    //   category_id?: string          ← ย้ายหมวด
-    // 409 = ชื่อซ้ำ
     const {accessToken} = useAuth();
     const [error, setError] = useState<string|null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
 
-    const editMenuItem = async ( menu_item_id:string,name?:string, description?:string|null, price?:number,category_id?:string)=>{
-        const body = { category_id,name,description,price };
+    const editMenuItem = async (
+        menu_item_id: string,
+        name?: string,
+        description?: string | null,
+        price?: number,
+        category_id?: string,
+        image_url?: string | null,
+    ) => {
+        const body = { category_id, name, description, price, image_url };
         
-        // อันนี้เช็คค่าใน body ว้ามีข้อมูลมูลไหม ถ้ามีข้อมูลจะส่งเป็น false ส่วนถ้าไม่มีข้อมูลเล่ย (undefined) ทั้งหมด จะส่ง true เข้าส่วน if
         if(Object.values(body).every(v=> v === undefined)){
             setError('ไม่มีข้อมูลที่เปลี่ยน');
             return false;
@@ -219,21 +230,15 @@ export function useEditMenu(){
         }
         return false;
     }
-    
-
-    // ผูกกลุ่มตัวเลือกกับเมนู (ถ้าในฟอร์มให้เลือกด้วย)
-    // PUT /menu/items/:menu_item_id/modifier-groups
-    // body: { modifier_group_ids: string[] }   ← เรียงตามลำดับที่แสดง, [] = ถอดทั้งหมด, สูงสุด 20
 
     return { editMenuItem, isSubmitting, error};
 }
 
-export function uselinkModifier(){
+export function useLinkModifier(){
     const {accessToken} = useAuth();
     const [error, setError] = useState<string|null>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
 
-    // modifier_group_ids เรียงตามลำดับที่แสดง, [] = ถอดทั้งหมด, สูงสุด 20
     const link = async (menu_item_id:string,modifier_group_ids:string[]) => {
         setError(null);
         setIsSubmitting(true);
@@ -250,3 +255,5 @@ export function uselinkModifier(){
     }
     return {link,error,isSubmitting}
 }
+
+export const uselinkModifier = useLinkModifier;

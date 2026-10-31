@@ -5,10 +5,10 @@ import { UpdateModifierGroupDTO } from './dto/update_modifier_group.dto';
 import { UpdateModifierItemDTO } from './dto/update_modifierItem.dto';
 
 const CATEGORY_COLS = `category_id, name, sort_order, is_active, created_at, updated_at`;
-const MENU_ITEM_COLS = `menu_item_id, category_id, name, description, price, is_available, is_active, created_at, updated_at`;
+const MENU_ITEM_COLS = `menu_item_id, category_id, name, description, image_url, price, is_available, is_active, created_at, updated_at`;
 const MODIFIER_GROUP_COLS = `modifier_group_id, name, selection_type, is_required,is_active,created_at,updated_at`;
 const MODIFIER_COLS = `modifier_id, modifier_group_id, name, price_delta, is_active, created_at, updated_at`;
-const UPDATABLE = ['name', 'price', 'description', 'category_id'];
+const UPDATABLE = ['name', 'price', 'description', 'image_url', 'category_id'];
 const MODIFIER_GROUP_UPDATABLE = ['name', 'selection_type', 'is_required'] as const;
 const MODIFIER_ITEM_UPDATABLE = ['name','price_delta'] as const ;
 
@@ -62,13 +62,13 @@ export class MenuRepository{
         return result.rows;
     }
     // ส่วนเมนู
-    async createMenuItem(categoryId:string,name:string,description:string|null,price:number){
+    async createMenuItem(categoryId:string,name:string,description:string|null,price:number,imageUrl:string|null=null){
         const sql = `
-            INSERT INTO menu_items(tenant_id, category_id, name, description, price)
-            VALUES (app_tenant_id(),$1,$2,$3,$4)
+            INSERT INTO menu_items(tenant_id, category_id, name, description, price, image_url)
+            VALUES (app_tenant_id(),$1,$2,$3,$4,$5)
             RETURNING ${MENU_ITEM_COLS};
         `;
-        const result = await this.db.query(sql,[categoryId,name,description,price]);
+        const result = await this.db.query(sql,[categoryId,name,description,price,imageUrl]);
         return result.rows[0];
     }
     async setMenuItemsActive(menu_id:string, isActive:boolean){
@@ -265,7 +265,7 @@ export class MenuRepository{
     async listMenuItemsForMenu(includeInactive: boolean) {
         const where = includeInactive ? '' : 'WHERE m.is_active AND c.is_active';
         const sql = `
-            SELECT m.category_id, m.menu_item_id, m.name, m.description, m.price,
+            SELECT m.category_id, m.menu_item_id, m.name, m.description, m.image_url, m.price,
                 m.is_available, m.is_active, m.updated_at
             FROM menu_items m
             JOIN categories c ON c.category_id = m.category_id
