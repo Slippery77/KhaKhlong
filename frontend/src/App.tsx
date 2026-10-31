@@ -3,6 +3,8 @@ import { KDSProvider } from './features/kds/context/KDSContext';
 import { SalesProvider } from './features/saleReport/context/SalesContext';
 import UpdatePrompt from './features/offline/components/UpdatePrompt';
 import OfflineBanner from './features/offline/components/offlineBanner';
+import OutboxRunner from './features/offline/components/OutboxRunner';   // [ใหม่]
+
 import './App.css';
 
 function App() {
@@ -12,6 +14,7 @@ function App() {
         <AppRouter />
         <UpdatePrompt />
         <OfflineBanner/>
+        <OutboxRunner/>
       </KDSProvider>
     </SalesProvider>
   );

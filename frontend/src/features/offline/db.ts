@@ -1,5 +1,48 @@
 import Dexie, { type Table } from 'dexie';
 
+
+// ===================== outbox (คิวคำสั่งที่รอส่ง server) =====================
+
+/** body ของ POST /orders — ตรงกับ CreateOrderDto ฝั่ง backend */
+export interface CreateOrderBody {
+  orderId: string;
+  tableId: string;
+}
+
+/** 1 จาน = 1 แถว — ตรงกับ CreateOrderItemDto ฝั่ง backend */
+export interface OrderItemBody {
+  orderItemId: string;
+  menuItemId: string;
+  specialRequest?: string;
+  modifierIds?: string[];
+}
+
+/** body ของ POST /orders/:id/items — ตรงกับ AddOrderItemsDto ฝั่ง backend */
+export interface AddItemsBody {
+  items: OrderItemBody[];
+  kitchenTicketId: string;
+}
+
+export type OutboxStatus = 'pending' | 'failed';
+
+/** ส่วนที่ทุกรายการมีเหมือนกัน */
+interface OutboxBase {
+  seq?: number; // Dexie ใส่ให้เอง (เลขรัน = ลำดับการส่ง)
+  tenantSlug: string;
+  userId: string; // คนที่กด — ใช้ในเครื่องเท่านั้น ไม่ส่งขึ้น server
+  orderId: string; // ใช้จัดกลุ่มรายการของบิลเดียวกัน
+  shiftId: string | null; // กะตอนกด (เก็บไว้ก่อน รอ backend SHIFT_MISMATCH)
+  status: OutboxStatus;
+  attempts: number;
+  lastError: string | null;
+  createdAt: number;
+}
+
+/** 1 รายการใน outbox — kind บอกว่า payload เป็นแบบไหน (discriminated union) */
+export type OutboxEntry =
+  | (OutboxBase & { kind: 'createOrder'; payload: CreateOrderBody })
+  | (OutboxBase & { kind: 'addItems'; payload: AddItemsBody });
+
 /**
  * ฐานข้อมูลในเครื่อง (IndexedDB) ของแอป — ใช้ผ่าน Dexie
  *
@@ -27,6 +70,7 @@ export interface Snapshot<T = unknown> {
 
 class PosDatabase extends Dexie {
   snapshots!: Table<Snapshot, [string, SnapshotKind]>;
+  outbox!: Table<OutboxEntry,number>;// primary key = seq (number)
 
   constructor() {
     // ต้องเรียก super() ก่อนใช้ this เสมอ (กติกาของคลาสลูก)
@@ -42,6 +86,16 @@ class PosDatabase extends Dexie {
     this.version(1).stores({
       snapshots: '[tenantSlug+kind], tenantSlug',
     });
+
+    // version(2): เพิ่มตาราง outbox — snapshots เหมือนเดิมทุกตัวอักษร
+    // '++seq'      = primary key เลขรันอัตโนมัติ 1, 2, 3, ... (ใช้เป็นลำดับการส่ง)
+    // 'tenantSlug' = ดึงเฉพาะของร้านนี้
+    // 'orderId'    = หา/ลบทุกรายการของบิลเดียวกัน
+    // 'status'     = นับจำนวน pending / failed
+    this.version(2).stores({
+      snapshots: '[tenantSlug+kind], tenantSlug',
+      outbox: '++seq, tenantSlug, orderId, status',
+    })
   }
 }
 
