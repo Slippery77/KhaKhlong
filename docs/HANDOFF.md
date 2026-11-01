@@ -69,7 +69,7 @@ $env:PGPASSWORD='<รหัสผ่าน pos_app จาก .env>'
 - **Menu** — หมวด/เมนู/ modifiers ครบ endpoint · ผูกเมนูกับกลุ่มตัวเลือกได้ (`linkModifier.tsx`) · **รองรับรูปภาพเมนู (`menu_items.image_url`) ทั้งอัปโหลดไฟล์บีบอัด/URL พร้อมแสดงบนการ์ด POS และตารางตั้งค่าเมนู** (ดู 3.15)
 - **Floors / Tables** — พื้นที่ โต๊ะ ผังร้าน
 - **Orders** — create, list (open), get by id, add items (+kitchen ticket), move table, close-unpaid, sync · **void / comp รายการพร้อม PIN ผู้อนุมัติ** (ดู 3.8) · **ยกเลิกทั้งบิล + ปิดบิลลูกค้าหนี (walkout) พร้อม PIN และคืนโต๊ะได้จริง** (ดู 3.13 / `docs/cancel-order-guide.md`)
-- **Inventory** — stock view, movements (รับเข้า/ปรับ/ของเสีย), **count batch** (รอบล่าสุด)
+- **Inventory** — stock view, movements (รับเข้า/ปรับ/ของเสีย), **count batch** (รอบล่าสุด) · **Inventory polish: คอลัมน์ business_date ใน inventory_transactions (PATCH_11), ปรับ note และทศนิยมใน record_stock_count(), และ UI/UX Pro Max ช่องค้นหา + ตัวกรองด่วนในการ์ดนับวัตถุดิบ (StockAdjustmentCard)** (ดู 3.22)
 - **Shifts** — open, current, close, verify (PIN ผู้จัดการ/เจ้าของ), reopen, cashbook, list · **`GET /shifts` ใช้ `report:view_all` หรือ `report:view_own_shift` แล้ว** (employee เห็นกะตัวเอง) · **PIN lock เก็บใน DB** (คงทนข้าม restart) · **กะค้างรับรองเกิน `shift_escalation_hours` (default 4 ชม.) ถูก escalate หา owner อัตโนมัติ**
 - **KDS** — คิวครัว + mark ready
 - **System Config** — GET/PATCH (VAT, ตั้งค่าเครื่องพิมพ์ และการตั้งค่าการทำงานร้าน/กะ/สต็อก ครบถ้วนบน UI)
@@ -87,7 +87,6 @@ $env:PGPASSWORD='<รหัสผ่าน pos_app จาก .env>'
 
 - **Offline data layer** — PWA shell พร้อมแล้ว แต่ยังไม่มี Dexie/IndexedDB แคชเมนู/โต๊ะ/กะ และยังไม่มี outbox คิวออเดอร์ (service worker ไม่แคช `/api` โดยตั้งใจ)
 - **Menu reorder** — endpoint และ UI จัดลำดับเมนู/หมวดหมู่
-- **Inventory polish** — ช่องค้นหาวัตถุดิบบนการ์ดตรวจนับ, ใช้วันที่ business date, note ในการตรวจนับ
 - *(หน้า Dashboard / Homepage `/:tenantSlug/homepage` และ Export สรุปยอดขายแบบ PDF ตัดออกจากขอบเขตแล้ว — รายงานใช้ส่งออกเป็น CSV เท่านั้น)*
 
 ---
@@ -385,7 +384,7 @@ commit เดียว 4 เรื่อง:
 - **Reports**: สรุปยอดขาย, กรองช่วงวันที่, หน้ารายงานรายกะ และส่งออก CSV เสร็จสมบูรณ์แล้ว (`3.18`) — *(ตัดการสรุปยอดขายแบบ PDF ออก ใช้แค่ CSV)*
 - **System Config UI**: หน้า VAT, Store และ **หน้าตั้งค่าเครื่องพิมพ์และใบเสร็จ (Printer & Receipt Settings)** เสร็จสมบูรณ์แล้ว (ดู 3.20)
 - **Menu reorder endpoint**
-- **Inventory polish**: ช่องค้นหาในการ์ดนับวัตถุดิบ, ใช้ business date แทน local date, note ใน `record_stock_count()` มีช่องว่างนำหน้า + ทศนิยม 4 ตำแหน่ง
+- **Inventory polish**: เสร็จสมบูรณ์แล้ว (ดู 3.22)
 
 ### ปิดแล้ว (เคยอยู่ใน P1 — อย่าเปิดซ้ำ)
 
@@ -414,7 +413,7 @@ commit เดียว 4 เรื่อง:
 | Backend `npx eslint "src/**/*.ts"` | ยังแดงหลายพัน problems (ส่วนใหญ่ prettier) — **อย่า auto-fix ปนกับ feature commit** |
 | Frontend `npx eslint src` | ~40 problems เดิม (`react-hooks/set-state-in-effect`, `no-explicit-any` ใน `libs/appClient.ts`) — ไฟล์ที่แตะในงาน void/comp สะอาด |
 | Backend e2e spec | `backend/test/app.e2e-spec.ts` ยังเป็น boilerplate (`"Hello World!"`) → ใช้ไม่ได้ |
-| E2E ใน repo | `backend/test/e2e/`: `e2e-reports.mjs`, `e2e-receipt.mjs`, `e2e-public-tenant.mjs`, `e2e-token-version.mjs`, `e2e-void-comp.mjs`, `e2e-cancel-order.mjs`, `e2e-login-lockout.mjs`, `e2e-users-me.mjs`, `e2e-merge-tables-payment.mjs`, `e2e-audit-logs.mjs`, `e2e-printer-config.mjs` |
+| E2E ใน repo | `backend/test/e2e/`: `e2e-reports.mjs`, `e2e-receipt.mjs`, `e2e-public-tenant.mjs`, `e2e-token-version.mjs`, `e2e-void-comp.mjs`, `e2e-cancel-order.mjs`, `e2e-login-lockout.mjs`, `e2e-users-me.mjs`, `e2e-merge-tables-payment.mjs`, `e2e-audit-logs.mjs`, `e2e-printer-config.mjs`, `e2e-inventory-polish.mjs` |
 | E2E ที่ยังไม่อยู่ใน repo | สคริปต์ใน `%TEMP%\opencode\` ของเครื่องที่เขียน: `e2e-shift.mjs`, `e2e-stock-count-batch.mjs`, `e2e-floors.mjs`, `e2e-kds-badge.mjs` |
 
 **ข้อควรระวังเวลาเทสต์**
@@ -497,7 +496,7 @@ commit เดียว 4 เรื่อง:
 ## 9. ลำดับที่แนะนำถัดไป
 
 1. **เปิด PR `feat-aod` → `main`** — งาน P0 และ P1 ทั้งหมด (`void/comp`, `PIN lock`, `escalation`, `cancel/walkout`, `login lockout`, `menu image`, `GET /users/me`) เสร็จครบแล้ว
-2. **P2 ที่เหลือ**: offline data layer (Dexie + outbox) → Menu reorder → Inventory polish (Reports/CSV, Audit logs 3.19 และ Printer & Receipt Settings 3.20 เสร็จเรียบร้อยแล้ว)
+2. **P2 ที่เหลือ**: offline data layer (Dexie + outbox) → Menu reorder (Reports/CSV, Audit logs 3.19, Printer & Receipt Settings 3.20 และ Inventory polish 3.22 เสร็จเรียบร้อยแล้ว)
 4. ย้าย E2E 4 ตัวจาก `%TEMP%\opencode\` เข้า repo และเพิ่ม E2E ของ PIN ผ่าน UI (ตั้ง PIN → void/comp → verify กะ) + E2E escalation (ต้องต่อ DB เพื่อย้อน `closed_at`)
 
 > ก่อนเริ่มงานทุกครั้ง: ดู `git status`, รัน `npx tsc --noEmit` (backend) และ `npx tsc -b` (frontend) ให้ผ่านก่อน commit

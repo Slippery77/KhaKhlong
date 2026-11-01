@@ -278,6 +278,7 @@ export class InventoryRepository {
     type?: string,
     limit = 50,
     offset = 0,
+    businessDate?: string,
   ) {
     const sql = `
       SELECT
@@ -291,17 +292,20 @@ export class InventoryRepository {
         t.waste_reason,
         t.note,
         t.created_by,
-        t.created_at
+        t.created_at,
+        t.business_date::text AS business_date
       FROM inventory_transactions t
       JOIN ingredients i ON i.ingredient_id = t.ingredient_id
       WHERE ($1::uuid IS NULL OR t.ingredient_id = $1)
         AND ($2::varchar IS NULL OR t.type = $2)
+        AND ($3::date IS NULL OR t.business_date = $3::date)
       ORDER BY t.created_at DESC
-      LIMIT $3 OFFSET $4;
+      LIMIT $4 OFFSET $5;
     `;
     const result = await this.db.query<InventoryTransactionRow>(sql, [
       ingredientId || null,
       type || null,
+      businessDate || null,
       limit,
       offset,
     ]);
@@ -314,16 +318,19 @@ export class InventoryRepository {
   async countTransactions(
     ingredientId?: string,
     type?: string,
+    businessDate?: string,
   ): Promise<number> {
     const sql = `
       SELECT count(*)::int AS total
       FROM inventory_transactions t
       WHERE ($1::uuid IS NULL OR t.ingredient_id = $1)
-        AND ($2::varchar IS NULL OR t.type = $2);
+        AND ($2::varchar IS NULL OR t.type = $2)
+        AND ($3::date IS NULL OR t.business_date = $3::date);
     `;
     const result = await this.db.query<TotalRow>(sql, [
       ingredientId || null,
       type || null,
+      businessDate || null,
     ]);
     return result.rows[0]?.total ?? 0;
   }

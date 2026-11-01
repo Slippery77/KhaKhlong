@@ -75,6 +75,12 @@ export class InventoryTransactionResponseDto {
     example: '2026-10-19T00:00:00.000Z',
   })
   created_at: Date;
+
+  @ApiPropertyOptional({
+    description: 'วันทำการที่เกิดรายการ (YYYY-MM-DD)',
+    example: '2026-10-31',
+  })
+  business_date?: string;
 }
 
 export class GetInventoryTransactionsQueryDto {
@@ -94,6 +100,13 @@ export class GetInventoryTransactionsQueryDto {
   @IsIn(['restock', 'adjustment', 'waste'])
   @IsOptional()
   type?: 'restock' | 'adjustment' | 'waste';
+
+  @ApiPropertyOptional({
+    description: 'กรองตามวันทำการ (YYYY-MM-DD)',
+    example: '2026-10-31',
+  })
+  @IsOptional()
+  business_date?: string;
 
   @ApiPropertyOptional({
     description: 'จำนวนแถวที่ต้องการดึง (ค่าเริ่มต้น 50, สูงสุด 200)',
@@ -137,5 +150,6 @@ export function toInventoryTransactionResponse(
     note: row.note ?? null,
     created_by: row.created_by,
     created_at: row.created_at,
+    business_date: row.business_date ?? undefined,
   };
 }
