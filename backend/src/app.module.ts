@@ -20,6 +20,7 @@ import { ShiftsModule } from './modules/shifts/shifts.module';
 import { SystemConfigModule } from './modules/system-config/system-config.module';
 import { PaymentModule } from './modules/payment/payment.module';
 import { ReportsModule } from './modules/reports/reports.module';
+import { AuditLogsModule } from './modules/audit-logs/audit-logs.module';
 import { ShiftEscalationService } from './common/shift-escalation.service';
 
 @Module({
@@ -56,6 +57,7 @@ import { ShiftEscalationService } from './common/shift-escalation.service';
     InventoryModule,
     PaymentModule,
     ReportsModule,
+    AuditLogsModule,
     ThrottlerModule.forRoot([{
       ttl: 60000,
       limit: 100,

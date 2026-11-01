@@ -79,12 +79,12 @@ $env:PGPASSWORD='<รหัสผ่าน pos_app จาก .env>'
 - **Payment** — `attempts` → `pay` → `cancel`; ออกเลขใบเสร็จ, ดู/พิมพ์ใบเสร็จ; UI `PaymentModal` 3 ขั้น ใช้ยอดจาก server เท่านั้น
 - **Receipt (FE)** — `features/receipt/` พรีวิว 80mm + พิมพ์จริง, ป้าย "สำเนา" ตาม `isCopy`, เคารพ `max_reprints` (409)
 - **Reports** — `sales/summary`, `sales/by-period`, `sales/top-items`, `sales/transactions`, `sales/receipt/:id` · **หน้ารายงานรอบด้านบน UI: ตัวกรองช่วงวันที่ (From - To), โหมดดูตามกะ (Shift Selector Dropdown), ส่งออกตารางธุรกรรมเป็น CSV (UTF-8 BOM ภาษาไทยไม่เพี้ยน)** (ดู 3.18)
+- **Audit Logs (2026-11-01)** — `GET /api/audit-logs` สิทธิ์ `audit_log:view` (Owner, Manager ตาม AUD-05) + Pagination + Filter ตาม action_type, user_id, วันที่ (timezone Asia/Bangkok) + หน้า UI แยกใน Header MenuDropdown พร้อม Detail Modal คัดลอก JSON และ AuditRouteGuard สกัดพนักงาน (ดู 3.19)
 - **Void / Comp (2026-10-30)** — batch endpoint + PIN ผู้อนุมัติ + audit ผ่าน trigger + FE modal + E2E 31 ข้อผ่าน
 - **PWA shell** — `vite-plugin-pwa` + manifest + precache ทุกไฟล์ build + `navigateFallback '/index.html'` (deny `/api`) + แจ้งอัปเดตด้วย `UpdatePrompt` (`registerType: 'prompt'`, ไม่ reload เองกลางการสั่งอาหาร) + ไอคอน 64/192/512/maskable
 
 ### ยังไม่เริ่ม / ยังไม่ครบ
 
-- **Audit Logs** — ไม่มี endpoint/UI (DB trigger เขียน audit บางเหตุการณ์ แต่ยังไม่มีหน้าดู)
 - **Offline data layer** — PWA shell พร้อมแล้ว แต่ยังไม่มี Dexie/IndexedDB แคชเมนู/โต๊ะ/กะ และยังไม่มี outbox คิวออเดอร์ (service worker ไม่แคช `/api` โดยตั้งใจ)
 - **Reports เพิ่มเติม** — หน้ารายงานรายกะ, ตัวกรองช่วงวันที่บน UI, export
 - **Shift escalation อัตโนมัติ** — มี service แล้วแต่ยังไม่ทำงานจริง (ดู 5/P1-1)
@@ -263,7 +263,7 @@ commit เดียว 4 เรื่อง:
   - **`TableCard.tsx`**: โหมด `selectionMode` แสดง Checkbox มุมการ์ดโต๊ะที่มีลูกค้า (`occupied`), ไฮไลท์การ์ดที่ถูกเลือกด้วยกรอบและเงาสีกาแฟ `#8C6D58`, โต๊ะว่างจะถูกหรี่แสงลงและกดไม่ได้
   - **`PaymentModal.tsx`**: รองรับ prop `orderIds: string[]` และชื่อโต๊ะรวม เช่น "โต๊ะ 01 + 02", คำนวณยอดและชำระรวมได้โดยตรงบนหน้าผังโต๊ะ
   - **`usePayment.ts`**: เพิ่มฟังก์ชัน `getOrdersSummary(orderIds: string[])`
-- **ทดสอบ**: E2E `backend/test/e2e/e2e-merge-tables-payment.mjs` (22/22 ผ่าน)
+- **ทดสอบ**: E2E `backend/test/e2e/e2e-merge-tables-payment.mjs, e2e-audit-logs.mjs` (22/22 ผ่าน)
 
 ### 3.18 รายงานยอดขาย: ตัวกรองช่วงวันที่ (Date Range), โหมดดูตามกะ (Shift Selector), และส่งออก CSV (2026-11-01)
 
@@ -280,6 +280,24 @@ commit เดียว 4 เรื่อง:
   - `SalesTransactionTable.tsx`: เพิ่มปุ่ม "ส่งออก CSV" มุมบนขวาของตาราง
   - `exportCsv.ts`: แปลงข้อมูลตารางประวัติธุรกรรมเป็นไฟล์ CSV พร้อมใส่ **UTF-8 BOM (`\uFEFF`)** เปิดใน Microsoft Excel ภาษาไทยไม่เป็นตัวต่างดาว
 - **Doubt-Driven Fix**: แก้บั๊กหน้าจอขาว (White screen) จากการที่ response ของ `GET /shifts` คืน `{ items: [...] }` แต่ frontend คาดหวัง array โดยตรง และปรับปรุง type safety ของตัวเลขก่อน export CSV
+
+---
+
+### 3.19 บันทึกประวัติความปลอดภัย (Audit Logs) — Endpoint, UI ใน Header MenuDropdown, และ Route Guard (2026-11-01)
+
+- **Backend**:
+  - สร้างโมดูลใหม่ `backend/src/modules/audit-logs/`:
+    - `AuditQueryDto`: รองรับ `page`, `limit` (max 100), `action_type`, `user_id`, `from`, `to`
+    - `AuditLogsRepository.findAuditLogs`: กรอง `tenant_id = app_tenant_id()` เสมอ, แปลงเขตเวลา `(a.created_at AT TIME ZONE 'Asia/Bangkok')::date` ป้องกันปัญหา timezone หลุดช่วงเวลา, และ JOIN `users` เพื่อเอา `username` กับ `display_name`
+    - `AuditLogsService` + `AuditLogsController`: กำกับด้วย `@RequirePermissions('audit_log:view')` ตามข้อกำหนด **AUD-05** อนุญาตเฉพาะ Owner และ Manager
+- **Frontend** (ออกแบบตาม `ui-ux-pro-max`):
+  - `Header.tsx`: เพิ่มเมนู **"ประวัติความปลอดภัย"** พร้อมไอคอน `ShieldCheck` ใน MenuDropdown แสดงเฉพาะบทบาท Owner และ Manager (พนักงานไม่เห็นเมนูนี้)
+  - `AuditRouteGuard.tsx`: คุ้มครองเส้นทาง `/:tenantSlug/audit-logs` หากพนักงานพยายามเข้า URL ตรงๆ จะถูกสกัดด้วย `AccessDeniedPage` อย่างสุภาพและปลอดภัย
+  - `AuditLogsPage.tsx`: ตารางข้อมูล Responsive (`overflow-x-auto`), ป้ายสถานะ Action Types สีสันตามหมวดหมู่, ตัวกรอง (Action Type, ผู้ใช้, วันที่เริ่มต้น-สิ้นสุด), ระบบป้องกัน Race condition จากการส่ง Request ถี่, และ `AuditDetailModal` แสดง JSON Metadata พร้อมปุ่ม "คัดลอก JSON"
+  - `AppRouter.tsx`: แก้ไขบั๊ก Infinite redirect loop ใน `SettingIndexRedirect` ให้ใช้ Absolute path
+- **ทดสอบ**:
+  - E2E `backend/test/e2e/e2e-audit-logs.mjs` (14/14 ผ่าน) ตรวจสอบ Token, 403 Forbidden สำหรับ Employee, Pagination และการกรองข้อมูล
+  - Typecheck (`tsc --noEmit`, `tsc -b`) และ Vite build ผ่าน 100%
 
 ---
 
@@ -307,7 +325,6 @@ commit เดียว 4 เรื่อง:
 - **Reports ต่อยอด**: หน้ารายงานรายกะ/ตัวกรองวันที่/ส่งออก CSV เสร็จแล้ว (`3.18`); ยังเหลือ export สรุปภาพรวมแบบ PDF (ถ้าต้องการเพิ่ม)
 - **System Config UI ที่เหลือ** (หน้า VAT กับ Store ทำแล้ว)
 - **Menu reorder endpoint**
-- **Audit Log endpoint/UI**
 - **Inventory polish**: ช่องค้นหาในการ์ดนับวัตถุดิบ, ใช้ business date แทน local date, note ใน `record_stock_count()` มีช่องว่างนำหน้า + ทศนิยม 4 ตำแหน่ง
 
 ### ปิดแล้ว (เคยอยู่ใน P1 — อย่าเปิดซ้ำ)

@@ -8,6 +8,7 @@ Package,
 ChartLine,
 Wallet,
 Settings,
+ShieldCheck,
 Utensils} from "lucide-react"
 import { useState, useRef, useEffect } from "react"
 import { useLocation, Link, useParams, useNavigate } from "react-router-dom"
@@ -43,6 +44,7 @@ export default function Header() {
     const isPOS = location.pathname.includes("/mainpos")
     const isTables = location.pathname.includes("/tables")
     const isSetting = location.pathname.includes("/setting")
+    const isAuditLogs = location.pathname.includes("/audit-logs")
     const isSiftwork = location.pathname.includes("/siftwork")
     const isSalereport = location.pathname.includes("/sale-report")
     const isStock = location.pathname.includes("/stock")
@@ -115,6 +117,7 @@ export default function Header() {
                     {isTables && ("โต๊ะ")}
                     {isStock && ("สต็อก")}
                     {isSalereport && ("ยอดขาย")}
+                    {isAuditLogs && ("ประวัติความปลอดภัย")}
                     {isSetting && (!canAccessSettings ? "ไม่มีสิทธิ์เข้าถึง" : "ตั้งค่า")}
                     {isSiftwork && ("ปิดกะ/นับเงิน")}
                 </span>
@@ -215,6 +218,20 @@ export default function Header() {
                                 <Wallet className="w-4 h-4 text-[#8C6D58]" />
                                 <span>ปิดกะ/นับเงิน</span>
                             </Link>
+
+                            {/* บันทึกประวัติความปลอดภัย (AUD-05) — เฉพาะเจ้าของร้านและผู้จัดการเท่านั้น */}
+                            {canAccessSettings && (
+                                <Link
+                                    to={`/${tenantSlug}/audit-logs`}
+                                    onClick={() => setIsMenuOpen(false)}
+                                    className={`flex items-center gap-3 px-4 py-2.5 text-sm transition-all hover:bg-[#FAF7F2] ${
+                                        isAuditLogs ? "font-semibold text-[#8C6D58] bg-[#FAF7F2]/80" : "text-[#2D241E]"
+                                    }`}
+                                >
+                                    <ShieldCheck className="w-4 h-4 text-[#8C6D58]" />
+                                    <span>ประวัติความปลอดภัย</span>
+                                </Link>
+                            )}
 
                             {/* เฉพาะผู้จัดการหรือเจ้าของร้านเท่านั้นที่จะเห็นเมนูตั้งค่า — พนักงานจะไม่เห็น */}
                             {canAccessSettings && (

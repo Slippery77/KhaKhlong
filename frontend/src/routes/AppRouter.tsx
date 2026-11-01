@@ -1,5 +1,5 @@
 import { lazy, Suspense } from 'react';
-import { Navigate, Route, Routes } from 'react-router-dom';
+import { Navigate, Route, Routes, useParams } from 'react-router-dom';
 import { LoginPage } from '../features/auth/pages/login_pages';
 import StoreFinderPage from '../features/auth/pages/store_finder_page';
 import Register_page from '../features/registerOwner/pages/register_pages';
@@ -13,17 +13,21 @@ import EditModiferPage from '../features/editModifer/pages/edit_modifer_pages';
 import TablesPage from '../features/tables/pages/TablesPage';
 import EditVat from '../features/editVat/pages/editVat';
 import UsersPage from '../features/users/pages/UsersPage';
+import AuditLogsPage from '../features/auditLogs/AuditLogsPage';
 import TableSettingPage from '../features/tableSetting/pages/TableSettingPage';
 import StoreSettingPage from '../features/store/pages/StoreSettingPage';
 import { SettingRouteGuard } from './SettingRouteGuard';
+import { AuditRouteGuard } from './AuditRouteGuard';
 import { useAuth } from '../features/auth/context/AuthContext';
 
-// นำทางหน้าเริ่มต้นตามบทบาท: เจ้าของร้านไป 'store', ผู้จัดการไป 'tables'
+// นำทางหน้าเริ่มต้นตามบทบาท: เจ้าของร้านไป '/:tenantSlug/setting/store', ผู้จัดการไป '/:tenantSlug/setting/tables'
 function SettingIndexRedirect() {
+    const { tenantSlug } = useParams<{ tenantSlug: string }>();
     const { user } = useAuth();
     const role = user?.role?.toLowerCase();
     const defaultSubpath = role === 'manager' ? 'tables' : 'store';
-    return <Navigate to={defaultSubpath} replace />;
+    const target = tenantSlug ? `/${tenantSlug}/setting/${defaultSubpath}` : `/${defaultSubpath}`;
+    return <Navigate to={target} replace />;
 }
 
 // [ใหม่] วางก่อน export function AppRouter
@@ -56,6 +60,11 @@ export function AppRouter() {
                 <Route path='modifier' element={<EditModiferPage />} />
                 <Route path='users' element={<UsersPage />} />
                 <Route path='*' element={<SettingIndexRedirect />} />
+            </Route>
+
+            {/* บันทึกประวัติความปลอดภัย (Audit Logs) — แยกออกจาก Settings ชัดเจน (AUD-05) */}
+            <Route path='/:tenantSlug/audit-logs' element={<AuditRouteGuard />}>
+                <Route index element={<AuditLogsPage />} />
             </Route>
 
             <Route path='/:tenantSlug/siftwork' element={<ShiftPage />} />
