@@ -1,15 +1,18 @@
 /* eslint-disable react-refresh/only-export-components */
 import { createContext, useContext, useState, useEffect, useCallback, type ReactNode, useMemo } from 'react';
-import type { 
-    SaleTransaction, 
-    PaymentMethod, 
-    TimeFilter, 
+import type {
+    SaleTransaction,
+    PaymentMethod,
+    TimeFilter,
     ChartDataPoint,
-    DailySalesData, 
+    DailySalesData,
     BestSellingCategory,
-    BillItem
+    BillItem,
+    ReportViewMode
 } from '../types/sales.types';
-import { reportsApi, type TopSellingCategoryRes } from '../api/reports.api';
+import { reportsApi, type ReportQueryParams } from '../api/reports.api';
+import { shiftsApi } from '../../shifts/api/shifts.api';
+import type { Shift } from '../../shifts/types/shift.types';
 import { useAuth } from '../../auth/context/AuthContext';
 
 interface SalesContextType {
@@ -17,6 +20,17 @@ interface SalesContextType {
     filteredTransactions: SaleTransaction[];
     filter: TimeFilter;
     setFilter: (f: TimeFilter) => void;
+    // Enhanced Filters
+    viewMode: ReportViewMode;
+    setViewMode: (vm: ReportViewMode) => void;
+    startDate: string;
+    endDate: string;
+    setDateRange: (start: string, end: string) => void;
+    selectedShiftId: string;
+    setSelectedShiftId: (id: string) => void;
+    availableShifts: Shift[];
+    isLoadingShifts: boolean;
+    // Core actions
     addSaleTransaction: (params: {
         billNumber?: number;
         items: BillItem[];
@@ -58,9 +72,53 @@ export function SalesProvider({ children }: { children: ReactNode }) {
     const [transactions, setTransactions] = useState<SaleTransaction[]>([]);
     const [remoteSummary, setRemoteSummary] = useState<any>(null);
     const [remoteChart, setRemoteChart] = useState<any[]>([]);
-    const [remoteTop, setRemoteTop] = useState<TopSellingCategoryRes[]>([]);
-    const [isLoading, setIsLoading] = useState(false);
-    const [filter, setFilter] = useState<TimeFilter>('WEEK');
+    const [remoteTop, setRemoteTop] = useState<any[]>([]);
+    const [isLoading, setIsLoading] = useState<boolean>(false);
+
+    // Filter states
+    const [viewMode, setViewMode] = useState<ReportViewMode>('PERIOD');
+    const [filter, setFilterState] = useState<TimeFilter>('WEEK');
+    const [startDate, setStartDate] = useState<string>('');
+    const [endDate, setEndDate] = useState<string>('');
+    const [selectedShiftId, setSelectedShiftId] = useState<string>('');
+    const [availableShifts, setAvailableShifts] = useState<Shift[]>([]);
+    const [isLoadingShifts, setIsLoadingShifts] = useState<boolean>(false);
+
+    // Fetch shift list for dropdown
+    useEffect(() => {
+        if (!accessToken) return;
+        let isMounted = true;
+        const fetchShiftList = async () => {
+            setIsLoadingShifts(true);
+            try {
+                const res = await shiftsApi.list(accessToken, { limit: 30 });
+                const shiftItems = (res as any)?.data?.items || (Array.isArray(res?.data) ? res.data : []);
+                if (isMounted) {
+                    setAvailableShifts(shiftItems);
+                    if (shiftItems.length > 0 && !selectedShiftId) {
+                        setSelectedShiftId(shiftItems[0].shiftId);
+                    }
+                }
+            } catch (err) {
+                console.error('Failed to list shifts for report', err);
+            } finally {
+                if (isMounted) setIsLoadingShifts(false);
+            }
+        };
+        fetchShiftList();
+        return () => { isMounted = false; };
+    }, [accessToken]);
+
+    const setFilter = (f: TimeFilter) => {
+        setFilterState(f);
+        setStartDate('');
+        setEndDate('');
+    };
+
+    const setDateRange = (start: string, end: string) => {
+        setStartDate(start);
+        setEndDate(end);
+    };
 
     const fetchData = useCallback(async () => {
         if (!accessToken) {
@@ -72,12 +130,27 @@ export function SalesProvider({ children }: { children: ReactNode }) {
         }
         setIsLoading(true);
         try {
-            const period = filter;
+            const queryParams: ReportQueryParams = {};
+            if (viewMode === 'SHIFT') {
+                if (selectedShiftId) {
+                    queryParams.shiftId = selectedShiftId;
+                } else {
+                    queryParams.period = 'TODAY';
+                }
+            } else {
+                if (startDate && endDate) {
+                    queryParams.from = startDate;
+                    queryParams.to = endDate;
+                } else {
+                    queryParams.period = filter;
+                }
+            }
+
             const [summaryRes, byPeriodRes, topRes, txRes] = await Promise.all([
-                reportsApi.getSummary(accessToken, period).catch(() => ({ data: null })),
-                reportsApi.getByPeriod(accessToken, period).catch(() => ({ data: [] })),
-                reportsApi.getTopItems(accessToken, period).catch(() => ({ data: [] })),
-                reportsApi.getTransactions(accessToken, period).catch(() => ({ data: [] })),
+                reportsApi.getSummary(accessToken, queryParams).catch(() => ({ data: null })),
+                reportsApi.getByPeriod(accessToken, queryParams).catch(() => ({ data: [] })),
+                reportsApi.getTopItems(accessToken, queryParams).catch(() => ({ data: [] })),
+                reportsApi.getTransactions(accessToken, queryParams).catch(() => ({ data: [] })),
             ]);
 
             setRemoteSummary(summaryRes?.data || null);
@@ -110,7 +183,7 @@ export function SalesProvider({ children }: { children: ReactNode }) {
         } finally {
             setIsLoading(false);
         }
-    }, [accessToken, filter]);
+    }, [accessToken, viewMode, filter, startDate, endDate, selectedShiftId]);
 
     useEffect(() => {
         fetchData();
@@ -168,17 +241,19 @@ export function SalesProvider({ children }: { children: ReactNode }) {
         };
     }, [filteredTransactions, transactions, remoteSummary]);
 
-    // Chart title based on filter
+    // Chart title
     const chartTitle = useMemo(() => {
+        if (viewMode === 'SHIFT') return 'ยอดขายตลอดกะ';
+        if (startDate && endDate) return `ยอดขาย (${startDate} ถึง ${endDate})`;
         if (filter === 'TODAY') return 'ยอดขายรายชั่วโมง';
         if (filter === 'WEEK') return 'ยอดขายรายวัน';
         return 'ยอดขายรายสัปดาห์';
-    }, [filter]);
+    }, [viewMode, startDate, endDate, filter]);
 
     // Chart Data Points
     const chartData = useMemo((): ChartDataPoint[] => {
         const now = new Date();
-        if (filter === 'TODAY') {
+        if (viewMode === 'SHIFT' || filter === 'TODAY' || (startDate && startDate === endDate)) {
             const hourLabels = ['09:00', '11:00', '13:00', '15:00', '17:00', '19:00', '21:00', '23:00'];
             const currentHour = now.getHours();
 
@@ -208,26 +283,6 @@ export function SalesProvider({ children }: { children: ReactNode }) {
                     data[idx].totalSales += Number(r.totalSales || r.total_sales || 0);
                     data[idx].billCount += Number(r.billCount || r.bill_count || 0);
                 });
-            } else {
-                filteredTransactions.forEach((tx) => {
-                    if (tx.type === 'SALE') {
-                        const txDate = new Date(tx.timestamp || tx.date);
-                        const h = txDate.getHours();
-                        let idx = 0;
-                        if (h < 10) idx = 0;
-                        else if (h < 12) idx = 1;
-                        else if (h < 14) idx = 2;
-                        else if (h < 16) idx = 3;
-                        else if (h < 18) idx = 4;
-                        else if (h < 20) idx = 5;
-                        else if (h < 22) idx = 6;
-                        else idx = 7;
-
-                        const amount = (tx.cashAmount || 0) + (tx.transferAmount || 0);
-                        data[idx].totalSales += amount;
-                        data[idx].billCount += 1;
-                    }
-                });
             }
             return data;
         }
@@ -236,7 +291,7 @@ export function SalesProvider({ children }: { children: ReactNode }) {
             const dayNames = ['อาทิตย์', 'จันทร์', 'อังคาร', 'พุธ', 'พฤหัส', 'ศุกร์', 'เสาร์'];
             const todayIndex = now.getDay();
 
-            const data: ChartDataPoint[] = dayNames.map((name, index) => {
+            return dayNames.map((name, index) => {
                 const found = remoteChart.find((r: any) => r.label === name || r.dayIndex === index);
                 return {
                     label: name,
@@ -245,22 +300,9 @@ export function SalesProvider({ children }: { children: ReactNode }) {
                     isHighlight: index === todayIndex,
                 };
             });
-
-            if ((!remoteChart || remoteChart.length === 0) && filteredTransactions.length > 0) {
-                filteredTransactions.forEach((tx) => {
-                    if (tx.type === 'SALE') {
-                        const date = new Date(tx.timestamp || tx.date);
-                        const dayIndex = date.getDay();
-                        const amount = (tx.cashAmount || 0) + (tx.transferAmount || 0);
-                        data[dayIndex].totalSales += amount;
-                        data[dayIndex].billCount += 1;
-                    }
-                });
-            }
-            return data;
         }
 
-        // MONTH
+        // MONTH หรือช่วงวันที่อื่น ๆ
         const weekLabels = ['สัปดาห์ที่ 1', 'สัปดาห์ที่ 2', 'สัปดาห์ที่ 3', 'สัปดาห์ที่ 4', 'สัปดาห์ที่ 5'];
         const todayDate = now.getDate();
         let curWeek = 0;
@@ -270,7 +312,7 @@ export function SalesProvider({ children }: { children: ReactNode }) {
         else if (todayDate <= 28) curWeek = 3;
         else curWeek = 4;
 
-        const data: ChartDataPoint[] = weekLabels.map((name, index) => {
+        return weekLabels.map((name, index) => {
             const found = remoteChart.find((r: any) => r.label === name || r.w === index + 1);
             return {
                 label: name,
@@ -279,27 +321,7 @@ export function SalesProvider({ children }: { children: ReactNode }) {
                 isHighlight: index === curWeek,
             };
         });
-
-        if ((!remoteChart || remoteChart.length === 0) && filteredTransactions.length > 0) {
-            filteredTransactions.forEach((tx) => {
-                if (tx.type === 'SALE') {
-                    const date = new Date(tx.timestamp || tx.date);
-                    const dayOfMonth = date.getDate();
-                    let weekIdx = 0;
-                    if (dayOfMonth <= 7) weekIdx = 0;
-                    else if (dayOfMonth <= 14) weekIdx = 1;
-                    else if (dayOfMonth <= 21) weekIdx = 2;
-                    else if (dayOfMonth <= 28) weekIdx = 3;
-                    else weekIdx = 4;
-
-                    const amount = (tx.cashAmount || 0) + (tx.transferAmount || 0);
-                    data[weekIdx].totalSales += amount;
-                    data[weekIdx].billCount += 1;
-                }
-            });
-        }
-        return data;
-    }, [filter, filteredTransactions, remoteChart]);
+    }, [viewMode, filter, startDate, endDate, remoteChart]);
 
     // Backwards-compatible dailySalesData
     const dailySalesData: DailySalesData[] = useMemo(() => {
@@ -333,11 +355,10 @@ export function SalesProvider({ children }: { children: ReactNode }) {
         };
 
         if (remoteTop && remoteTop.length > 0) {
-            // response จาก server: [{ categoryId, categoryName, categoryTotal, items: [...] }]
             return remoteTop
                 .filter((c) => Array.isArray(c?.items) && c.items.length > 0)
                 .map((c) => {
-                    const items = c.items.slice(0, PER_CATEGORY).map((r) => ({
+                    const items = c.items.slice(0, PER_CATEGORY).map((r: any) => ({
                         name: r.name,
                         quantity: Number(r.quantity || 0),
                         totalAmount: Number(r.totalAmount ?? 0),
@@ -352,46 +373,8 @@ export function SalesProvider({ children }: { children: ReactNode }) {
                     };
                 });
         }
-
-        // fallback: คำนวณจาก transactions (ไม่มีข้อมูลหมวดหมู่ จึงรวมเป็นหมวดเดียว)
-        const itemMap = new Map<string, { quantity: number; totalAmount: number }>();
-        filteredTransactions.forEach((tx) => {
-            if (tx.type === 'SALE' && tx.items) {
-                tx.items.forEach((item) => {
-                    const existing = itemMap.get(item.name) || { quantity: 0, totalAmount: 0 };
-                    itemMap.set(item.name, {
-                        quantity: existing.quantity + item.quantity,
-                        totalAmount: existing.totalAmount + item.price * item.quantity,
-                    });
-                });
-            }
-        });
-
-        if (itemMap.size === 0) return [];
-
-        const items: BestSellingCategory['items'] = [];
-        let categoryTotal = 0;
-        itemMap.forEach((val, name) => {
-            categoryTotal += val.totalAmount;
-            items.push({
-                name,
-                quantity: val.quantity,
-                totalAmount: val.totalAmount,
-                percentage: 0,
-            });
-        });
-
-        items.sort((a, b) => b.totalAmount - a.totalAmount || b.quantity - a.quantity);
-
-        return [
-            {
-                categoryId: 'uncategorized',
-                categoryName: 'ไม่ระบุหมวดหมู่',
-                categoryTotal,
-                items: withPercentages(items.slice(0, PER_CATEGORY)),
-            },
-        ];
-    }, [filteredTransactions, remoteTop]);
+        return [];
+    }, [remoteTop]);
 
     // Add cash movement (in / out) to backend
     const addCashMovement = async (
@@ -477,6 +460,15 @@ export function SalesProvider({ children }: { children: ReactNode }) {
                 filteredTransactions,
                 filter,
                 setFilter,
+                viewMode,
+                setViewMode,
+                startDate,
+                endDate,
+                setDateRange,
+                selectedShiftId,
+                setSelectedShiftId,
+                availableShifts,
+                isLoadingShifts,
                 addSaleTransaction,
                 addCashMovement,
                 metrics,

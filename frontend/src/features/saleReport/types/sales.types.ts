@@ -1,6 +1,15 @@
 export type TransactionType = 'SALE' | 'CASH_IN' | 'CASH_OUT';
 export type PaymentMethod = 'CASH' | 'TRANSFER';
 export type TimeFilter = 'TODAY' | 'WEEK' | 'MONTH';
+export type ReportViewMode = 'PERIOD' | 'SHIFT';
+
+export interface SalesQueryFilter {
+    viewMode: ReportViewMode;
+    period?: TimeFilter;
+    startDate?: string;
+    endDate?: string;
+    shiftId?: string;
+}
 
 export interface BillItem {
     id?: string;

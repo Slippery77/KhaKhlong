@@ -1,7 +1,7 @@
 # HANDOFF — PWA-POS (ค้าคล่อง / KhaKhlong)
 
 > ไฟล์นี้คือสรุปสถานะล่าสุดสำหรับ **เปิดแชทใหม่แล้วทำงานต่อ** โดยไม่ต้องเล่าบริบทใหม่
-> อัปเดต: **2026-10-31** · branch `feat-aod` · `origin/main` = `b352de6` (2026-10-28) · ดู `git log` สำหรับ hash ล่าสุด
+> อัปเดต: **2026-11-01** · branch `feat-aod` · `origin/main` = `b352de6` (2026-10-28) · ดู `git log` สำหรับ hash ล่าสุด
 > ใช้แทน `docs/backend-todo.md` และ `docs/daily-update-2026-10-21.md` (สองไฟล์นั้นล้าสมัยแล้ว)
 
 ## วิธีใช้ในแชทใหม่
@@ -78,7 +78,7 @@ $env:PGPASSWORD='<รหัสผ่าน pos_app จาก .env>'
 - **Roles / Permissions** — seed ครบ, employee 9 สิทธิ์
 - **Payment** — `attempts` → `pay` → `cancel`; ออกเลขใบเสร็จ, ดู/พิมพ์ใบเสร็จ; UI `PaymentModal` 3 ขั้น ใช้ยอดจาก server เท่านั้น
 - **Receipt (FE)** — `features/receipt/` พรีวิว 80mm + พิมพ์จริง, ป้าย "สำเนา" ตาม `isCopy`, เคารพ `max_reprints` (409)
-- **Reports** — `sales/summary`, `sales/by-period`, `sales/top-items`, `sales/transactions`, `sales/receipt/:id`
+- **Reports** — `sales/summary`, `sales/by-period`, `sales/top-items`, `sales/transactions`, `sales/receipt/:id` · **หน้ารายงานรอบด้านบน UI: ตัวกรองช่วงวันที่ (From - To), โหมดดูตามกะ (Shift Selector Dropdown), ส่งออกตารางธุรกรรมเป็น CSV (UTF-8 BOM ภาษาไทยไม่เพี้ยน)** (ดู 3.18)
 - **Void / Comp (2026-10-30)** — batch endpoint + PIN ผู้อนุมัติ + audit ผ่าน trigger + FE modal + E2E 31 ข้อผ่าน
 - **PWA shell** — `vite-plugin-pwa` + manifest + precache ทุกไฟล์ build + `navigateFallback '/index.html'` (deny `/api`) + แจ้งอัปเดตด้วย `UpdatePrompt` (`registerType: 'prompt'`, ไม่ reload เองกลางการสั่งอาหาร) + ไอคอน 64/192/512/maskable
 
@@ -265,6 +265,22 @@ commit เดียว 4 เรื่อง:
   - **`usePayment.ts`**: เพิ่มฟังก์ชัน `getOrdersSummary(orderIds: string[])`
 - **ทดสอบ**: E2E `backend/test/e2e/e2e-merge-tables-payment.mjs` (22/22 ผ่าน)
 
+### 3.18 รายงานยอดขาย: ตัวกรองช่วงวันที่ (Date Range), โหมดดูตามกะ (Shift Selector), และส่งออก CSV (2026-11-01)
+
+- **Backend**:
+  - `ReportsRepository.getSalesByPeriod`: รองรับ `params.shiftId` โดยให้จัดกลุ่มเวลาเป็นรายชั่วโมง (`to_char(date_trunc('hour', p.paid_at), 'HH24:00')`) สอดคล้องกับพฤติกรรมยอดขายตลอดกะ
+- **Frontend**:
+  - `reports.api.ts`: รองรับพารามิเตอร์ `ReportQueryParams` (`period`, `from`, `to`, `shiftId`)
+  - `shifts.api.ts`: เพิ่ม method `shiftsApi.list()` รองรับ pagination และการส่งออกข้อมูลกะ
+  - `SalesContext.tsx`: จัดการ state `viewMode` (`PERIOD` vs `SHIFT`), `startDate`, `endDate`, `selectedShiftId`, `availableShifts` (ดึงจาก `res.data.items` อย่างปลอดภัยป้องกัน runtime error) พร้อม sync query parameter ไปยัง backend ครบทุก endpoint
+  - `SalesHeader.tsx`: ปรับปรุงตามหลัก `ui-ux-pro-max`:
+    - สวิตช์เลือกโหมด `ช่วงเวลา` หรือ `ตามกะ`
+    - Date Range Picker แบบ Popover เลือกวันที่เริ่มต้น - สิ้นสุด พร้อมปุ่มล้าง/รีเซ็ต
+    - Dropdown เลือกลิสต์กะ แสดง วันที่, ช่วงเวลาเปิด-ปิด, และชื่อพนักงาน
+  - `SalesTransactionTable.tsx`: เพิ่มปุ่ม "ส่งออก CSV" มุมบนขวาของตาราง
+  - `exportCsv.ts`: แปลงข้อมูลตารางประวัติธุรกรรมเป็นไฟล์ CSV พร้อมใส่ **UTF-8 BOM (`\uFEFF`)** เปิดใน Microsoft Excel ภาษาไทยไม่เป็นตัวต่างดาว
+- **Doubt-Driven Fix**: แก้บั๊กหน้าจอขาว (White screen) จากการที่ response ของ `GET /shifts` คืน `{ items: [...] }` แต่ frontend คาดหวัง array โดยตรง และปรับปรุง type safety ของตัวเลขก่อน export CSV
+
 ---
 
 ## 4. งานค้าง P0
@@ -288,7 +304,7 @@ commit เดียว 4 เรื่อง:
 
 - **PWA shell**: manifest + service worker precache + update prompt + icons ทำแล้ว (`a992417`)
   - **ยังเหลือ**: IndexedDB (Dexie) แคช `GET /menu/full` / โต๊ะ / กะปัจจุบัน + outbox คิวออเดอร์ออฟไลน์
-- **Reports ต่อยอด**: หน้ารายงานรายกะ/ประวัติกะ, ตัวกรอง `from`/`to`/`shiftId` บน UI (API รองรับแล้ว แต่ FE ส่งแค่ `period`), export
+- **Reports ต่อยอด**: หน้ารายงานรายกะ/ตัวกรองวันที่/ส่งออก CSV เสร็จแล้ว (`3.18`); ยังเหลือ export สรุปภาพรวมแบบ PDF (ถ้าต้องการเพิ่ม)
 - **System Config UI ที่เหลือ** (หน้า VAT กับ Store ทำแล้ว)
 - **Menu reorder endpoint**
 - **Audit Log endpoint/UI**
@@ -403,7 +419,7 @@ commit เดียว 4 เรื่อง:
 ## 9. ลำดับที่แนะนำถัดไป
 
 1. **เปิด PR `feat-aod` → `main`** — งาน P0 และ P1 ทั้งหมด (`void/comp`, `PIN lock`, `escalation`, `cancel/walkout`, `login lockout`, `menu image`, `GET /users/me`) เสร็จครบแล้ว
-2. **P2**: offline data layer (Dexie + outbox) → Reports รายกะ/ตัวกรองวันที่ → Audit log → Menu reorder
+2. **P2**: offline data layer (Dexie + outbox) → Audit log → Menu reorder
 4. ย้าย E2E 4 ตัวจาก `%TEMP%\opencode\` เข้า repo และเพิ่ม E2E ของ PIN ผ่าน UI (ตั้ง PIN → void/comp → verify กะ) + E2E escalation (ต้องต่อ DB เพื่อย้อน `closed_at`)
 
 > ก่อนเริ่มงานทุกครั้ง: ดู `git status`, รัน `npx tsc --noEmit` (backend) และ `npx tsc -b` (frontend) ให้ผ่านก่อน commit
