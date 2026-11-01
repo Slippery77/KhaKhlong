@@ -358,6 +358,21 @@ commit เดียว 4 เรื่อง:
   - Typecheck (`tsc --noEmit`, `tsc -b`) และ Vite build ผ่าน 100%
   - E2E `backend/test/e2e/e2e-printer-config.mjs` ยืนยันการทำงานของ System Config ครบถ้วน
 
+### 3.22 Inventory Polish (Business date + Note + Stock card UX) — 2026-11-02
+
+- **DB**: `PATCH_11_inventory_business_date.sql` เพิ่ม `business_date` ใน `inventory_transactions`
+- **Backend**: บันทึก note และทศนิยมอย่างถูกต้องใน `record_stock_count()`
+- **Frontend**: `StockAdjustmentCard.tsx` เพิ่มช่องค้นหาวัตถุดิบและตัวกรองสถานะด่วน
+
+### 3.23 Build Lifecycle & NodeNext Entrypoint Hardening (Doubt-Driven Development) — 2026-11-02
+
+- **วิเคราะห์ต้นตอ `MODULE_NOT_FOUND` ของ `backend/dist/main`**: เกิดจากการที่ `dist/` อยู่ใน `.gitignore` เมื่อยังไม่ได้ build หรือรัน `start:prod` บนสภาพแวดล้อมใหม่จะไม่มี `dist/main.js`
+- **Adversarial Review (Single-Model + Gemini Pro)**: ตรวจสอบและสกัดข้อผิดพลาดวิกฤต เช่น การห้ามผูก `prestart:prod` ที่จะทำให้ Production Container ล่มจากการ prune `devDependencies`, และการหลีกเลี่ยง `&&` ใน PowerShell 5.1
+- **แก้ไขและเพิ่ม Root Workspaces Scripts**:
+  - Root `package.json`: เพิ่ม `"build": "npm run build --workspaces --if-present"`, `"build:backend"`, `"build:frontend"`, `"start:backend"`
+  - `backend/package.json`: ปรับ `"start:prod": "node dist/main.js"` ระบุนามสกุล `.js` ชัดเจนตามมาตรฐาน NodeNext
+  - ตรวจสอบ `tsc --noEmit`, `tsc -b`, `npm run build` ผ่าน 100% ทั้งหมด
+
 ---
 
 ## 4. งานค้าง P0
