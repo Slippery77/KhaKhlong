@@ -86,8 +86,9 @@ $env:PGPASSWORD='<รหัสผ่าน pos_app จาก .env>'
 ### ยังไม่เริ่ม / ยังไม่ครบ
 
 - **Offline data layer** — PWA shell พร้อมแล้ว แต่ยังไม่มี Dexie/IndexedDB แคชเมนู/โต๊ะ/กะ และยังไม่มี outbox คิวออเดอร์ (service worker ไม่แคช `/api` โดยตั้งใจ)
-- **Reports เพิ่มเติม** — หน้ารายงานรายกะ, ตัวกรองช่วงวันที่บน UI, export
-- *(หน้า Dashboard / Homepage `/:tenantSlug/homepage` ตัดออกจากขอบเขตแล้ว)*
+- **Menu reorder** — endpoint และ UI จัดลำดับเมนู/หมวดหมู่
+- **Inventory polish** — ช่องค้นหาวัตถุดิบบนการ์ดตรวจนับ, ใช้วันที่ business date, note ในการตรวจนับ
+- *(หน้า Dashboard / Homepage `/:tenantSlug/homepage` และ Export สรุปยอดขายแบบ PDF ตัดออกจากขอบเขตแล้ว — รายงานใช้ส่งออกเป็น CSV เท่านั้น)*
 
 ---
 
@@ -381,7 +382,7 @@ commit เดียว 4 เรื่อง:
 
 - **PWA shell**: manifest + service worker precache + update prompt + icons ทำแล้ว (`a992417`)
   - **ยังเหลือ**: IndexedDB (Dexie) แคช `GET /menu/full` / โต๊ะ / กะปัจจุบัน + outbox คิวออเดอร์ออฟไลน์
-- **Reports ต่อยอด**: หน้ารายงานรายกะ/ตัวกรองวันที่/ส่งออก CSV เสร็จแล้ว (`3.18`); ยังเหลือ export สรุปภาพรวมแบบ PDF (ถ้าต้องการเพิ่ม)
+- **Reports**: สรุปยอดขาย, กรองช่วงวันที่, หน้ารายงานรายกะ และส่งออก CSV เสร็จสมบูรณ์แล้ว (`3.18`) — *(ตัดการสรุปยอดขายแบบ PDF ออก ใช้แค่ CSV)*
 - **System Config UI**: หน้า VAT, Store และ **หน้าตั้งค่าเครื่องพิมพ์และใบเสร็จ (Printer & Receipt Settings)** เสร็จสมบูรณ์แล้ว (ดู 3.20)
 - **Menu reorder endpoint**
 - **Inventory polish**: ช่องค้นหาในการ์ดนับวัตถุดิบ, ใช้ business date แทน local date, note ใน `record_stock_count()` มีช่องว่างนำหน้า + ทศนิยม 4 ตำแหน่ง
@@ -398,6 +399,7 @@ commit เดียว 4 เรื่อง:
 - `POST /orders/sync` ขาด DTO → เพื่อนร่วมทีมทำให้เสร็จแล้ว (2026-10-31)
 - ไม่มี `GET /users/me` → 2026-10-31 (`@AnyAuthenticated` + `permissions: string[]` + `store` + sync เข้า `AuthContext`, ดู 3.16)
 - `/:tenantSlug/homepage` และ `POST /auth/pin-login` → ตัดออกจากขอบเขตแล้ว
+- สรุปยอดขายแบบ PDF → ตัดออกจากขอบเขตแล้ว (ทำส่งออก CSV เพียงพอแล้วตามข้อตกลง)
 
 ---
 
@@ -495,7 +497,7 @@ commit เดียว 4 เรื่อง:
 ## 9. ลำดับที่แนะนำถัดไป
 
 1. **เปิด PR `feat-aod` → `main`** — งาน P0 และ P1 ทั้งหมด (`void/comp`, `PIN lock`, `escalation`, `cancel/walkout`, `login lockout`, `menu image`, `GET /users/me`) เสร็จครบแล้ว
-2. **P2 ที่เหลือ**: offline data layer (Dexie + outbox) → Menu reorder → Inventory polish (Audit logs 3.19 และ Printer & Receipt Settings 3.20 เสร็จเรียบร้อยแล้ว)
+2. **P2 ที่เหลือ**: offline data layer (Dexie + outbox) → Menu reorder → Inventory polish (Reports/CSV, Audit logs 3.19 และ Printer & Receipt Settings 3.20 เสร็จเรียบร้อยแล้ว)
 4. ย้าย E2E 4 ตัวจาก `%TEMP%\opencode\` เข้า repo และเพิ่ม E2E ของ PIN ผ่าน UI (ตั้ง PIN → void/comp → verify กะ) + E2E escalation (ต้องต่อ DB เพื่อย้อน `closed_at`)
 
 > ก่อนเริ่มงานทุกครั้ง: ดู `git status`, รัน `npx tsc --noEmit` (backend) และ `npx tsc -b` (frontend) ให้ผ่านก่อน commit
