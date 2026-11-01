@@ -10,6 +10,8 @@ import StockAdjustmentCard from '../components/StockAdjustmentCard';
 import { secondaryButtonClass } from '../constants';
 import { useShift } from '../hooks/useShift';
 import { SHIFT_STATUS_LABEL, formatBusinessDate } from '../utils/shiftFormat';
+import { useOutbox } from '../../offline/hooks/useOutbox';
+import { openOutboxPanel } from '../../offline/outboxPanel';
 
 export default function ShiftPage() {
   const { user } = useAuth();
@@ -26,6 +28,8 @@ export default function ShiftPage() {
     verifyWithPin,
   } = useShift();
 
+  // [ใหม่] ออเดอร์ค้างส่งในเครื่องนี้ (ทุกผู้ใช้ของร้าน) — ใช้บล็อกปุ่มปิดกะ
+  const { totalOrderCount } = useOutbox(user?.tenantSlug);
   const awaitingVerification =
     shift?.status === 'pending_verification' || shift?.status === 'escalated';
   const isClosed = shift?.status === 'closed_auto' || shift?.status === 'verified';
@@ -96,7 +100,13 @@ export default function ShiftPage() {
               {shift?.status === 'open' && (
                 <>
                   <StockAdjustmentCard />
-                  <CloseShiftCard shift={shift} isSubmitting={isSubmitting} onSubmit={closeShift} />
+                  <CloseShiftCard
+                    shift={shift}
+                    isSubmitting={isSubmitting}
+                    onSubmit={closeShift}
+                    unsentBills={totalOrderCount}
+                    onShowUnsent={openOutboxPanel}
+                  />
                 </>
               )}
 

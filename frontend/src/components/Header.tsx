@@ -17,6 +17,8 @@ import { apiFetch } from "../libs/appClient"
 import { groupItemsToTickets } from "../features/kds/types/kds.types"
 import type { ApiKDSItem } from "../features/kds/types/kds.types"
 import { ROLE_LABEL } from "../features/users/types/user.types"
+import { useOutbox } from "../features/offline/hooks/useOutbox"
+import { openOutboxPanel } from "../features/offline/outboxPanel"
 
 export interface Employee {
     name: string
@@ -37,6 +39,13 @@ export default function Header() {
         name: user?.display_name || user?.username || "ไม่มีชื่อ",
         role: ROLE_LABEL[user?.role as keyof typeof ROLE_LABEL] ?? user?.role ?? "",
     }
+
+    // [ใหม่] ออเดอร์ค้างส่งของ "คนที่ login อยู่" (นับเป็นบิล) — มีแล้วห้าม logout (ตัดสินใจ C/F)
+    const { entries: outboxEntries } = useOutbox(user?.tenantSlug)
+    const myUnsentBills = new Set(
+        outboxEntries.filter((e) => e.userId === user?.sub).map((e) => e.orderId),
+    ).size
+
     // อ่าน slug จาก URL แทน user.tenantSlug เพราะ user หายเมื่อ refresh หน้า
     const { tenantSlug } = useParams<{ tenantSlug: string }>()
     const isKDS = location.pathname.includes("/kds")
@@ -221,15 +230,35 @@ export default function Header() {
 
                             <div className="border-t border-stone-100 my-1" />
 
+                            {/* [ใหม่] มีออเดอร์ค้างส่ง → บอกเหตุผลที่ออกไม่ได้ + ทางไปจัดการ */}
+                            {myUnsentBills > 0 && (
+                                <div className="mx-3 mb-1 rounded-lg bg-[#FEF3F2] px-3 py-2 text-xs text-[#B42318]">
+                                    <p>มี {myUnsentBills} บิลยังไม่ส่งถึงครัว ออกจากระบบไม่ได้</p>
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            setIsMenuOpen(false)
+                                            openOutboxPanel()
+                                        }}
+                                        className="mt-1 cursor-pointer font-semibold underline underline-offset-2"
+                                    >
+                                        ดูรายการ
+                                    </button>
+                                </div>
+                            )}
+
                             <button
                                 type="button"
-                                onClick={() => {
+                                disabled={myUnsentBills > 0}
+                                onClick={async () => {
                                     setIsMenuOpen(false)
-                                    logout()
-                                    navigate(`/${tenantSlug}/login`)
+                                    // logout เช็คซ้ำอีกชั้น (เผื่อคิวเปลี่ยนระหว่างเมนูเปิด) — ออกไม่ได้ก็ไม่เปลี่ยนหน้า
+                                    const result = await logout()
+                                    if (result === 'ok') navigate(`/${tenantSlug}/login`)
+                                    else openOutboxPanel()
                                 }}
                                 
-                                className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-rose-600 hover:bg-rose-50 transition-all cursor-pointer text-left"
+                                className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-rose-600 hover:bg-rose-50 transition-all cursor-pointer text-left disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent"
                             >
                                 <LogOut className="w-4 h-4" />
                                 <span>ออกจากระบบ</span>

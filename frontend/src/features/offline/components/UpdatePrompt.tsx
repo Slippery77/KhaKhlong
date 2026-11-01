@@ -1,3 +1,6 @@
+import { useAuth } from '../../auth/context/AuthContext';
+import { useOutbox } from '../hooks/useOutbox';
+import { openOutboxPanel } from '../outboxPanel';
 import { useRegisterSW } from 'virtual:pwa-register/react';
 import { CloudCheck, RefreshCw, X } from 'lucide-react';
 
@@ -8,9 +11,9 @@ const UPDATE_CHECK_INTERVAL_MS = 60 * 60 * 1000;
  * ลงทะเบียน service worker + แจ้งเตือน 2 แบบ
  * - offlineReady: แคชไฟล์ครบครั้งแรก เปิดแอปได้แม้ไม่มีเน็ต
  * - needRefresh: มีเวอร์ชันใหม่ ให้พนักงานกดอัปเดตเองตอนว่าง (ไม่ reload กลางออเดอร์)
- *
- * TODO (ตอนทำ outbox): ซ่อนปุ่ม "อัปเดตเลย" ถ้ายังมีออเดอร์รอส่ง
- * เพราะเวอร์ชันใหม่อาจเปลี่ยนรูปแบบข้อมูลในคิว
+ * - มีออเดอร์ค้างใน outbox → ซ่อนปุ่ม "อัปเดตเลย"
+ * - เพราะเวอร์ชันใหม่อาจเปลี่ยนรูปแบบข้อมูลในคิว (เช่นเพิ่ม field ใน payload) โค้ดใหม่อ่านของเก่าไม่ได้
+ * - ส่งให้หมดด้วยโค้ดเวอร์ชันที่สร้างคิวนั้นก่อน แล้วค่อยอัปเดต
  */
 export default function UpdatePrompt() {
   const {
@@ -29,6 +32,9 @@ export default function UpdatePrompt() {
       console.error('[PWA] ลงทะเบียน service worker ไม่สำเร็จ', error);
     },
   });
+  const { user } = useAuth();
+  const { totalOrderCount } = useOutbox(user?.tenantSlug);
+  const hasQueue = totalOrderCount > 0;
 
   if (!offlineReady && !needRefresh) return null;
 
@@ -41,7 +47,7 @@ export default function UpdatePrompt() {
     <div
       role="status"
       aria-live="polite"
-      className="fixed bottom-4 right-4 z-[1000] flex max-w-sm items-start gap-3 rounded-2xl border border-[#E8DFD5] bg-white p-4 text-[#2D241E] shadow-lg"
+      className="fixed bottom-4 right-4 z-1000 flex max-w-sm items-start gap-3 rounded-2xl border border-[#E8DFD5] bg-white p-4 text-[#2D241E] shadow-lg"
     >
       {needRefresh ? (
         <RefreshCw className="mt-0.5 h-5 w-5 shrink-0 text-[#8C6D58]" aria-hidden="true" />
@@ -55,19 +61,32 @@ export default function UpdatePrompt() {
         </p>
         <p className="mt-0.5 text-sm text-[#2D241E]/70">
           {needRefresh
-            ? 'กดอัปเดตตอนที่ไม่มีออเดอร์ค้างในหน้าจอ หน้าเว็บจะโหลดใหม่'
+            ? hasQueue  
+              ? `ยังมีออเดอร์ค้างส่ง ${totalOrderCount} บิล · อัปเดตได้เมื่อส่งครบแล้ว`
+              : 'กดอัปเดตตอนที่ไม่มีออเดอร์ค้างในหน้าจอ หน้าเว็บจะโหลดใหม่'
             : 'เปิดแอปได้แม้อินเทอร์เน็ตหลุด'}
         </p>
 
         {needRefresh && (
           <div className="mt-3 flex gap-2">
-            <button
-              type="button"
-              onClick={() => updateServiceWorker(true)}
-              className="cursor-pointer rounded-xl bg-[#8C6D58] px-3 py-1.5 text-sm text-white transition-colors duration-200 hover:bg-[#7a5c45] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#8C6D58] focus-visible:ring-offset-2"
-            >
-              อัปเดตเลย
-            </button>
+            {hasQueue ? (
+              // มีของค้าง: แทนที่ปุ่มอัปเดตด้วยทางไปดูรายการ
+              <button
+                type="button"
+                onClick={openOutboxPanel}
+                className="cursor-pointer rounded-xl bg-[#8C6D58] px-3 py-1.5 text-sm text-white transition-colors duration-200 hover:bg-[#7a5c45] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#8C6D58] focus-visible:ring-offset-2"
+              >
+                ดูรายการค้าง
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={() => updateServiceWorker(true)}
+                className="cursor-pointer rounded-xl bg-[#8C6D58] px-3 py-1.5 text-sm text-white transition-colors duration-200 hover:bg-[#7a5c45] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#8C6D58] focus-visible:ring-offset-2"
+              >
+                อัปเดตเลย
+              </button>
+            )}
             <button
               type="button"
               onClick={close}
@@ -87,6 +106,7 @@ export default function UpdatePrompt() {
       >
         <X className="h-4 w-4" aria-hidden="true" />
       </button>
+      
     </div>
   );
 }

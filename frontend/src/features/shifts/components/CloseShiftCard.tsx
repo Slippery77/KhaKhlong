@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import type { FormEvent } from 'react';
-import { AlertTriangle, Banknote, Calculator, Loader2 } from 'lucide-react';
+import { AlertTriangle, Banknote, Calculator, CloudUpload, Loader2 } from 'lucide-react';
 import {
   fieldClass,
   primaryButtonClass,
@@ -18,19 +18,24 @@ interface CloseShiftCardProps {
   shift: Shift;
   isSubmitting: boolean;
   onSubmit: (actualClosingCash: number) => Promise<Shift | null>;
+  /** [ใหม่] จำนวนบิลที่ค้างใน outbox ของเครื่องนี้ — มากกว่า 0 ห้ามปิดกะ */
+  unsentBills?: number;
+  /** [ใหม่] เปิดหน้าต่างรายการค้างส่ง */
+  onShowUnsent?: () => void;
 }
 
 /** นับเงินแล้วปิดกะ — ยังไม่โชว์ยอดที่ควรมี (นับแบบไม่เห็นยอดตามขั้นตอนหน้าปิดกะ) */
-export default function CloseShiftCard({ shift, isSubmitting, onSubmit }: CloseShiftCardProps) {
+export default function CloseShiftCard({ shift, isSubmitting, onSubmit, unsentBills = 0, onShowUnsent }: CloseShiftCardProps) {
   const [isCounting, setIsCounting] = useState(false);
   const [amount, setAmount] = useState('');
 
   const parsedAmount = Number(amount);
   const isValid = amount.trim() !== '' && !Number.isNaN(parsedAmount) && parsedAmount >= 0;
-
+  // [ใหม่] ปิดกะตอนมีของค้าง → ส่งทีหลังออเดอร์จะไปเข้ากะใหม่ (หรือได้ 409 ไม่มีกะเปิด) ยอดกะนี้จะขาด
+  const isBlockedByOutbox = unsentBills > 0;
   const submit = async (event: FormEvent) => {
     event.preventDefault();
-    if (!isValid || isSubmitting) return;
+    if (!isValid || isSubmitting || isBlockedByOutbox) return;
     const result = await onSubmit(parsedAmount);
     if (result) {
       setAmount('');
@@ -70,10 +75,33 @@ export default function CloseShiftCard({ shift, isSubmitting, onSubmit }: CloseS
         </div>
       </div>
 
+       {/* [ใหม่] มีออเดอร์ค้างส่งในเครื่องนี้ */}
+      {isBlockedByOutbox && (
+        <div role="alert" className="mt-4 flex items-start gap-2 rounded-xl border border-[#F4C7C3] bg-[#FEF3F2] px-3 py-2.5">
+          <CloudUpload className="mt-0.5 h-4 w-4 shrink-0 text-[#B42318]" aria-hidden="true" />
+          <div className="flex-1 text-xs leading-relaxed text-[#B42318]">
+            <p>
+              เครื่องนี้ยังมีออเดอร์ที่ไม่ถึงเซิร์ฟเวอร์ {unsentBills} บิล — ส่งให้ครบหรือลบทิ้งก่อนจึงปิดกะได้
+              ไม่อย่างนั้นยอดขายของกะนี้จะไม่ครบ
+            </p>
+            {onShowUnsent && (
+              <button
+                type="button"
+                onClick={onShowUnsent}
+                className="mt-1 cursor-pointer font-semibold underline underline-offset-2"
+              >
+                ดูรายการ
+              </button>
+            )}
+          </div>
+        </div>
+      )}
+
       {!isCounting ? (
         <button
           type="button"
           onClick={() => setIsCounting(true)}
+          disabled={isBlockedByOutbox}
           className={`${primaryButtonClass} mt-4`}
         >
           <Calculator className="h-4 w-4" aria-hidden="true" />
@@ -113,7 +141,7 @@ export default function CloseShiftCard({ shift, isSubmitting, onSubmit }: CloseS
           <div className="mt-4 flex gap-2">
             <button
               type="submit"
-              disabled={!isValid || isSubmitting}
+              disabled={!isValid || isSubmitting || isBlockedByOutbox}
               className={`${primaryButtonClass} flex-1`}
             >
               {isSubmitting ? (
