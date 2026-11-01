@@ -1,12 +1,12 @@
 /*
- * กฎการพิมพ์ใบเสร็จ (ความร้อน 80mm)
+ * กฎการพิมพ์ใบเสร็จ (Thermal Paper 80mm & 58mm)
  * ใช้ร่วมกับ ReceiptModal ซึ่ง portal แผ่นใบเสร็จไว้ใต้ <body> โดยตรง
  */
 
 @media print {
   @page {
-    size: 80mm auto;
-    margin: 4mm 2mm;
+    size: auto;
+    margin: 3mm 2mm;
   }
 
   html,
@@ -28,8 +28,14 @@
     padding: 0;
   }
 
+  /* กรณีเลือกขนาดกระดาษ 58mm */
+  .receipt-print-area.paper-58mm {
+    width: 48mm !important;
+  }
+
   .receipt-print-area .receipt-paper {
     width: 72mm !important;
+    max-width: 72mm !important;
     margin: 0 !important;
     padding: 0 0 2mm 0 !important;
     border: 0 !important;
@@ -38,6 +44,11 @@
     color: #000000 !important;
     -webkit-print-color-adjust: exact;
     print-color-adjust: exact;
+  }
+
+  .receipt-print-area.paper-58mm .receipt-paper {
+    width: 48mm !important;
+    max-width: 48mm !important;
   }
 
   /* กันหน้าว่างที่เกิดจาก element ที่ซ่อนไปแล้ว */

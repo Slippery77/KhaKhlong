@@ -301,6 +301,37 @@ commit เดียว 4 เรื่อง:
 
 ---
 
+### 3.20 ระบบตั้งค่าเครื่องพิมพ์และใบเสร็จ (Printer & Receipt Settings) + รองรับกระดาษ 80mm/58mm และ Auto-Print — 2026-11-01
+
+- **สถาปัตยกรรมแบบผสม (Hybrid Storage)**:
+  - **Store Policy (DB ผ่าน `system_config` & `config_definitions`)**:
+    - `receipt_footer`: ข้อความส่วนท้ายใบเสร็จ (รองรับหลายบรรทัด)
+    - `receipt_show_tax_id`: เปิด/ปิด แสดงเลขประจำตัวผู้เสียภาษี
+    - `receipt_show_cashier`: เปิด/ปิด แสดงชื่อพนักงานแคชเชียร์
+    - `receipt_show_address`: เปิด/ปิด แสดงที่อยู่และเบอร์โทรร้าน
+    - `max_reprints`: โควตาพิมพ์ซ้ำสูงสุด (0 = ไม่จำกัด)
+  - **Device Hardware Settings (`localStorage` ประจำเครื่อง)**:
+    - `paper_size`: ขนาดกระดาษความร้อน (`80mm` พื้นที่พิมพ์ 72mm หรือ `58mm` พื้นที่พิมพ์ 48mm ย่อขนาดฟอนต์และระยะบรรทัดอัตโนมัติ)
+    - `auto_print`: สวิตช์เปิด/ปิด สั่งพิมพ์ใบเสร็จอัตโนมัติทันทีเมื่อชำระเงินสำเร็จ
+- **Backend**:
+  - `PATCH_10_receipt_printer_config.sql` + อัปเดต `FULL_INSTALL.sql`
+  - `SystemConfigRepository.updateValue`: ปรับเป็น UPSERT (`ON CONFLICT (tenant_id, config_key) DO UPDATE`) รองรับการอัปเดต key ใหม่ได้ทันทีโดยไม่ติด NotFound
+  - `PaymentRepository.findStore`: ดึง `receipt_footer` และตัวเลือกการแสดงผลผ่าน `cfg()` ฟังก์ชันตรงจาก DB
+  - `toReceiptResponse`: ส่งฟิลด์ `footer`, `showTaxId`, `showCashier`, `showAddress` ออก API `GET /payments/:id/receipt`
+- **Frontend** (ออกแบบตามหลัก `ui-ux-pro-max` โทนคาเฟ่อบอุ่น `#FAF7F2` / `#8C6D58`):
+  - `SettingNavBar.tsx`: เพิ่มแท็บ **"เครื่องพิมพ์"** ให้ทั้ง Owner และ Manager เข้าถึงได้
+  - `PrinterSettingPage.tsx` (`/:tenantSlug/setting/printer`):
+    - ฝั่งซ้าย: ฟอร์มเลือกขนาดกระดาษแบบการ์ด Visual Radio, สวิตช์ Auto-Print, ช่องโควตาพิมพ์ซ้ำ, กล่องข้อความท้ายใบเสร็จ, สวิตช์แสดงผลข้อมูลร้าน, และปุ่มบันทึก/พิมพ์ทดสอบ
+    - ฝั่งขวา: **Live Receipt Preview** แสดงกระดาษใบเสร็จจำลองขนาด 80mm/58mm ที่ตอบสนองการเปลี่ยนแปลงการตั้งค่าแบบเรียลไทม์
+  - `ReceiptPaper.tsx` & `receipt.print.css`: รองรับทั้ง 80mm (`w-[72mm]`) และ 58mm (`w-[48mm]` + ฟอนต์กะทัดรัด) และเคารพการเปิด/ปิดแสดงข้อมูล
+  - `PaymentModal.tsx`: ผูกพฤติกรรม Auto-Print หากเปิดใช้งานจะเปิด `ReceiptModal` และสั่งพิมพ์ทันทีหลังชำระเงินสำเร็จ
+- **ทดสอบ**:
+  - E2E `backend/test/e2e/e2e-printer-config.mjs` ผ่านครบทุกข้อ (ตรวจ GET/PATCH system-config, เปิดบิล, เสิร์ฟ, จ่ายเงิน และ assert ใบเสร็จ)
+  - E2E `backend/test/e2e/e2e-receipt.mjs` ผ่าน 12/12 ข้อ
+  - Typecheck (`tsc --noEmit`, `tsc -b`) และ Vite build ผ่าน 100%
+
+---
+
 ## 4. งานค้าง P0
 
 **ไม่มีงาน P0 ค้าง** — คงไว้เป็นบันทึกว่าอะไรเสร็จแล้ว

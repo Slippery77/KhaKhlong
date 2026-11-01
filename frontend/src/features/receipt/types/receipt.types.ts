@@ -2,6 +2,8 @@
  * ข้อมูลใบเสร็จจาก GET /api/payments/:paymentId/receipt
  * ทุกยอดเงินเป็นค่าที่เซิร์ฟเวอร์คำนวณแล้ว (DB trigger) — client ห้ามคำนวณซ้ำ
  */
+export type PaperSize = '80mm' | '58mm';
+
 export interface ReceiptStore {
   name: string;
   phone: string | null;
@@ -49,6 +51,10 @@ export interface ReceiptData {
   store: ReceiptStore;
   tables: ReceiptTable[];
   lines: ReceiptLine[];
+  footer?: string | null;
+  showTaxId?: boolean;
+  showCashier?: boolean;
+  showAddress?: boolean;
 }
 
 export interface ReceiptPrintResult {

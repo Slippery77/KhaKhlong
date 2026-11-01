@@ -3,6 +3,7 @@ import { X, Banknote, QrCode, CheckCircle2, Loader2, Info, Printer } from 'lucid
 import { usePayment } from '../hooks/usePayment';
 import { ApiError } from '../../../libs/appClient';
 import { ReceiptModal } from '../../receipt';
+import { getDevicePrinterSettings } from '../../printer/storage/printerStorage';
 import type { PaymentAttempt, PaymentMethod, PaymentResult } from '../types/payment.type';
 import { QRCodeSVG } from 'qrcode.react';
 
@@ -137,6 +138,9 @@ export default function PaymentModal({ table, orderId, orderIds, onClose, onPaym
             const r = await pay(attempt.paymentAttemptId, method === 'cash' ? cashReceived : undefined);
             setResult(r);
             setStep('done');
+            if (getDevicePrinterSettings().autoPrint) {
+                setReceiptOpen(true);
+            }
         } catch (e) {
             showError(e);
         } finally {
@@ -269,7 +273,7 @@ export default function PaymentModal({ table, orderId, orderIds, onClose, onPaym
                                     <label className="text-xs font-semibold text-stone-600 block">รับเงินมา (บาท)</label>
                                     <div className="flex flex-wrap gap-2">
                                         {[amount, ...quickCash].map((v, i) => (
-                                            <button key={v} type="button" onClick={() => setCashInput(String(v))}
+                                             <button key={v} type="button" onClick={() => setCashInput(String(v))}
                                                 className="px-3 py-1.5 rounded-xl text-xs font-semibold border bg-white text-stone-700 border-stone-200 hover:bg-stone-100 cursor-pointer">
                                                 {i === 0 ? 'พอดี' : baht(v)}
                                             </button>
@@ -427,6 +431,7 @@ export default function PaymentModal({ table, orderId, orderIds, onClose, onPaym
             {receiptOpen && result && (
                 <ReceiptModal
                     paymentId={result.paymentId}
+                    autoPrintImmediate={getDevicePrinterSettings().autoPrint}
                     onClose={() => setReceiptOpen(false)}
                 />
             )}

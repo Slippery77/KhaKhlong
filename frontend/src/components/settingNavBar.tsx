@@ -59,6 +59,14 @@ export default function SettingNavBar() {
                         ตัวเลือกเสริม
                     </NavLink>
                 </li>
+                <li>
+                    <NavLink
+                        to={`/${tenantSlug}/setting/printer`}
+                        className={({ isActive }) => (isActive ? activeClass : inactiveClass)}
+                    >
+                        เครื่องพิมพ์
+                    </NavLink>
+                </li>
 
                 {/* เฉพาะเจ้าของร้าน (Owner only) */}
                 {isOwner && (

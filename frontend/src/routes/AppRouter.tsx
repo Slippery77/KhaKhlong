@@ -16,6 +16,7 @@ import UsersPage from '../features/users/pages/UsersPage';
 import AuditLogsPage from '../features/auditLogs/AuditLogsPage';
 import TableSettingPage from '../features/tableSetting/pages/TableSettingPage';
 import StoreSettingPage from '../features/store/pages/StoreSettingPage';
+import PrinterSettingPage from '../features/printer/pages/PrinterSettingPage';
 import { SettingRouteGuard } from './SettingRouteGuard';
 import { AuditRouteGuard } from './AuditRouteGuard';
 import { useAuth } from '../features/auth/context/AuthContext';
@@ -58,6 +59,7 @@ export function AppRouter() {
                 <Route path='tables' element={<TableSettingPage />} />
                 <Route path='menu' element={<MenuEdit />} />
                 <Route path='modifier' element={<EditModiferPage />} />
+                <Route path='printer' element={<PrinterSettingPage />} />
                 <Route path='users' element={<UsersPage />} />
                 <Route path='*' element={<SettingIndexRedirect />} />
             </Route>
@@ -78,7 +80,7 @@ export function AppRouter() {
                     element={<Suspense fallback={null}><OutboxDevPage /></Suspense>}
                 />
             )}
-            <Route path='*' element={<StoreFinderPage />} />
+            <Route path='*' element={<Navigate to='/' replace />} />
         </Routes>
     );
 }

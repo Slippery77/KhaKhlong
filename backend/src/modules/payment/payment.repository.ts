@@ -180,7 +180,11 @@ export class PaymentRepository{
     async findStore() {
         const sql = `
             SELECT restaurant_name, phone, tax_id, house_number, moo, soi, road,
-                subdistrict, district, province, postal_code
+                subdistrict, district, province, postal_code,
+                cfg(app_tenant_id(), 'receipt_footer') AS receipt_footer,
+                cfg(app_tenant_id(), 'receipt_show_tax_id') AS receipt_show_tax_id,
+                cfg(app_tenant_id(), 'receipt_show_cashier') AS receipt_show_cashier,
+                cfg(app_tenant_id(), 'receipt_show_address') AS receipt_show_address
             FROM tenants WHERE tenant_id = app_tenant_id()`;
         const result = await this.db.query(sql);
         return result.rows[0];

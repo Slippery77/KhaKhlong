@@ -29,12 +29,13 @@ export class SystemConfigRepository{
 
     async updateValue(key: string, value: string) {
         const sql = `
-            UPDATE system_config 
-            SET config_value = $2 , updated_at = now()
-            WHERE tenant_id = app_tenant_id() and config_key = $1
+            INSERT INTO system_config (tenant_id, config_key, config_value, updated_at)
+            VALUES (app_tenant_id(), $1, $2, now())
+            ON CONFLICT (tenant_id, config_key)
+            DO UPDATE SET config_value = EXCLUDED.config_value, updated_at = now()
             RETURNING config_key, config_value, updated_at;
         `;
-        const result = await this.db.query(sql,[key,value])
+        const result = await this.db.query(sql,[key,value]);
         return result.rows[0];
     }
 }

@@ -1351,7 +1351,15 @@ INSERT INTO config_definitions
  ('require_all_served_before_payment','bool','true',NULL,NULL,NULL,false,
   'PAY-03 บังคับเสิร์ฟครบก่อนจ่าย ร้านที่จ่ายก่อนกินให้ตั้ง false'),
  ('inventory_variance_alert_percent','decimal','20',0,1000,NULL,false,
-  'ส่วนต่างสต็อกเกินกี่ % ถึงยิง audit (และต้องเกิน 1 หน่วยด้วย)')
+  'ส่วนต่างสต็อกเกินกี่ % ถึงยิง audit (และต้องเกิน 1 หน่วยด้วย)'),
+ ('receipt_footer','text','ขอบคุณที่ใช้บริการ\nโปรดตรวจสอบรายการก่อนออกจากร้าน',NULL,NULL,NULL,false,
+  'ข้อความท้ายใบเสร็จ'),
+ ('receipt_show_tax_id','bool','true',NULL,NULL,NULL,false,
+  'แสดงเลขประจำตัวผู้เสียภาษีบนใบเสร็จ'),
+ ('receipt_show_cashier','bool','true',NULL,NULL,NULL,false,
+  'แสดงชื่อพนักงานแคชเชียร์บนใบเสร็จ'),
+ ('receipt_show_address','bool','true',NULL,NULL,NULL,false,
+  'แสดงที่อยู่และเบอร์โทรร้านบนใบเสร็จ')
 ON CONFLICT (config_key) DO NOTHING;
 
 -- ============================================================

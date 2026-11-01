@@ -1,4 +1,4 @@
-import type { ReceiptData } from '../types/receipt.types';
+import type { PaperSize, ReceiptData } from '../types/receipt.types';
 import {
   formatMoney,
   formatThaiDateTime,
@@ -15,6 +15,16 @@ interface ReceiptPaperProps {
   /** ลำดับการพิมพ์ (แสดงบนป้ายสำเนา) */
   printCount?: number;
   className?: string;
+  /** ขนาดกระดาษความร้อน: '80mm' (หน้ากว้าง 72mm) หรือ '58mm' (หน้ากว้าง 48mm) */
+  paperSize?: PaperSize;
+  /** ข้อความท้ายใบเสร็จ (ถ้าไม่ระบุ จะดึงจาก receipt.footer หรือข้อความเริ่มต้น) */
+  customFooter?: string | null;
+  /** เปิด/ปิด แสดงเลขประจำตัวผู้เสียภาษี */
+  showTaxId?: boolean;
+  /** เปิด/ปิด แสดงชื่อพนักงานแคชเชียร์ */
+  showCashier?: boolean;
+  /** เปิด/ปิด แสดงที่อยู่และเบอร์โทรร้าน */
+  showAddress?: boolean;
 }
 
 /** เส้นคั่นแบบใบเสร็จความร้อน */
@@ -22,9 +32,21 @@ function Divider({ className = '' }: { className?: string }) {
   return <div className={`border-t border-dashed border-[#8A837A] ${className}`} />;
 }
 
-function MetaRow({ label, value }: { label: string; value: string }) {
+function MetaRow({
+  label,
+  value,
+  isSmall = false,
+}: {
+  label: string;
+  value: string;
+  isSmall?: boolean;
+}) {
   return (
-    <div className="flex items-start justify-between gap-2 text-[9px] leading-[1.6]">
+    <div
+      className={`flex items-start justify-between gap-2 leading-[1.6] ${
+        isSmall ? 'text-[8px]' : 'text-[9px]'
+      }`}
+    >
       <span className="shrink-0 text-[#5A544D]">{label}</span>
       <span className="min-w-0 break-words text-right font-medium tabular-nums">{value}</span>
     </div>
@@ -35,17 +57,23 @@ function TotalRow({
   label,
   value,
   strong = false,
+  isSmall = false,
 }: {
   label: string;
   value: string;
   strong?: boolean;
+  isSmall?: boolean;
 }) {
   return (
     <div
       className={
         strong
-          ? 'flex items-baseline justify-between gap-2 pt-[1mm] text-[12px] font-bold'
-          : 'flex items-baseline justify-between gap-2 text-[9px] leading-[1.6]'
+          ? `flex items-baseline justify-between gap-2 pt-[1mm] font-bold ${
+              isSmall ? 'text-[10.5px]' : 'text-[12px]'
+            }`
+          : `flex items-baseline justify-between gap-2 leading-[1.6] ${
+              isSmall ? 'text-[8px]' : 'text-[9px]'
+            }`
       }
     >
       <span className={strong ? '' : 'text-[#3F3A34]'}>{label}</span>
@@ -55,7 +83,8 @@ function TotalRow({
 }
 
 /**
- * กระดาษใบเสร็จขนาด 80mm (พื้นที่พิมพ์ 72mm)
+ * กระดาษใบเสร็จ (Thermal Paper)
+ * รองรับทั้งขนาด 80mm (กว้าง 72mm) และ 58mm (กว้าง 48mm)
  * ใช้คอมโพเนนต์เดียวกันทั้งหน้าจอพรีวิวและแผ่นที่ส่งเข้าเครื่องพิมพ์
  */
 export default function ReceiptPaper({
@@ -63,7 +92,14 @@ export default function ReceiptPaper({
   isCopy = false,
   printCount,
   className = '',
+  paperSize = '80mm',
+  customFooter,
+  showTaxId,
+  showCashier,
+  showAddress,
 }: ReceiptPaperProps) {
+  const is58 = paperSize === '58mm';
+
   const tableNumbers = Array.from(
     new Set(receipt.tables.map((t) => t.tableNumber).filter(Boolean)),
   );
@@ -72,9 +108,26 @@ export default function ReceiptPaper({
   const showVat = receipt.vatMode !== 'none' && receipt.vatAmount > 0;
   const showRounding = Math.abs(receipt.roundingAdjustment) >= 0.005;
 
+  // จัดการเงื่อนไขการแสดงผลข้อมูลร้าน
+  const canShowAddress = showAddress !== undefined ? showAddress : receipt.showAddress !== false;
+  const canShowTaxId = showTaxId !== undefined ? showTaxId : receipt.showTaxId !== false;
+  const canShowCashier = showCashier !== undefined ? showCashier : receipt.showCashier !== false;
+
+  // จัดการข้อความท้ายใบเสร็จ
+  const footerText =
+    customFooter !== undefined
+      ? (customFooter ?? '')
+      : (receipt.footer ?? 'ขอบคุณที่ใช้บริการ\nโปรดตรวจสอบรายการก่อนออกจากร้าน');
+
+  const footerLines = footerText.split('\n').filter((l) => l.trim().length > 0);
+
   return (
     <article
-      className={`receipt-paper w-[72mm] bg-white px-[3mm] py-[4mm] font-kanit text-[#1A1A1A] ${className}`}
+      className={`receipt-paper bg-white font-kanit text-[#1A1A1A] transition-all duration-200 ${
+        is58
+          ? 'w-[48mm] min-w-[48mm] max-w-[48mm] px-[2mm] py-[3mm] text-[8px]'
+          : 'w-[72mm] min-w-[72mm] max-w-[72mm] px-[3mm] py-[4mm] text-[9px]'
+      } ${className}`}
     >
       {isCopy && (
         <div className="mb-[2mm] border border-dashed border-[#1A1A1A] px-[2mm] py-[1.2mm] text-center">
@@ -88,77 +141,118 @@ export default function ReceiptPaper({
       {/* หัวใบเสร็จ: ข้อมูลร้านจาก server */}
       <header className="text-center">
         {receipt.store.name ? (
-          <h1 className="text-[14px] leading-tight font-bold">{receipt.store.name}</h1>
+          <h1
+            className={`leading-tight font-bold ${
+              is58 ? 'text-[12px]' : 'text-[14px]'
+            }`}
+          >
+            {receipt.store.name}
+          </h1>
         ) : null}
-        {receipt.store.address ? (
-          <p className="mt-[1.2mm] text-[8.5px] leading-[1.55] text-[#3F3A34]">
+
+        {canShowAddress && receipt.store.address ? (
+          <p
+            className={`mt-[1mm] leading-[1.5] text-[#3F3A34] ${
+              is58 ? 'text-[7.5px]' : 'text-[8.5px]'
+            }`}
+          >
             {receipt.store.address}
           </p>
         ) : null}
-        {receipt.store.phone ? (
-          <p className="mt-[0.6mm] text-[8.5px] leading-[1.55] text-[#3F3A34]">
+
+        {canShowAddress && receipt.store.phone ? (
+          <p
+            className={`mt-[0.5mm] leading-[1.5] text-[#3F3A34] ${
+              is58 ? 'text-[7.5px]' : 'text-[8.5px]'
+            }`}
+          >
             โทร. {receipt.store.phone}
           </p>
         ) : null}
-        {receipt.store.taxId ? (
-          <p className="mt-[0.6mm] text-[8.5px] leading-[1.55] text-[#3F3A34]">
+
+        {canShowTaxId && receipt.store.taxId ? (
+          <p
+            className={`mt-[0.5mm] leading-[1.5] text-[#3F3A34] ${
+              is58 ? 'text-[7.5px]' : 'text-[8.5px]'
+            }`}
+          >
             เลขประจำตัวผู้เสียภาษี {receipt.store.taxId}
           </p>
         ) : null}
       </header>
 
-      <Divider className="my-[2.5mm]" />
+      <Divider className={is58 ? 'my-[1.8mm]' : 'my-[2.5mm]'} />
 
-      <p className="text-center text-[10.5px] font-bold tracking-wide">
+      <p
+        className={`text-center font-bold tracking-wide ${
+          is58 ? 'text-[9.5px]' : 'text-[10.5px]'
+        }`}
+      >
         {receiptDocTitle(receipt.vatMode)}
       </p>
 
       {/* ข้อมูลเอกสาร */}
-      <div className="mt-[2mm] space-y-[0.4mm]">
-        <MetaRow label="เลขที่" value={receipt.receiptNumber} />
-        <MetaRow label="วันที่" value={formatThaiDateTime(receipt.paidAt)} />
+      <div className={`mt-[1.8mm] ${is58 ? 'space-y-[0.3mm]' : 'space-y-[0.4mm]'}`}>
+        <MetaRow label="เลขที่" value={receipt.receiptNumber} isSmall={is58} />
+        <MetaRow label="วันที่" value={formatThaiDateTime(receipt.paidAt)} isSmall={is58} />
         {tableNumbers.length > 0 ? (
-          <MetaRow label="โต๊ะ" value={tableNumbers.join(', ')} />
+          <MetaRow label="โต๊ะ" value={tableNumbers.join(', ')} isSmall={is58} />
         ) : null}
         {orderNumbers.length > 0 ? (
-          <MetaRow label="บิล" value={orderNumbers.join(', ')} />
+          <MetaRow label="บิล" value={orderNumbers.join(', ')} isSmall={is58} />
         ) : null}
-        {receipt.cashier ? <MetaRow label="พนักงาน" value={receipt.cashier} /> : null}
+        {canShowCashier && receipt.cashier ? (
+          <MetaRow label="พนักงาน" value={receipt.cashier} isSmall={is58} />
+        ) : null}
       </div>
 
-      <Divider className="my-[2.5mm]" />
+      <Divider className={is58 ? 'my-[1.8mm]' : 'my-[2.5mm]'} />
 
       {/* รายการอาหาร — ยอดทุกบรรทัดมาจาก server */}
-      <div className="space-y-[1.6mm]">
+      <div className={is58 ? 'space-y-[1.2mm]' : 'space-y-[1.6mm]'}>
         {receipt.lines.length === 0 ? (
-          <p className="py-[2mm] text-center text-[9px] text-[#5A544D]">ไม่มีรายการอาหาร</p>
+          <p className="py-[2mm] text-center text-[#5A544D]">ไม่มีรายการอาหาร</p>
         ) : (
           receipt.lines.map((line, index) => {
             const modifiers = splitModifiers(line.modifiers);
             return (
-              <div key={`${line.name}-${index}`} className="flex items-start justify-between gap-2">
+              <div key={`${line.name}-${index}`} className="flex items-start justify-between gap-1.5">
                 <div className="min-w-0 flex-1">
-                  <p className="text-[9.5px] leading-snug font-medium">
+                  <p
+                    className={`leading-snug font-medium ${
+                      is58 ? 'text-[8.5px]' : 'text-[9.5px]'
+                    }`}
+                  >
                     {line.name}
                     {line.isComped ? (
-                      <span className="ml-[1mm] rounded-[1mm] border border-[#8A837A] px-[1mm] text-[7px] font-normal">
+                      <span className="ml-[1mm] rounded-[1mm] border border-[#8A837A] px-[0.8mm] text-[6.5px] font-normal">
                         ฟรี
                       </span>
                     ) : null}
                   </p>
-                  <p className="text-[8.5px] leading-[1.5] text-[#5A544D] tabular-nums">
+                  <p
+                    className={`leading-[1.4] text-[#5A544D] tabular-nums ${
+                      is58 ? 'text-[7.5px]' : 'text-[8.5px]'
+                    }`}
+                  >
                     {line.qty} × {formatMoney(line.unitPrice)}
                   </p>
                   {modifiers.map((modifier) => (
                     <p
                       key={modifier}
-                      className="text-[8px] leading-[1.5] text-[#5A544D]"
+                      className={`leading-[1.4] text-[#5A544D] ${
+                        is58 ? 'text-[7px]' : 'text-[8px]'
+                      }`}
                     >
                       + {modifier}
                     </p>
                   ))}
                 </div>
-                <span className="shrink-0 text-right text-[9.5px] tabular-nums">
+                <span
+                  className={`shrink-0 text-right tabular-nums ${
+                    is58 ? 'text-[8.5px]' : 'text-[9.5px]'
+                  }`}
+                >
                   {line.isComped ? '0.00' : formatMoney(line.lineTotal)}
                 </span>
               </div>
@@ -167,11 +261,11 @@ export default function ReceiptPaper({
         )}
       </div>
 
-      <Divider className="my-[2.5mm]" />
+      <Divider className={is58 ? 'my-[1.8mm]' : 'my-[2.5mm]'} />
 
       {/* สรุปยอด: ใช้ค่าจาก payments ตรง ๆ ไม่คำนวณซ้ำ */}
-      <div className="space-y-[0.6mm]">
-        <TotalRow label="ยอดรวม" value={formatMoney(receipt.subtotal)} />
+      <div className={is58 ? 'space-y-[0.4mm]' : 'space-y-[0.6mm]'}>
+        <TotalRow label="ยอดรวม" value={formatMoney(receipt.subtotal)} isSmall={is58} />
         {showServiceCharge ? (
           <TotalRow
             label={
@@ -180,12 +274,14 @@ export default function ReceiptPaper({
                 : 'ค่าบริการ'
             }
             value={formatMoney(receipt.serviceChargeAmount)}
+            isSmall={is58}
           />
         ) : null}
         {showVat ? (
           <TotalRow
             label={vatLabel(receipt.vatMode, receipt.vatRate)}
             value={formatMoney(receipt.vatAmount)}
+            isSmall={is58}
           />
         ) : null}
         {showRounding ? (
@@ -194,32 +290,64 @@ export default function ReceiptPaper({
             value={`${receipt.roundingAdjustment > 0 ? '+' : '-'}${formatMoney(
               Math.abs(receipt.roundingAdjustment),
             )}`}
+            isSmall={is58}
           />
         ) : null}
       </div>
 
-      <Divider className="my-[2mm]" />
+      <Divider className={is58 ? 'my-[1.6mm]' : 'my-[2mm]'} />
 
-      <TotalRow label="รวมทั้งสิ้น" value={formatMoney(receipt.totalAmount)} strong />
+      <TotalRow
+        label="รวมทั้งสิ้น"
+        value={formatMoney(receipt.totalAmount)}
+        strong
+        isSmall={is58}
+      />
 
-      <Divider className="my-[2.5mm]" />
+      <Divider className={is58 ? 'my-[1.8mm]' : 'my-[2.5mm]'} />
 
       {/* การชำระเงิน */}
-      <div className="space-y-[0.4mm]">
-        <MetaRow label="ชำระโดย" value={paymentMethodLabel(receipt.paymentMethod)} />
+      <div className={is58 ? 'space-y-[0.3mm]' : 'space-y-[0.4mm]'}>
+        <MetaRow
+          label="ชำระโดย"
+          value={paymentMethodLabel(receipt.paymentMethod)}
+          isSmall={is58}
+        />
         {receipt.cashReceived !== null ? (
-          <MetaRow label="รับเงิน" value={formatMoney(receipt.cashReceived)} />
+          <MetaRow
+            label="รับเงิน"
+            value={formatMoney(receipt.cashReceived)}
+            isSmall={is58}
+          />
         ) : null}
         {receipt.changeAmount !== null ? (
-          <MetaRow label="เงินทอน" value={formatMoney(receipt.changeAmount)} />
+          <MetaRow
+            label="เงินทอน"
+            value={formatMoney(receipt.changeAmount)}
+            isSmall={is58}
+          />
         ) : null}
       </div>
 
-      <Divider className="my-[2.5mm]" />
+      <Divider className={is58 ? 'my-[1.8mm]' : 'my-[2.5mm]'} />
 
-      <footer className="text-center text-[8.5px] leading-[1.6] text-[#3F3A34]">
-        <p className="font-semibold">ขอบคุณที่ใช้บริการ</p>
-        <p>โปรดตรวจสอบรายการก่อนออกจากร้าน</p>
+      <footer
+        className={`text-center leading-[1.6] text-[#3F3A34] ${
+          is58 ? 'text-[7.5px]' : 'text-[8.5px]'
+        }`}
+      >
+        {footerLines.length > 0 ? (
+          footerLines.map((line, idx) => (
+            <p key={idx} className={idx === 0 ? 'font-semibold' : ''}>
+              {line}
+            </p>
+          ))
+        ) : (
+          <>
+            <p className="font-semibold">ขอบคุณที่ใช้บริการ</p>
+            <p>โปรดตรวจสอบรายการก่อนออกจากร้าน</p>
+          </>
+        )}
         {isCopy ? <p className="mt-[1mm]">เอกสารฉบับนี้เป็นสำเนา</p> : null}
       </footer>
     </article>

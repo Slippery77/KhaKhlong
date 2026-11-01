@@ -4,7 +4,8 @@ import { AlertCircle, Loader2, Printer, X } from 'lucide-react';
 import { ApiError } from '../../../libs/appClient';
 import ReceiptPaper from './ReceiptPaper';
 import { useReceipt } from '../hooks/useReceipt';
-import type { ReceiptPrintResult } from '../types/receipt.types';
+import type { PaperSize, ReceiptPrintResult } from '../types/receipt.types';
+import { getDevicePrinterSettings } from '../../printer/storage/printerStorage';
 import './receipt.print.css';
 
 interface ReceiptModalProps {
@@ -12,27 +13,33 @@ interface ReceiptModalProps {
   paymentId: string;
   /** ปิดหน้าต่าง — ผู้เรียกเป็นคนตัดสินใจว่าจะทำอะไรต่อ */
   onClose: () => void;
+  /** กำหนดขนาดกระดาษเจาะจง (ถ้าไม่ระบุ จะอ่านจาก printer settings ประจำเครื่อง) */
+  paperSize?: PaperSize;
+  /** สั่งพิมพ์ทันทีที่โหลดข้อมูลเสร็จ (ใช้สำหรับ auto-print) */
+  autoPrintImmediate?: boolean;
 }
 
 /** โครงร่างกระดาษระหว่างรอข้อมูล */
-function ReceiptSkeleton() {
+function ReceiptSkeleton({ is58 = false }: { is58?: boolean }) {
   return (
     <div
-      className="mx-auto w-[72mm] animate-pulse bg-white px-4 py-5 shadow-[0_14px_34px_-16px_rgba(45,36,30,0.45)] ring-1 ring-black/5 motion-reduce:animate-none"
+      className={`mx-auto animate-pulse bg-white px-4 py-5 shadow-[0_14px_34px_-16px_rgba(45,36,30,0.45)] ring-1 ring-black/5 motion-reduce:animate-none ${
+        is58 ? 'w-[48mm]' : 'w-[72mm]'
+      }`}
       aria-hidden="true"
     >
-      <div className="mx-auto h-3 w-32 rounded bg-stone-200" />
-      <div className="mx-auto mt-2 h-2 w-44 rounded bg-stone-100" />
-      <div className="mx-auto mt-1 h-2 w-36 rounded bg-stone-100" />
+      <div className="mx-auto h-3 w-28 rounded bg-stone-200" />
+      <div className="mx-auto mt-2 h-2 w-36 rounded bg-stone-100" />
+      <div className="mx-auto mt-1 h-2 w-28 rounded bg-stone-100" />
       <div className="my-4 border-t border-dashed border-stone-300" />
-      {Array.from({ length: 5 }).map((_, index) => (
+      {Array.from({ length: 4 }).map((_, index) => (
         <div key={index} className="mt-2 flex items-center justify-between gap-3">
-          <div className="h-2 w-24 rounded bg-stone-200" />
+          <div className="h-2 w-20 rounded bg-stone-200" />
           <div className="h-2 w-10 rounded bg-stone-100" />
         </div>
       ))}
       <div className="my-4 border-t border-dashed border-stone-300" />
-      <div className="ml-auto h-3 w-24 rounded bg-stone-200" />
+      <div className="ml-auto h-3 w-20 rounded bg-stone-200" />
     </div>
   );
 }
@@ -42,10 +49,20 @@ function ReceiptSkeleton() {
  * ลำดับการทำงาน: อ่านใบเสร็จ (GET) → กดพิมพ์ → บันทึกการพิมพ์ (POST /print) → เปิดหน้าต่างพิมพ์ของเบราว์เซอร์
  * ต้องบันทึกก่อนพิมพ์เสมอ เพื่อให้รู้ว่าเป็นฉบับแรกหรือ "สำเนา" และเคารพจำนวนพิมพ์ซ้ำของร้าน
  */
-export default function ReceiptModal({ paymentId, onClose }: ReceiptModalProps) {
+export default function ReceiptModal({
+  paymentId,
+  onClose,
+  paperSize: propPaperSize,
+  autoPrintImmediate = false,
+}: ReceiptModalProps) {
   const titleId = useId();
   const panelRef = useRef<HTMLDivElement>(null);
+  const autoPrintedRef = useRef(false);
   const { receipt, loading, error, reload, recordPrint } = useReceipt(paymentId);
+
+  // ขนาดกระดาษจาก prop หรือจาก LocalStorage ประจำเครื่อง
+  const [deviceSettings] = useState(() => getDevicePrinterSettings());
+  const effectivePaperSize = propPaperSize ?? deviceSettings.paperSize;
 
   const [printInfo, setPrintInfo] = useState<ReceiptPrintResult | null>(null);
   const [printing, setPrinting] = useState(false);
@@ -94,14 +111,25 @@ export default function ReceiptModal({ paymentId, onClose }: ReceiptModalProps) 
     }
   };
 
+  // กรณีเปิดใช้งาน autoPrintImmediate เมื่อโหลดใบเสร็จเสร็จแล้วให้พิมพ์ทันที 1 ครั้ง
+  useEffect(() => {
+    if (autoPrintImmediate && receipt && !autoPrintedRef.current && !loading && !error) {
+      autoPrintedRef.current = true;
+      void handlePrint();
+    }
+  }, [autoPrintImmediate, receipt, loading, error]);
+
+  const is58 = effectivePaperSize === '58mm';
+
   const printArea =
     receipt &&
     createPortal(
-      <div className="receipt-print-area hidden">
+      <div className={`receipt-print-area hidden ${is58 ? 'paper-58mm' : ''}`}>
         <ReceiptPaper
           receipt={receipt}
           isCopy={isCopy}
           printCount={printInfo?.printCount}
+          paperSize={effectivePaperSize}
         />
       </div>,
       document.body,
@@ -136,7 +164,7 @@ export default function ReceiptModal({ paymentId, onClose }: ReceiptModalProps) 
                       ใบเสร็จรับเงิน
                     </h2>
                     <span className="rounded-full border border-[#E8DFD5] bg-white px-2 py-0.5 text-[10px] font-medium text-[#8C6D58]">
-                      กระดาษ 80 มม.
+                      กระดาษ {is58 ? '58 มม.' : '80 มม.'}
                     </span>
                   </div>
                   <p className="mt-1 truncate text-xs text-[#6B625B] tabular-nums">
@@ -156,7 +184,7 @@ export default function ReceiptModal({ paymentId, onClose }: ReceiptModalProps) 
               {/* กระดาษตัวอย่าง */}
               <div className="flex-1 overflow-y-auto bg-[#F6F1EA] px-4 py-5">
                 {loading ? (
-                  <ReceiptSkeleton />
+                  <ReceiptSkeleton is58={is58} />
                 ) : error ? (
                   <div className="mx-auto flex max-w-xs flex-col items-center gap-2 py-10 text-center">
                     <AlertCircle className="h-8 w-8 text-rose-400" aria-hidden="true" />
@@ -176,6 +204,7 @@ export default function ReceiptModal({ paymentId, onClose }: ReceiptModalProps) 
                       receipt={receipt}
                       isCopy={isCopy}
                       printCount={printInfo?.printCount}
+                      paperSize={effectivePaperSize}
                     />
                   </div>
                 ) : null}
