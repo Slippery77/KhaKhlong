@@ -6,6 +6,7 @@ import ReceiptPaper from './ReceiptPaper';
 import { useReceipt } from '../hooks/useReceipt';
 import type { PaperSize, ReceiptPrintResult } from '../types/receipt.types';
 import { getDevicePrinterSettings } from '../../printer/storage/printerStorage';
+import { useAuth } from '../../auth/context/AuthContext';
 import './receipt.print.css';
 
 interface ReceiptModalProps {
@@ -55,13 +56,14 @@ export default function ReceiptModal({
   paperSize: propPaperSize,
   autoPrintImmediate = false,
 }: ReceiptModalProps) {
+  const { user } = useAuth();
   const titleId = useId();
   const panelRef = useRef<HTMLDivElement>(null);
   const autoPrintedRef = useRef(false);
   const { receipt, loading, error, reload, recordPrint } = useReceipt(paymentId);
 
   // ขนาดกระดาษจาก prop หรือจาก LocalStorage ประจำเครื่อง
-  const [deviceSettings] = useState(() => getDevicePrinterSettings());
+  const [deviceSettings] = useState(() => getDevicePrinterSettings(user?.tenantSlug));
   const effectivePaperSize = propPaperSize ?? deviceSettings.paperSize;
 
   const [printInfo, setPrintInfo] = useState<ReceiptPrintResult | null>(null);
@@ -86,6 +88,7 @@ export default function ReceiptModal({
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
       document.body.style.overflow = previousOverflow;
+      document.body.classList.remove('is-printing-receipt');
     };
   }, [onClose]);
 
@@ -94,6 +97,7 @@ export default function ReceiptModal({
 
     setPrinting(true);
     setPrintError(null);
+    document.body.classList.add('is-printing-receipt');
     try {
       const info = await recordPrint();
       // ต้อง commit ป้าย "สำเนา" ให้เสร็จก่อนเบราว์เซอร์ snapshot หน้าพิมพ์
@@ -108,6 +112,7 @@ export default function ReceiptModal({
       }
     } finally {
       setPrinting(false);
+      document.body.classList.remove('is-printing-receipt');
     }
   };
 

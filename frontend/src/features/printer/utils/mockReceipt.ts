@@ -56,3 +56,4 @@ export function createMockReceipt(storeName = 'ค้าคล่อง คา�
     showAddress: true,
   };
 }
+

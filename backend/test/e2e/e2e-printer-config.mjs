@@ -86,7 +86,21 @@ assert(Boolean(cashierItem), 'มี key receipt_show_cashier');
 assert(Boolean(addressItem), 'มี key receipt_show_address');
 assert(Boolean(reprintsItem), 'มี key max_reprints');
 
-console.log(`\n=== 4. อัปเดตค่าข้อความท้ายใบเสร็จและตัวเลือกแสดงผล ===`);
+console.log(`\n=== 4. ตรวจสอบ Boundary & Input Validation ===`);
+// Footer เกิน 500 ตัวอักษรต้องถูกปฏิเสธด้วย 400
+const tooLongFooter = 'A'.repeat(501);
+const rejectLongFooter = await req('/system-config/receipt_footer', token, 'PATCH', {
+  value: tooLongFooter,
+});
+assert(rejectLongFooter.status === 400, 'ปฏิเสธ footer ความยาวเกิน 500 ตัวอักษร (400)');
+
+// max_reprints เป็นค่าติดลบต้องถูกปฏิเสธด้วย 400
+const rejectNegativeReprints = await req('/system-config/max_reprints', token, 'PATCH', {
+  value: -5,
+});
+assert(rejectNegativeReprints.status === 400, 'ปฏิเสธ max_reprints ติดลบ (400)');
+
+console.log(`\n=== 5. อัปเดตค่าข้อความท้ายใบเสร็จและตัวเลือกแสดงผล ===`);
 const newFooter = 'ขอบคุณทุกท่านที่มาอุดหนุน\nWi-Fi: KhaKhlong_5G Pass: 88888888';
 const patchFooter = await req('/system-config/receipt_footer', token, 'PATCH', {
   value: newFooter,
@@ -100,7 +114,7 @@ const patchAddress = await req('/system-config/receipt_show_address', token, 'PA
 assert(patchAddress.status === 200, 'PATCH receipt_show_address สำเร็จ');
 assert(patchAddress.json.data.value === false, 'ค่า receipt_show_address เป็น false');
 
-console.log(`\n=== 5. สร้างออเดอร์ ชำระเงิน และอ่านใบเสร็จ ===`);
+console.log(`\n=== 6. สร้างออเดอร์ ชำระเงิน และอ่านใบเสร็จ ===`);
 // เปิดกะ (ถ้ายังไม่ได้เปิด)
 const shiftRes = await req('/shifts/open', token, 'POST', { openingCash: 500 });
 assert([201, 409].includes(shiftRes.status), 'เปิดกะสำเร็จหรือมีกะเปิดอยู่');

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { apiFetch, ApiError } from '../../../libs/appClient';
 import { useAuth } from '../../auth/context/AuthContext';
 import type { ConfigListResponse } from '../../editVat/types/vatEdit.types';
@@ -11,15 +11,25 @@ import {
 const DEFAULT_FOOTER = 'ขอบคุณที่ใช้บริการ\nโปรดตรวจสอบรายการก่อนออกจากร้าน';
 
 export function usePrinterSettings() {
-  const { accessToken } = useAuth();
+  const { accessToken, user } = useAuth();
+  const tenantSlug = user?.tenantSlug;
+
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [saveSuccess, setSaveSuccess] = useState(false);
 
+  const toastTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+    };
+  }, []);
+
   // Initial state combining LocalStorage device settings + DB defaults
   const [settings, setSettings] = useState<PrinterSettingsForm>(() => {
-    const device = getDevicePrinterSettings();
+    const device = getDevicePrinterSettings(tenantSlug);
     return {
       paperSize: device.paperSize,
       autoPrint: device.autoPrint,
@@ -44,32 +54,28 @@ export function usePrinterSettings() {
     setIsLoading(true);
     setError(null);
     try {
-      const device = getDevicePrinterSettings();
+      const device = getDevicePrinterSettings(tenantSlug);
       let maxReprints = 0;
       let receiptFooter = DEFAULT_FOOTER;
       let showTaxId = true;
       let showCashier = true;
       let showAddress = true;
 
-      try {
-        const res = await apiFetch<ConfigListResponse>('/system-config', accessToken);
-        if (res?.data) {
-          for (const item of res.data) {
-            if (item.key === 'max_reprints') {
-              maxReprints = Number(item.value ?? 0);
-            } else if (item.key === 'receipt_footer') {
-              receiptFooter = String(item.value ?? DEFAULT_FOOTER);
-            } else if (item.key === 'receipt_show_tax_id') {
-              showTaxId = item.value !== 'false' && item.value !== false;
-            } else if (item.key === 'receipt_show_cashier') {
-              showCashier = item.value !== 'false' && item.value !== false;
-            } else if (item.key === 'receipt_show_address') {
-              showAddress = item.value !== 'false' && item.value !== false;
-            }
+      const res = await apiFetch<ConfigListResponse>('/system-config', accessToken);
+      if (res?.data) {
+        for (const item of res.data) {
+          if (item.key === 'max_reprints') {
+            maxReprints = Number(item.value ?? 0);
+          } else if (item.key === 'receipt_footer') {
+            receiptFooter = String(item.value ?? DEFAULT_FOOTER);
+          } else if (item.key === 'receipt_show_tax_id') {
+            showTaxId = item.value !== 'false' && item.value !== false;
+          } else if (item.key === 'receipt_show_cashier') {
+            showCashier = item.value !== 'false' && item.value !== false;
+          } else if (item.key === 'receipt_show_address') {
+            showAddress = item.value !== 'false' && item.value !== false;
           }
         }
-      } catch (err) {
-        console.warn('Cannot fetch system-config, falling back to local defaults:', err);
       }
 
       const serverVals = {
@@ -91,7 +97,7 @@ export function usePrinterSettings() {
     } finally {
       setIsLoading(false);
     }
-  }, [accessToken]);
+  }, [accessToken, tenantSlug]);
 
   useEffect(() => {
     load();
@@ -103,13 +109,7 @@ export function usePrinterSettings() {
     setSaveSuccess(false);
 
     try {
-      // 1. บันทึกลง LocalStorage ประจำเครื่อง
-      saveDevicePrinterSettings({
-        paperSize: newForm.paperSize,
-        autoPrint: newForm.autoPrint,
-      });
-
-      // 2. บันทึกค่า Store policy ไปยัง system_config บน server
+      // 1. บันทึกค่า Store policy ไปยัง system_config บน server ก่อนเสมอ
       const patches: Promise<unknown>[] = [];
 
       if (!initialServerValues || initialServerValues.maxReprints !== newForm.maxReprints) {
@@ -156,6 +156,15 @@ export function usePrinterSettings() {
         await Promise.all(patches);
       }
 
+      // 2. เมื่อ Server บันทึกสำเร็จแล้ว จึงบันทึกลง LocalStorage ประจำเครื่อง
+      saveDevicePrinterSettings(
+        {
+          paperSize: newForm.paperSize,
+          autoPrint: newForm.autoPrint,
+        },
+        tenantSlug,
+      );
+
       setInitialServerValues({
         maxReprints: newForm.maxReprints,
         receiptFooter: newForm.receiptFooter,
@@ -166,7 +175,9 @@ export function usePrinterSettings() {
 
       setSettings(newForm);
       setSaveSuccess(true);
-      setTimeout(() => setSaveSuccess(false), 3000);
+
+      if (toastTimerRef.current) clearTimeout(toastTimerRef.current);
+      toastTimerRef.current = setTimeout(() => setSaveSuccess(false), 3000);
     } catch (err) {
       if (err instanceof ApiError) {
         setError(err.message);

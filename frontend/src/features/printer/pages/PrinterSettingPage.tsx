@@ -1,5 +1,5 @@
-import { useId, useMemo, useState } from 'react';
-import { createPortal } from 'react-dom';
+import { useEffect, useId, useMemo, useRef, useState } from 'react';
+import { createPortal, flushSync } from 'react-dom';
 import {
   Printer,
   FileText,
@@ -35,15 +35,15 @@ export default function PrinterSettingPage() {
   // Local form state for instant preview & editing before save
   const [form, setForm] = useState(settings);
   const [isTestPrinting, setIsTestPrinting] = useState(false);
+  const isInitialSyncDone = useRef(false);
 
-  // Sync initial settings into form when loaded
-  const [syncedKey, setSyncedKey] = useState('');
-  const currentKey = `${settings.paperSize}-${settings.autoPrint}-${settings.maxReprints}-${settings.receiptFooter}-${settings.showTaxId}-${settings.showCashier}-${settings.showAddress}`;
-
-  if (syncedKey !== currentKey && !isLoading) {
-    setForm(settings);
-    setSyncedKey(currentKey);
-  }
+  // Sync initial settings into form only when initial API load finishes
+  useEffect(() => {
+    if (!isLoading && !isInitialSyncDone.current) {
+      setForm(settings);
+      isInitialSyncDone.current = true;
+    }
+  }, [isLoading, settings]);
 
   // Accessibility IDs
   const paperSizeGroupId = useId();
@@ -72,12 +72,17 @@ export default function PrinterSettingPage() {
   };
 
   const handleTestPrint = () => {
-    setIsTestPrinting(true);
-    // Give react time to render the portal before invoking window.print()
-    setTimeout(() => {
+    document.body.classList.add('is-printing-receipt');
+    try {
+      // ใช้ flushSync การันตีว่า React Portal commit ลง DOM เสร็จสมบูรณ์ทันทีก่อนเรียก window.print()
+      flushSync(() => {
+        setIsTestPrinting(true);
+      });
       window.print();
+    } finally {
       setIsTestPrinting(false);
-    }, 150);
+      document.body.classList.remove('is-printing-receipt');
+    }
   };
 
   // Portal container for print execution
@@ -100,6 +105,9 @@ export default function PrinterSettingPage() {
       </div>,
       document.body,
     );
+
+  const footerLength = form.receiptFooter?.length ?? 0;
+  const isFooterOverLimit = footerLength > 500;
 
   return (
     <div className="min-h-screen bg-[#FAF7F2] font-kanit text-[#2D241E]">
@@ -323,27 +331,41 @@ export default function PrinterSettingPage() {
                   >
                     ข้อความท้ายใบเสร็จ (Receipt Footer Note)
                   </label>
-                  <button
-                    type="button"
-                    onClick={handleResetFooter}
-                    className="inline-flex items-center gap-1 text-[11px] font-medium text-[#8C6D58] hover:text-[#7a5c45] transition-colors cursor-pointer"
-                  >
-                    <RotateCcw className="h-3 w-3" />
-                    คืนค่าเริ่มต้น
-                  </button>
+                  <div className="flex items-center gap-3">
+                    <span
+                      className={`text-[11px] tabular-nums ${
+                        isFooterOverLimit ? 'font-bold text-rose-600' : 'text-stone-400'
+                      }`}
+                    >
+                      {footerLength}/500
+                    </span>
+                    <button
+                      type="button"
+                      onClick={handleResetFooter}
+                      className="inline-flex items-center gap-1 text-[11px] font-medium text-[#8C6D58] hover:text-[#7a5c45] transition-colors cursor-pointer"
+                    >
+                      <RotateCcw className="h-3 w-3" />
+                      คืนค่าเริ่มต้น
+                    </button>
+                  </div>
                 </div>
                 <textarea
                   id={footerTextareaId}
                   rows={3}
+                  maxLength={500}
                   value={form.receiptFooter}
                   onChange={(e) =>
                     setForm((prev) => ({ ...prev, receiptFooter: e.target.value }))
                   }
-                  placeholder="เช่น ขอบคุณที่ใช้บริการ / Wi-Fi: KhaKhlong_Free"
-                  className="w-full rounded-xl border border-stone-200 p-3 text-sm text-[#2D241E] placeholder:text-stone-400 focus:border-[#8C6D58] focus:outline-none focus:ring-2 focus:ring-[#8C6D58]/20"
+                  placeholder="เช่น ขอบคุณที่ใช้บริการ / Wi-Fi: KhaKhlong_Free (เว้นว่างไว้หากไม่ต้องการให้แสดงข้อความ)"
+                  className={`w-full rounded-xl border p-3 text-sm text-[#2D241E] placeholder:text-stone-400 focus:outline-none focus:ring-2 ${
+                    isFooterOverLimit
+                      ? 'border-rose-400 focus:ring-rose-200'
+                      : 'border-stone-200 focus:border-[#8C6D58] focus:ring-[#8C6D58]/20'
+                  }`}
                 />
                 <p className="text-[11px] text-stone-500">
-                  รองรับการขึ้นบรรทัดใหม่ จะแสดงผลตรงกลางที่ส่วนท้ายสุดของกระดาษใบเสร็จ
+                  รองรับการขึ้นบรรทัดใหม่ ไม่เกิน 500 ตัวอักษร (ลบทั้งหมดเพื่อให้ท้ายใบเสร็จว่างได้)
                 </p>
               </div>
             </section>
@@ -439,7 +461,7 @@ export default function PrinterSettingPage() {
             <div className="pt-2">
               <button
                 type="submit"
-                disabled={isSaving || isLoading}
+                disabled={isSaving || isLoading || isFooterOverLimit}
                 className="w-full flex items-center justify-center gap-2 rounded-xl bg-[#8C6D58] py-3 text-sm font-semibold text-white shadow-xs transition-colors duration-200 hover:bg-[#7a5c45] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#8C6D58]/40 disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer"
               >
                 {isSaving ? (

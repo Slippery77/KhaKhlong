@@ -4,6 +4,7 @@ import { usePayment } from '../hooks/usePayment';
 import { ApiError } from '../../../libs/appClient';
 import { ReceiptModal } from '../../receipt';
 import { getDevicePrinterSettings } from '../../printer/storage/printerStorage';
+import { useAuth } from '../../auth/context/AuthContext';
 import type { PaymentAttempt, PaymentMethod, PaymentResult } from '../types/payment.type';
 import { QRCodeSVG } from 'qrcode.react';
 
@@ -30,6 +31,7 @@ const baht = (n: number) =>
     `฿${n.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
 export default function PaymentModal({ table, orderId, orderIds, onClose, onPaymentSuccess }: PaymentModalProps) {
+    const { user } = useAuth();
     const { createAttempt, pay, cancel, getOrderSummary, getOrdersSummary } = usePayment();
     // key แบบ string กัน effect วนซ้ำเมื่อ parent สร้าง array ใหม่ทุก render
     const idsKey = (orderIds && orderIds.length > 0 ? orderIds : orderId ? [orderId] : []).join(',');
@@ -51,6 +53,8 @@ export default function PaymentModal({ table, orderId, orderIds, onClose, onPaym
     const [summaryReloadKey, setSummaryReloadKey] = useState(0);
     // เปิดหน้าต่างใบเสร็จหลังจ่ายเงินสำเร็จ (ยังไม่ปิดหน้าชำระเงิน)
     const [receiptOpen, setReceiptOpen] = useState(false);
+    // สั่งพิมพ์อัตโนมัติเฉพาะจังหวะแรกที่ชำระเงินสำเร็จ (ไม่พิมพ์ซ้ำเมื่อแคชเชียร์กดปุ่มดูใบเสร็จด้วยตนเอง)
+    const [autoPrintTriggered, setAutoPrintTriggered] = useState(false);
 
     // ยอดมาจาก server เท่านั้น หน้าจอไม่คำนวณยอดเอง
     const amount = attempt?.amount ?? 0;
@@ -138,7 +142,8 @@ export default function PaymentModal({ table, orderId, orderIds, onClose, onPaym
             const r = await pay(attempt.paymentAttemptId, method === 'cash' ? cashReceived : undefined);
             setResult(r);
             setStep('done');
-            if (getDevicePrinterSettings().autoPrint) {
+            if (getDevicePrinterSettings(user?.tenantSlug).autoPrint) {
+                setAutoPrintTriggered(true);
                 setReceiptOpen(true);
             }
         } catch (e) {
@@ -417,8 +422,14 @@ export default function PaymentModal({ table, orderId, orderIds, onClose, onPaym
                                 className="flex-1 py-2.5 border border-stone-200 hover:bg-stone-100 text-stone-600 font-medium text-sm rounded-xl transition cursor-pointer">
                                 เสร็จสิ้น
                             </button>
-                            <button type="button" onClick={() => setReceiptOpen(true)}
-                                className="flex-1 py-2.5 bg-[#A68874] hover:bg-[#967763] text-white font-medium text-sm rounded-xl transition cursor-pointer flex items-center justify-center gap-1.5">
+                            <button
+                                type="button"
+                                onClick={() => {
+                                    setAutoPrintTriggered(false);
+                                    setReceiptOpen(true);
+                                }}
+                                className="flex-1 py-2.5 bg-[#A68874] hover:bg-[#967763] text-white font-medium text-sm rounded-xl transition cursor-pointer flex items-center justify-center gap-1.5"
+                            >
                                 <Printer className="w-4 h-4" />
                                 พิมพ์ใบเสร็จ
                             </button>
@@ -431,8 +442,11 @@ export default function PaymentModal({ table, orderId, orderIds, onClose, onPaym
             {receiptOpen && result && (
                 <ReceiptModal
                     paymentId={result.paymentId}
-                    autoPrintImmediate={getDevicePrinterSettings().autoPrint}
-                    onClose={() => setReceiptOpen(false)}
+                    autoPrintImmediate={autoPrintTriggered}
+                    onClose={() => {
+                        setAutoPrintTriggered(false);
+                        setReceiptOpen(false);
+                    }}
                 />
             )}
         </div>

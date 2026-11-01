@@ -27,3 +27,4 @@ WHERE cd.config_key IN ('receipt_footer', 'receipt_show_tax_id', 'receipt_show_c
 ON CONFLICT (tenant_id, config_key) DO NOTHING;
 
 COMMIT;
+

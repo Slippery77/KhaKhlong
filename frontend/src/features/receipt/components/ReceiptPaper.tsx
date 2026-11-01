@@ -43,12 +43,12 @@ function MetaRow({
 }) {
   return (
     <div
-      className={`flex items-start justify-between gap-2 leading-[1.6] ${
+      className={`flex items-start justify-between gap-1.5 leading-[1.6] ${
         isSmall ? 'text-[8px]' : 'text-[9px]'
       }`}
     >
-      <span className="shrink-0 text-[#5A544D]">{label}</span>
-      <span className="min-w-0 break-words text-right font-medium tabular-nums">{value}</span>
+      <span className="min-w-0 flex-1 break-words text-[#5A544D]">{label}</span>
+      <span className="shrink-0 text-right font-medium tabular-nums">{value}</span>
     </div>
   );
 }
@@ -68,16 +68,16 @@ function TotalRow({
     <div
       className={
         strong
-          ? `flex items-baseline justify-between gap-2 pt-[1mm] font-bold ${
+          ? `flex items-baseline justify-between gap-1.5 pt-[1mm] font-bold ${
               isSmall ? 'text-[10.5px]' : 'text-[12px]'
             }`
-          : `flex items-baseline justify-between gap-2 leading-[1.6] ${
+          : `flex items-baseline justify-between gap-1.5 leading-[1.6] ${
               isSmall ? 'text-[8px]' : 'text-[9px]'
             }`
       }
     >
-      <span className={strong ? '' : 'text-[#3F3A34]'}>{label}</span>
-      <span className="tabular-nums">{value}</span>
+      <span className={`min-w-0 flex-1 break-words ${strong ? '' : 'text-[#3F3A34]'}`}>{label}</span>
+      <span className="shrink-0 text-right tabular-nums">{value}</span>
     </div>
   );
 }
@@ -113,13 +113,22 @@ export default function ReceiptPaper({
   const canShowTaxId = showTaxId !== undefined ? showTaxId : receipt.showTaxId !== false;
   const canShowCashier = showCashier !== undefined ? showCashier : receipt.showCashier !== false;
 
-  // จัดการข้อความท้ายใบเสร็จ
-  const footerText =
+  // จัดการข้อความท้ายใบเสร็จ:
+  // ถ้า customFooter ถูกส่งมา (แม้เป็น '') ให้ใช้ตามนั้น
+  // ถ้าไม่ ให้ดู receipt.footer
+  // ถ้าทั้งคู่เป็น null/undefined จึง fallback เป็นค่าเริ่มต้น
+  const rawFooter =
     customFooter !== undefined
-      ? (customFooter ?? '')
-      : (receipt.footer ?? 'ขอบคุณที่ใช้บริการ\nโปรดตรวจสอบรายการก่อนออกจากร้าน');
+      ? customFooter
+      : receipt.footer !== undefined
+      ? receipt.footer
+      : 'ขอบคุณที่ใช้บริการ\nโปรดตรวจสอบรายการก่อนออกจากร้าน';
 
-  const footerLines = footerText.split('\n').filter((l) => l.trim().length > 0);
+  const normalizedFooter = rawFooter ? rawFooter.replace(/\\n/g, '\n') : '';
+  const footerLines = normalizedFooter
+    .split('\n')
+    .map((l) => l.trim())
+    .filter((l) => l.length > 0);
 
   return (
     <article
@@ -142,7 +151,7 @@ export default function ReceiptPaper({
       <header className="text-center">
         {receipt.store.name ? (
           <h1
-            className={`leading-tight font-bold ${
+            className={`leading-tight font-bold break-words ${
               is58 ? 'text-[12px]' : 'text-[14px]'
             }`}
           >
@@ -152,7 +161,7 @@ export default function ReceiptPaper({
 
         {canShowAddress && receipt.store.address ? (
           <p
-            className={`mt-[1mm] leading-[1.5] text-[#3F3A34] ${
+            className={`mt-[1mm] leading-[1.5] break-words text-[#3F3A34] ${
               is58 ? 'text-[7.5px]' : 'text-[8.5px]'
             }`}
           >
@@ -219,7 +228,7 @@ export default function ReceiptPaper({
               <div key={`${line.name}-${index}`} className="flex items-start justify-between gap-1.5">
                 <div className="min-w-0 flex-1">
                   <p
-                    className={`leading-snug font-medium ${
+                    className={`min-w-0 break-words leading-snug font-medium ${
                       is58 ? 'text-[8.5px]' : 'text-[9.5px]'
                     }`}
                   >
@@ -240,7 +249,7 @@ export default function ReceiptPaper({
                   {modifiers.map((modifier) => (
                     <p
                       key={modifier}
-                      className={`leading-[1.4] text-[#5A544D] ${
+                      className={`break-words leading-[1.4] text-[#5A544D] ${
                         is58 ? 'text-[7px]' : 'text-[8px]'
                       }`}
                     >
@@ -329,27 +338,34 @@ export default function ReceiptPaper({
         ) : null}
       </div>
 
-      <Divider className={is58 ? 'my-[1.8mm]' : 'my-[2.5mm]'} />
+      {/* ข้อความท้ายใบเสร็จ (ถ้ามี) */}
+      {footerLines.length > 0 && (
+        <>
+          <Divider className={is58 ? 'my-[1.8mm]' : 'my-[2.5mm]'} />
+          <footer
+            className={`text-center leading-[1.6] text-[#3F3A34] ${
+              is58 ? 'text-[7.5px]' : 'text-[8.5px]'
+            }`}
+          >
+            {footerLines.map((line, idx) => (
+              <p key={idx} className={idx === 0 ? 'font-semibold' : ''}>
+                {line}
+              </p>
+            ))}
+            {isCopy ? <p className="mt-[1mm]">เอกสารฉบับนี้เป็นสำเนา</p> : null}
+          </footer>
+        </>
+      )}
 
-      <footer
-        className={`text-center leading-[1.6] text-[#3F3A34] ${
-          is58 ? 'text-[7.5px]' : 'text-[8.5px]'
-        }`}
-      >
-        {footerLines.length > 0 ? (
-          footerLines.map((line, idx) => (
-            <p key={idx} className={idx === 0 ? 'font-semibold' : ''}>
-              {line}
-            </p>
-          ))
-        ) : (
-          <>
-            <p className="font-semibold">ขอบคุณที่ใช้บริการ</p>
-            <p>โปรดตรวจสอบรายการก่อนออกจากร้าน</p>
-          </>
-        )}
-        {isCopy ? <p className="mt-[1mm]">เอกสารฉบับนี้เป็นสำเนา</p> : null}
-      </footer>
+      {/* กรณีไม่มีข้อความท้าย แต่เป็นสำเนา */}
+      {footerLines.length === 0 && isCopy && (
+        <>
+          <Divider className={is58 ? 'my-[1.8mm]' : 'my-[2.5mm]'} />
+          <footer className="text-center text-[7.5px] leading-[1.6] text-[#3F3A34]">
+            <p className="mt-[1mm]">เอกสารฉบับนี้เป็นสำเนา</p>
+          </footer>
+        </>
+      )}
     </article>
   );
 }

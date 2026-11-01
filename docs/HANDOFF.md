@@ -325,8 +325,16 @@ commit เดียว 4 เรื่อง:
     - ฝั่งขวา: **Live Receipt Preview** แสดงกระดาษใบเสร็จจำลองขนาด 80mm/58mm ที่ตอบสนองการเปลี่ยนแปลงการตั้งค่าแบบเรียลไทม์
   - `ReceiptPaper.tsx` & `receipt.print.css`: รองรับทั้ง 80mm (`w-[72mm]`) และ 58mm (`w-[48mm]` + ฟอนต์กะทัดรัด) และเคารพการเปิด/ปิดแสดงข้อมูล
   - `PaymentModal.tsx`: ผูกพฤติกรรม Auto-Print หากเปิดใช้งานจะเปิด `ReceiptModal` และสั่งพิมพ์ทันทีหลังชำระเงินสำเร็จ
+- **Doubt-Driven Development Audit & Hardening (2026-11-01)**:
+  - แก้ Auto-print Re-trigger Loop: แยก `autoPrintTriggered` state ทำงานแบบ One-shot เฉพาะหลังชำระเงินสำเร็จทันที ป้องกันการสั่งพิมพ์ซ้ำเมื่อกดดูใบเสร็จด้วยตนเอง
+  - Print CSS Scope Isolation: กำกับ `body.is-printing-receipt` ตอนสั่งพิมพ์ ป้องกัน CSS print ทั่วไปซ่อนหน้าจอเว็บทั้งแอพเวลาผู้ใช้เผลอกด Ctrl+P
+  - Multi-Tenant Web Storage Isolation: เติม namespace `khakhlong_${tenantSlug}_printer_*` ใน `localStorage` ป้องกันการตั้งค่าเครื่องพิมพ์ปนกันเมื่อล็อกอินสลับร้าน
+  - ป้องกัน 58mm Horizontal Overflow: เติม `min-w-0 flex-1 break-words` ให้ชื่อรายการอาหารและ TotalRow ย่อข้อความยาวลงบรรทัดใหม่อย่างเรียบร้อย
+  - Server Boundary Validation: เพิ่มตรวจสอบความยาว `receipt_footer` (จำกัด ≤ 500 อักขระ) และ `max_reprints` (ต้องเป็นจำนวนเต็มไม่ติดลบ) ปฏิเสธด้วย `400 Bad Request`
+  - ป้องกันข้อความท้ายบิลกลับเป็นค่า Default: ตรวจสอบ empty string (`footer !== undefined ? footer : DEFAULT`) เพื่อให้เจ้าของร้านเคลียร์ข้อความท้ายบิลว่างเปล่าได้จริง
+  - React State Sync & Race Condition: ย้ายการ sync server config ใน `PrinterSettingPage` เข้า `useEffect` พร้อม flag เช็คว่ามีการพิมพ์อยู่หรือไม่ และใช้ `flushSync` เพื่อให้ DOM ใบเสร็จจำลอง render ทันก่อนสั่ง `window.print()`
 - **ทดสอบ**:
-  - E2E `backend/test/e2e/e2e-printer-config.mjs` ผ่านครบทุกข้อ (ตรวจ GET/PATCH system-config, เปิดบิล, เสิร์ฟ, จ่ายเงิน และ assert ใบเสร็จ)
+  - E2E `backend/test/e2e/e2e-printer-config.mjs` ผ่านครบทุกข้อ (ตรวจ GET/PATCH system-config, Boundary validation 400, เปิดบิล, เสิร์ฟ, จ่ายเงิน และ assert ใบเสร็จ)
   - E2E `backend/test/e2e/e2e-receipt.mjs` ผ่าน 12/12 ข้อ
   - Typecheck (`tsc --noEmit`, `tsc -b`) และ Vite build ผ่าน 100%
 

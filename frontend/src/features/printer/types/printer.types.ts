@@ -14,3 +14,4 @@ export interface StoreReceiptSettings {
 }
 
 export interface PrinterSettingsForm extends DevicePrinterSettings, StoreReceiptSettings {}
+

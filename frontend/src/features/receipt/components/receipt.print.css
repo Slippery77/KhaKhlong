@@ -1,6 +1,7 @@
 /*
  * กฎการพิมพ์ใบเสร็จ (Thermal Paper 80mm & 58mm)
- * ใช้ร่วมกับ ReceiptModal ซึ่ง portal แผ่นใบเสร็จไว้ใต้ <body> โดยตรง
+ * ใช้ร่วมกับ ReceiptModal และ PrinterSettingPage ซึ่ง portal แผ่นใบเสร็จไว้ใต้ <body>
+ * กำกับด้วยคลาส body.is-printing-receipt เพื่อไม่ให้กระทบการสั่งพิมพ์เอกสารทั่วไปของเบราว์เซอร์
  */
 
 @media print {
@@ -9,15 +10,14 @@
     margin: 3mm 2mm;
   }
 
-  html,
-  body {
+  body.is-printing-receipt {
     margin: 0 !important;
     padding: 0 !important;
     background: #ffffff !important;
   }
 
-  /* ซ่อนทั้งแอป เหลือเฉพาะแผ่นใบเสร็จที่เตรียมไว้ */
-  body > *:not(.receipt-print-area) {
+  /* ซ่อนทั้งแอป เหลือเฉพาะแผ่นใบเสร็จที่เตรียมไว้ เมื่ออยู่ในโหมดพิมพ์ใบเสร็จ */
+  body.is-printing-receipt > *:not(.receipt-print-area) {
     display: none !important;
   }
 
@@ -51,8 +51,8 @@
     max-width: 48mm !important;
   }
 
-  /* กันหน้าว่างที่เกิดจาก element ที่ซ่อนไปแล้ว */
-  .receipt-print-area * {
+  .receipt-print-area header,
+  .receipt-print-area footer {
     break-inside: avoid;
     page-break-inside: avoid;
   }
