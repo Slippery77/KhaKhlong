@@ -362,7 +362,7 @@ commit เดียว 4 เรื่อง:
 - **PWA shell**: manifest + service worker precache + update prompt + icons ทำแล้ว (`a992417`)
   - **ยังเหลือ**: IndexedDB (Dexie) แคช `GET /menu/full` / โต๊ะ / กะปัจจุบัน + outbox คิวออเดอร์ออฟไลน์
 - **Reports ต่อยอด**: หน้ารายงานรายกะ/ตัวกรองวันที่/ส่งออก CSV เสร็จแล้ว (`3.18`); ยังเหลือ export สรุปภาพรวมแบบ PDF (ถ้าต้องการเพิ่ม)
-- **System Config UI ที่เหลือ** (หน้า VAT กับ Store ทำแล้ว)
+- **System Config UI**: หน้า VAT, Store และ **หน้าตั้งค่าเครื่องพิมพ์และใบเสร็จ (Printer & Receipt Settings)** เสร็จสมบูรณ์แล้ว (ดู 3.20)
 - **Menu reorder endpoint**
 - **Inventory polish**: ช่องค้นหาในการ์ดนับวัตถุดิบ, ใช้ business date แทน local date, note ใน `record_stock_count()` มีช่องว่างนำหน้า + ทศนิยม 4 ตำแหน่ง
 
@@ -383,7 +383,7 @@ commit เดียว 4 เรื่อง:
 
 ## 6. คุณภาพ / เทสต์ / เอกสาร
 
-| รายการ | สถานะล่าสุด (2026-10-31, branch `feat-aod`) |
+| รายการ | สถานะล่าสุด (2026-11-01, branch `feat-aod`) |
 |---|---|
 | Backend `npx tsc --noEmit` | **ผ่าน** |
 | Frontend `npx tsc -b` | **ผ่าน** |
@@ -392,7 +392,7 @@ commit เดียว 4 เรื่อง:
 | Backend `npx eslint "src/**/*.ts"` | ยังแดงหลายพัน problems (ส่วนใหญ่ prettier) — **อย่า auto-fix ปนกับ feature commit** |
 | Frontend `npx eslint src` | ~40 problems เดิม (`react-hooks/set-state-in-effect`, `no-explicit-any` ใน `libs/appClient.ts`) — ไฟล์ที่แตะในงาน void/comp สะอาด |
 | Backend e2e spec | `backend/test/app.e2e-spec.ts` ยังเป็น boilerplate (`"Hello World!"`) → ใช้ไม่ได้ |
-| E2E ใน repo | `backend/test/e2e/`: `e2e-reports.mjs`, `e2e-receipt.mjs`, `e2e-public-tenant.mjs`, `e2e-token-version.mjs`, `e2e-void-comp.mjs`, `e2e-cancel-order.mjs`, `e2e-login-lockout.mjs`, `e2e-users-me.mjs`, `e2e-merge-tables-payment.mjs` |
+| E2E ใน repo | `backend/test/e2e/`: `e2e-reports.mjs`, `e2e-receipt.mjs`, `e2e-public-tenant.mjs`, `e2e-token-version.mjs`, `e2e-void-comp.mjs`, `e2e-cancel-order.mjs`, `e2e-login-lockout.mjs`, `e2e-users-me.mjs`, `e2e-merge-tables-payment.mjs`, `e2e-audit-logs.mjs`, `e2e-printer-config.mjs` |
 | E2E ที่ยังไม่อยู่ใน repo | สคริปต์ใน `%TEMP%\opencode\` ของเครื่องที่เขียน: `e2e-shift.mjs`, `e2e-stock-count-batch.mjs`, `e2e-floors.mjs`, `e2e-kds-badge.mjs` |
 
 **ข้อควรระวังเวลาเทสต์**
@@ -475,7 +475,7 @@ commit เดียว 4 เรื่อง:
 ## 9. ลำดับที่แนะนำถัดไป
 
 1. **เปิด PR `feat-aod` → `main`** — งาน P0 และ P1 ทั้งหมด (`void/comp`, `PIN lock`, `escalation`, `cancel/walkout`, `login lockout`, `menu image`, `GET /users/me`) เสร็จครบแล้ว
-2. **P2**: offline data layer (Dexie + outbox) → Audit log → Menu reorder
+2. **P2 ที่เหลือ**: offline data layer (Dexie + outbox) → Menu reorder → Inventory polish (Audit logs 3.19 และ Printer & Receipt Settings 3.20 เสร็จเรียบร้อยแล้ว)
 4. ย้าย E2E 4 ตัวจาก `%TEMP%\opencode\` เข้า repo และเพิ่ม E2E ของ PIN ผ่าน UI (ตั้ง PIN → void/comp → verify กะ) + E2E escalation (ต้องต่อ DB เพื่อย้อน `closed_at`)
 
 > ก่อนเริ่มงานทุกครั้ง: ดู `git status`, รัน `npx tsc --noEmit` (backend) และ `npx tsc -b` (frontend) ให้ผ่านก่อน commit

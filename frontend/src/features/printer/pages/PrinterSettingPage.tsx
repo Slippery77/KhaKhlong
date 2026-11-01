@@ -18,6 +18,7 @@ import { createMockReceipt } from '../utils/mockReceipt';
 import ReceiptPaper from '../../receipt/components/ReceiptPaper';
 import type { PaperSize } from '../../receipt/types/receipt.types';
 import '../../receipt/components/receipt.print.css';
+import Header from '../../../components/Header';
 
 const DEFAULT_FOOTER_NOTE = 'ขอบคุณที่ใช้บริการ\nโปรดตรวจสอบรายการก่อนออกจากร้าน';
 
@@ -90,9 +91,8 @@ export default function PrinterSettingPage() {
     isTestPrinting &&
     createPortal(
       <div
-        className={`receipt-print-area hidden ${
-          form.paperSize === '58mm' ? 'paper-58mm' : ''
-        }`}
+        className={`receipt-print-area hidden ${form.paperSize === '58mm' ? 'paper-58mm' : ''
+          }`}
       >
         <ReceiptPaper
           receipt={mockReceipt}
@@ -111,6 +111,7 @@ export default function PrinterSettingPage() {
 
   return (
     <div className="min-h-screen bg-[#FAF7F2] font-kanit text-[#2D241E]">
+      <Header />
       <SettingNavBar />
 
       <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
@@ -209,11 +210,10 @@ export default function PrinterSettingPage() {
                     role="radio"
                     aria-checked={form.paperSize === '80mm'}
                     onClick={() => handlePaperSizeChange('80mm')}
-                    className={`flex flex-col items-start rounded-xl border p-4 text-left transition-all duration-200 cursor-pointer ${
-                      form.paperSize === '80mm'
+                    className={`flex flex-col items-start rounded-xl border p-4 text-left transition-all duration-200 cursor-pointer ${form.paperSize === '80mm'
                         ? 'border-[#8C6D58] bg-[#FAF7F2] ring-2 ring-[#8C6D58]/20 shadow-xs'
                         : 'border-stone-200 bg-white hover:border-[#d9c6b0] hover:bg-stone-50/70'
-                    }`}
+                      }`}
                   >
                     <div className="flex w-full items-center justify-between">
                       <span className="font-semibold text-sm text-[#2D241E]">80 มม.</span>
@@ -232,11 +232,10 @@ export default function PrinterSettingPage() {
                     role="radio"
                     aria-checked={form.paperSize === '58mm'}
                     onClick={() => handlePaperSizeChange('58mm')}
-                    className={`flex flex-col items-start rounded-xl border p-4 text-left transition-all duration-200 cursor-pointer ${
-                      form.paperSize === '58mm'
+                    className={`flex flex-col items-start rounded-xl border p-4 text-left transition-all duration-200 cursor-pointer ${form.paperSize === '58mm'
                         ? 'border-[#8C6D58] bg-[#FAF7F2] ring-2 ring-[#8C6D58]/20 shadow-xs'
                         : 'border-stone-200 bg-white hover:border-[#d9c6b0] hover:bg-stone-50/70'
-                    }`}
+                      }`}
                   >
                     <div className="flex w-full items-center justify-between">
                       <span className="font-semibold text-sm text-[#2D241E]">58 มม.</span>
@@ -333,9 +332,8 @@ export default function PrinterSettingPage() {
                   </label>
                   <div className="flex items-center gap-3">
                     <span
-                      className={`text-[11px] tabular-nums ${
-                        isFooterOverLimit ? 'font-bold text-rose-600' : 'text-stone-400'
-                      }`}
+                      className={`text-[11px] tabular-nums ${isFooterOverLimit ? 'font-bold text-rose-600' : 'text-stone-400'
+                        }`}
                     >
                       {footerLength}/500
                     </span>
@@ -358,11 +356,10 @@ export default function PrinterSettingPage() {
                     setForm((prev) => ({ ...prev, receiptFooter: e.target.value }))
                   }
                   placeholder="เช่น ขอบคุณที่ใช้บริการ / Wi-Fi: KhaKhlong_Free (เว้นว่างไว้หากไม่ต้องการให้แสดงข้อความ)"
-                  className={`w-full rounded-xl border p-3 text-sm text-[#2D241E] placeholder:text-stone-400 focus:outline-none focus:ring-2 ${
-                    isFooterOverLimit
+                  className={`w-full rounded-xl border p-3 text-sm text-[#2D241E] placeholder:text-stone-400 focus:outline-none focus:ring-2 ${isFooterOverLimit
                       ? 'border-rose-400 focus:ring-rose-200'
                       : 'border-stone-200 focus:border-[#8C6D58] focus:ring-[#8C6D58]/20'
-                  }`}
+                    }`}
                 />
                 <p className="text-[11px] text-stone-500">
                   รองรับการขึ้นบรรทัดใหม่ ไม่เกิน 500 ตัวอักษร (ลบทั้งหมดเพื่อให้ท้ายใบเสร็จว่างได้)
