@@ -3,6 +3,7 @@ import { useAuth } from '../../auth/context/AuthContext';
 import { inventoryApi } from '../../inventory/api/inventory.api';
 import { shiftsApi } from '../../shifts/api/shifts.api';
 import type {
+  InventoryTransaction,
   StockCountBatchResult,
   StockItem,
 } from '../../inventory/types/inventory.types';
@@ -26,6 +27,7 @@ const isToday = (iso: string) => {
  * ปรับวัตถุดิบคงเหลือตอนจบวัน (Periodic Physical Count — INV-11)
  * โหลดยอดระบบของวัตถุดิบที่ใช้งานทั้งหมด แล้วให้กรอกเฉพาะตัวที่ได้นับจริง
  * เทียบยอดนับของวันทำการปัจจุบัน (business_date) แทนวันปฏิทิน local เพื่อรองรับร้านเปิดข้ามคืน
+ * มี fallback resilience ป้องกันเน็ตสะดุดของ shift API ไม่ให้ขัดขวางการโหลดสต็อก
  */
 export function useStockAdjustment() {
   const { accessToken } = useAuth();
@@ -42,32 +44,45 @@ export function useStockAdjustment() {
     async (silent = false) => {
       if (!silent) setIsLoading(true);
       try {
+        const stockPromise = inventoryApi.getStock(accessToken);
+        const shiftPromise = shiftsApi.getCurrent(accessToken).catch(() => null);
+
         const [stockResponse, shiftResponse] = await Promise.all([
-          inventoryApi.getStock(accessToken),
-          shiftsApi.getCurrent(accessToken),
+          stockPromise,
+          shiftPromise,
         ]);
         setItems(stockResponse.data);
 
-        const currentBDate = shiftResponse.data?.businessDate ?? null;
+        const currentBDate = shiftResponse?.data?.businessDate ?? null;
         setBusinessDate(currentBDate);
 
-        const transactionsResponse = await inventoryApi.getTransactions(accessToken, {
-          type: 'adjustment',
-          limit: 200,
-          businessDate: currentBDate ?? undefined,
-        });
+        let txs: InventoryTransaction[] = [];
+        try {
+          const transactionsResponse = await inventoryApi.getTransactions(accessToken, {
+            type: 'adjustment',
+            limit: 200,
+            businessDate: currentBDate ?? undefined,
+          });
+          txs = transactionsResponse.data;
+        } catch {
+          // transactions fetch failure should not break whole stock view
+        }
 
-        // หากมี businessDate ประจำกะ ให้เทียบกับ business_date ของธุรกรรม
+        // นับจำนวนวัตถุดิบ (unique ingredient_id) ที่ได้รับการปรับยอดในรอบวันทำการนี้
         if (currentBDate) {
-          setCountedToday(
-            transactionsResponse.data.filter(
-              (transaction) => transaction.business_date === currentBDate,
-            ).length,
+          const countedIds = new Set(
+            txs
+              .filter((transaction) => transaction.business_date === currentBDate)
+              .map((transaction) => transaction.ingredient_id),
           );
+          setCountedToday(countedIds.size);
         } else {
-          setCountedToday(
-            transactionsResponse.data.filter((transaction) => isToday(transaction.created_at)).length,
+          const countedIds = new Set(
+            txs
+              .filter((transaction) => isToday(transaction.created_at))
+              .map((transaction) => transaction.ingredient_id),
           );
+          setCountedToday(countedIds.size);
         }
       } catch (requestError) {
         setError(getErrorMessage(requestError, 'ไม่สามารถโหลดข้อมูลวัตถุดิบได้'));

@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsOptional, IsUUID, IsIn, IsInt, Min, Max } from 'class-validator';
+import { IsOptional, IsUUID, IsIn, IsInt, Min, Max, IsDateString } from 'class-validator';
 import { Type } from 'class-transformer';
 import { InventoryTransactionRow } from '../inventory.types';
 
@@ -105,6 +105,7 @@ export class GetInventoryTransactionsQueryDto {
     description: 'กรองตามวันทำการ (YYYY-MM-DD)',
     example: '2026-10-31',
   })
+  @IsDateString()
   @IsOptional()
   business_date?: string;
 

@@ -109,7 +109,8 @@ async function main() {
     },
   });
   assert.equal(restock.status, 201);
-  console.log('PASS  รับของเข้าสต็อกสำเร็จ');
+  assert.equal(restock.data.data.business_date, shiftBusinessDate, 'restock response ต้องมี business_date');
+  console.log('PASS  รับของเข้าสต็อกสำเร็จ (มี business_date ใน response)');
 
   console.log('\n=== 6. ตรวจนับสต็อกแบบไม่มี note (counted = 850.5) ===');
   const count = await jsonReq('/inventory/count', {
@@ -166,6 +167,13 @@ async function main() {
   const latestTx = txList2.data.data[0];
   assert.equal(latestTx.note, 'นับรอบเย็น [counted 800, system 850.5]');
   console.log(`PASS  Note มีข้อความนำหน้าถูกต้อง: "${latestTx.note}"`);
+
+  console.log('\n=== 9. ทดสอบส่ง business_date ไม่ถูกต้อง ต้องได้ 400 Bad Request ===');
+  const invalidDateReq = await jsonReq('/inventory/transactions?business_date=not-a-date', {
+    headers: authHeaders,
+  });
+  assert.equal(invalidDateReq.status, 400, 'Invalid date query parameter ต้องได้ 400 Bad Request');
+  console.log('PASS  ส่ง business_date ผิดฟอร์แมตได้รับ 400 Bad Request ไม่เกิด 500');
 
   console.log('\n========================================');
   console.log('สรุปผลการทดสอบ Inventory Polish: ผ่านครบทุกข้อ');

@@ -1032,8 +1032,8 @@ BEGIN
   d := p_counted - cur;
   IF d = 0 THEN RETURN 0; END IF;
 
-  v_note := '[counted ' || rtrim(to_char(round(p_counted, 4), 'FM999999990.9999'), '.') ||
-            ', system ' || rtrim(to_char(round(cur, 4), 'FM999999990.9999'), '.') || ']';
+  v_note := '[counted ' || trim_scale(round(p_counted, 4))::text ||
+            ', system ' || trim_scale(round(cur, 4))::text || ']';
   IF p_note IS NOT NULL AND trim(p_note) <> '' THEN
     v_note := trim(p_note) || ' ' || v_note;
   END IF;

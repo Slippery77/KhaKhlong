@@ -181,7 +181,8 @@ export class InventoryRepository {
         waste_reason,
         note,
         created_by,
-        created_at;
+        created_at,
+        business_date::text AS business_date;
     `;
     const result = await this.db.query<InventoryTransactionRow>(sql, [
       ingredientId,
@@ -230,7 +231,8 @@ export class InventoryRepository {
         waste_reason,
         note,
         created_by,
-        created_at;
+        created_at,
+        business_date::text AS business_date;
     `;
     const result = await this.db.query<InventoryTransactionRow>(sql, [
       ingredientId,
