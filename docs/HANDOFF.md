@@ -72,8 +72,8 @@ $env:PGPASSWORD='<รหัสผ่าน pos_app จาก .env>'
 - **Inventory** — stock view, movements (รับเข้า/ปรับ/ของเสีย), **count batch** (รอบล่าสุด)
 - **Shifts** — open, current, close, verify (PIN ผู้จัดการ/เจ้าของ), reopen, cashbook, list · **`GET /shifts` ใช้ `report:view_all` หรือ `report:view_own_shift` แล้ว** (employee เห็นกะตัวเอง) · **PIN lock เก็บใน DB** (คงทนข้าม restart) · **กะค้างรับรองเกิน `shift_escalation_hours` (default 4 ชม.) ถูก escalate หา owner อัตโนมัติ**
 - **KDS** — คิวครัว + mark ready
-- **System Config** — GET/PATCH (หน้า UI ใช้เฉพาะ VAT)
-- **Tenants / Store** — GET/PATCH + หน้า `setting/store`
+- **System Config** — GET/PATCH (VAT, ตั้งค่าเครื่องพิมพ์ และการตั้งค่าการทำงานร้าน/กะ/สต็อก ครบถ้วนบน UI)
+- **Tenants / Store** — GET/PATCH + หน้า `setting/store` พร้อมการ์ดตั้งค่าการทำงานร้านและกะ
 - **Users** — **`GET /users/me` (`@AnyAuthenticated` คืนโปรไฟล์ + `permissions: string[]` + ข้อมูลร้าน `store`)** · list, create, update, deactivate, reactivate · ตั้ง PIN ได้ทั้งสร้างและแก้ไข (`UpdateUserDTO.pin` ตรวจ `/^\d{6}$/` + bcrypt) · `UserTable` แสดง badge `has_pin` (ไม่ส่ง `pin_hash` ออก API)
 - **Roles / Permissions** — seed ครบ, employee 9 สิทธิ์
 - **Payment** — `attempts` → `pay` → `cancel`; ออกเลขใบเสร็จ, ดู/พิมพ์ใบเสร็จ; UI `PaymentModal` 3 ขั้น ใช้ยอดจาก server เท่านั้น
@@ -87,7 +87,6 @@ $env:PGPASSWORD='<รหัสผ่าน pos_app จาก .env>'
 
 - **Offline data layer** — PWA shell พร้อมแล้ว แต่ยังไม่มี Dexie/IndexedDB แคชเมนู/โต๊ะ/กะ และยังไม่มี outbox คิวออเดอร์ (service worker ไม่แคช `/api` โดยตั้งใจ)
 - **Reports เพิ่มเติม** — หน้ารายงานรายกะ, ตัวกรองช่วงวันที่บน UI, export
-- **Shift escalation อัตโนมัติ** — มี service แล้วแต่ยังไม่ทำงานจริง (ดู 5/P1-1)
 - *(หน้า Dashboard / Homepage `/:tenantSlug/homepage` ตัดออกจากขอบเขตแล้ว)*
 
 ---
@@ -337,6 +336,27 @@ commit เดียว 4 เรื่อง:
   - E2E `backend/test/e2e/e2e-printer-config.mjs` ผ่านครบทุกข้อ (ตรวจ GET/PATCH system-config, Boundary validation 400, เปิดบิล, เสิร์ฟ, จ่ายเงิน และ assert ใบเสร็จ)
   - E2E `backend/test/e2e/e2e-receipt.mjs` ผ่าน 12/12 ข้อ
   - Typecheck (`tsc --noEmit`, `tsc -b`) และ Vite build ผ่าน 100%
+
+### 3.21 การตั้งค่าการทำงานของร้านและกะ (Store Operations & Shifts Config) — 2026-11-01
+
+- **Frontend** (`ui-ux-pro-max`):
+  - สร้างโมดูล `features/store/components/StoreOperationsConfigCard.tsx` และ Type `storeOperations.types.ts`
+  - รวมเข้ากับการ์ดในหน้า `/:tenantSlug/setting/store` (`StoreSettingPage.tsx`) โดยแยกปุ่มบันทึกเฉพาะสำหรับการทำงานร้านเพื่อไม่ให้ปนกับข้อมูลทั่วไปของร้าน
+  - ค่าที่รองรับ:
+    - `business_day_start_hour`: ตัวเลือกชั่วโมงเริ่มวันขาย 00:00–23:00 น. (Default 05:00 น.) พร้อมคำอธิบายสำหรับร้านที่เปิดดึก/ข้ามคืน
+    - `shift_escalation_hours`: ระยะเวลาส่งต่อกะค้างตรวจให้เจ้าของร้าน 1–168 ชม. (Default 4 ชม.) พร้อมปุ่มเลือกด่วน (2, 4, 8, 24 ชม.)
+    - `inventory_variance_alert_percent`: เกณฑ์ส่วนต่างสต็อกแจ้งเตือน 0–1,000% (Default 20%) พร้อมปุ่มเลือกด่วน (10, 20, 30, 50%)
+  - รองรับ Input Validation ทั้งฝั่ง Client และเชื่อมต่อ `PATCH /api/system-config/:key` พร้อมระบบตรวจจับการเปลี่ยนแปลง (`hasChanges`)
+- **Doubt-Driven Development Audit & Hardening (2026-11-02)**:
+  - **ป้องกัน POS ล่มกลางคัน (Mid-day Cutoff Paralysis)**: เพิ่ม Confirmation Modal แจ้งเตือนความเสี่ยงเรื่องกะค้างเมื่อมีการเปลี่ยน `business_day_start_hour` เพื่อให้เจ้าของร้านมั่นใจว่าปิดกะรอบวันแล้วเท่านั้นก่อนเปลี่ยน
+  - **แก้ไข Controlled Input State (Backspace & Decimal Stripping)**: ปรับ State เป็น String input อนุญาตให้ลบจนว่างเปล่าได้ ไม่เด้งกลับเป็น 0 และรองรับการพิมพ์จุดทศนิยม `12.` โดยไม่ถูกตัดจุดออก
+  - **แก้ไข Browser Decimal Constraint**: เติม `noValidate` ในฟอร์ม และรองรับ input `decimal` ไม่ให้เบราว์เซอร์บล็อกการส่งค่าทศนิยม
+  - **แก้ไข State Desynchronization ผ่าน `Promise.allSettled`**: แยกบันทึกและอัปเดต `initialConfig` ทีละฟิลด์ที่สำเร็จจริง หากมีตัวใดล้มเหลวจะแจ้งเตือนรายตัวและสั่ง re-sync จากเซิร์ฟเวอร์ทันที
+  - **ป้องกัน Auth Lifecycle Freeze & Silent Default Overwrite**: แก้บั๊ก loading ค้างเมื่อกู้คืน session และเพิ่มปุ่ม "โหลดใหม่ (Retry)" ป้องกันการบันทึกค่า default ทับข้อมูลจริงใน DB เมื่อเน็ตหลุด
+  - **UI/UX & Accessibility Polish**: เพิ่มสถานะ disabled และ focus rings ให้ปุ่มเลือกด่วนครบถ้วน, แสดง badge เจ้าของร้านบนทุกขนาดหน้าจอ และมี Auto-dismiss timer 4 วินาทีสำหรับป้ายบันทึกสำเร็จ
+- **ทดสอบ**:
+  - Typecheck (`tsc --noEmit`, `tsc -b`) และ Vite build ผ่าน 100%
+  - E2E `backend/test/e2e/e2e-printer-config.mjs` ยืนยันการทำงานของ System Config ครบถ้วน
 
 ---
 

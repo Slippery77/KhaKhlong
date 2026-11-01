@@ -7,6 +7,7 @@ import { apiFetch } from '../../../libs/appClient';
 import { getDistricts, getProvinces, getSubdistricts, getZipCode } from '../../../data/thailandAddress';
 import { QRCodeSVG } from 'qrcode.react';
 import generatePayload from 'promptpay-qr';
+import StoreOperationsConfigCard from '../components/StoreOperationsConfigCard';
 
 interface StoreInfo {
   tenant_id: string;
@@ -203,7 +204,7 @@ export default function StoreSettingPage() {
       <Header />
       <SettingNavBar />
 
-      <main className="max-w-5xl mx-auto px-6 py-6">
+      <main className="max-w-5xl mx-auto px-6 py-6 space-y-8">
         <div className="mb-6">
           <div className="flex items-center gap-2 text-sm text-stone-500 mb-2">
             <ArrowLeft className="w-4 h-4" />
@@ -548,7 +549,7 @@ export default function StoreSettingPage() {
                 className="inline-flex items-center gap-2 px-5 py-2 bg-[#8C6D58] hover:bg-[#7a5c45] text-white rounded-xl transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <Save className="w-4 h-4" />
-                {isSaving ? 'กำลังบันทึก...' : 'บันทึกข้อมูล'}
+                {isSaving ? 'กำลังบันทึก...' : 'บันทึกข้อมูลร้าน'}
               </button>
             </div>
           )}
@@ -559,6 +560,9 @@ export default function StoreSettingPage() {
             </div>
           )}
         </form>
+
+        {/* การตั้งค่าการทำงานร้านและกะ (System Config) */}
+        <StoreOperationsConfigCard />
       </main>
     </div>
   );
