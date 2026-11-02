@@ -2,7 +2,6 @@ import type { PaperSize } from '../../receipt/types/receipt.types';
 
 export interface DevicePrinterSettings {
   paperSize: PaperSize;
-  autoPrint: boolean;
 }
 
 export interface StoreReceiptSettings {
@@ -14,4 +13,3 @@ export interface StoreReceiptSettings {
 }
 
 export interface PrinterSettingsForm extends DevicePrinterSettings, StoreReceiptSettings {}
-

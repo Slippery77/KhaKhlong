@@ -4,6 +4,7 @@ import { useAuth } from '../../auth/context/AuthContext';
 import type { ConfigListResponse } from '../../editVat/types/vatEdit.types';
 import type { PrinterSettingsForm } from '../types/printer.types';
 import {
+  cleanupDeprecatedPrinterSettings,
   getDevicePrinterSettings,
   saveDevicePrinterSettings,
 } from '../storage/printerStorage';
@@ -32,7 +33,6 @@ export function usePrinterSettings() {
     const device = getDevicePrinterSettings(tenantSlug);
     return {
       paperSize: device.paperSize,
-      autoPrint: device.autoPrint,
       maxReprints: 0,
       receiptFooter: DEFAULT_FOOTER,
       showTaxId: true,
@@ -89,7 +89,6 @@ export function usePrinterSettings() {
       setInitialServerValues(serverVals);
       setSettings({
         paperSize: device.paperSize,
-        autoPrint: device.autoPrint,
         ...serverVals,
       });
     } catch (err) {
@@ -100,6 +99,7 @@ export function usePrinterSettings() {
   }, [accessToken, tenantSlug]);
 
   useEffect(() => {
+    cleanupDeprecatedPrinterSettings();
     load();
   }, [load]);
 
@@ -160,7 +160,6 @@ export function usePrinterSettings() {
       saveDevicePrinterSettings(
         {
           paperSize: newForm.paperSize,
-          autoPrint: newForm.autoPrint,
         },
         tenantSlug,
       );

@@ -364,6 +364,25 @@ commit เดียว 4 เรื่อง:
 - **Backend**: บันทึก note และทศนิยมอย่างถูกต้องใน `record_stock_count()`
 - **Frontend**: `StockAdjustmentCard.tsx` เพิ่มช่องค้นหาวัตถุดิบและตัวกรองสถานะด่วน
 
+### 3.24 ปรับปรุงการตั้งค่าเครื่องพิมพ์ — นำระบบ Auto-Print ออกจากระบบ (Doubt-Driven Development) — 2026-11-02
+
+- **ความต้องการ**: ลบตัวเลือก "พิมพ์อัตโนมัติ (Auto-Print)" ออกจากหน้าตั้งค่าเครื่องพิมพ์ และปรับให้การพิมพ์ใบเสร็จเป็นการสั่งพิมพ์โดยผู้ใช้งานด้วยตนเอง (Manual Print Only)
+- **Frontend Core Changes**:
+  - `PrinterSettingPage.tsx`: นำสวิตช์พิมพ์อัตโนมัติและ `autoPrintSwitchId` ออกจาก Section 1 (Device Settings), ปรับคำอธิบายส่วนหัวของหน้า
+  - `printerStorage.ts` & `printer.types.ts`: ถอดฟิลด์ `autoPrint` ออกจาก `DevicePrinterSettings` และนำ ghost key ออกจาก `getStorageKeys`
+  - `usePrinterSettings.ts`: ถอด state และการ sync/save ค่า `autoPrint` ออก
+  - `PaymentModal.tsx`: นำการ trigger พิมพ์อัตโนมัติหลังรับเงินและ state `autoPrintTriggered` ออกอย่างสมบูรณ์ แคชเชียร์สามารถกดปุ่ม "พิมพ์ใบเสร็จ" ในหน้าสำเร็จเมื่อต้องการ
+  - `ReceiptModal.tsx`: ถอด prop `autoPrintImmediate` และ effect การพิมพ์อัตโนมัติออก คงไว้เฉพาะการกดปุ่มพิมพ์โดยตรง
+- **Doubt-Driven Development Audit & Hardening**:
+  - **Command-Query Separation (CQS) ใน `printerStorage.ts`**: แยกการล้างคีย์เก่าออกจาก `getDevicePrinterSettings` ให้เป็น Pure Query ป้องกัน Side-effect ใน React Render
+  - **Restricted Storage Resiliency**: ปกป้องกรณีรันบน Private Mode / Sandboxed WebView ที่ห้ามเขียน Storage เพื่อไม่ให้การล้างคีย์ไปโยน error จนทำให้การอ่านขนาดกระดาษ (`paperSize`) ผิดพลาดกลับเป็น Default 80mm
+  - **Multi-Tenant Storage Cleanup (`cleanupDeprecatedPrinterSettings`)**: วนลูปสแกนและลบทุกคีย์ที่ลงท้ายด้วย `_printer_auto_print` อย่างปลอดภัย ครอบคลุมทุก tenant ที่เคยล็อกอินบนเครื่อง POS เดียวกัน
+  - **POS Double-Modal UX Trade-off Verification**: ยืนยันพฤติกรรมคงหน้าจอ `step === 'done'` ไว้เมื่อปิด `ReceiptModal` เพื่อให้พนักงานยังมองเห็นยอดเงินทอน (Change amount) ขณะทอนเงินให้ลูกค้า และปิดบิลสำเร็จผ่าน `handleClose`
+- **ทดสอบ**:
+  - `npx tsc -b` (frontend) และ `npx tsc --noEmit` / `nest build` (backend) ผ่าน 100%
+  - Unit/E2E `backend/test/e2e/e2e-printer-storage.mjs` (5/5 ผ่าน) ครอบคลุม CQS, Multi-tenant cleanup, และ Restricted Storage
+  - E2E `backend/test/e2e/e2e-printer-config.mjs` ผ่านครบทุกข้อ
+
 ### 3.23 Build Lifecycle & NodeNext Entrypoint Hardening (Doubt-Driven Development) — 2026-11-02
 
 - **วิเคราะห์ต้นตอ `MODULE_NOT_FOUND` ของ `backend/dist/main`**: เกิดจากการที่ `dist/` อยู่ใน `.gitignore` เมื่อยังไม่ได้ build หรือรัน `start:prod` บนสภาพแวดล้อมใหม่จะไม่มี `dist/main.js`

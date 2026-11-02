@@ -16,8 +16,6 @@ interface ReceiptModalProps {
   onClose: () => void;
   /** กำหนดขนาดกระดาษเจาะจง (ถ้าไม่ระบุ จะอ่านจาก printer settings ประจำเครื่อง) */
   paperSize?: PaperSize;
-  /** สั่งพิมพ์ทันทีที่โหลดข้อมูลเสร็จ (ใช้สำหรับ auto-print) */
-  autoPrintImmediate?: boolean;
 }
 
 /** โครงร่างกระดาษระหว่างรอข้อมูล */
@@ -54,12 +52,10 @@ export default function ReceiptModal({
   paymentId,
   onClose,
   paperSize: propPaperSize,
-  autoPrintImmediate = false,
 }: ReceiptModalProps) {
   const { user } = useAuth();
   const titleId = useId();
   const panelRef = useRef<HTMLDivElement>(null);
-  const autoPrintedRef = useRef(false);
   const { receipt, loading, error, reload, recordPrint } = useReceipt(paymentId);
 
   // ขนาดกระดาษจาก prop หรือจาก LocalStorage ประจำเครื่อง
@@ -115,14 +111,6 @@ export default function ReceiptModal({
       document.body.classList.remove('is-printing-receipt');
     }
   };
-
-  // กรณีเปิดใช้งาน autoPrintImmediate เมื่อโหลดใบเสร็จเสร็จแล้วให้พิมพ์ทันที 1 ครั้ง
-  useEffect(() => {
-    if (autoPrintImmediate && receipt && !autoPrintedRef.current && !loading && !error) {
-      autoPrintedRef.current = true;
-      void handlePrint();
-    }
-  }, [autoPrintImmediate, receipt, loading, error]);
 
   const is58 = effectivePaperSize === '58mm';
 

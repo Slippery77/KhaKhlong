@@ -48,7 +48,6 @@ export default function PrinterSettingPage() {
 
   // Accessibility IDs
   const paperSizeGroupId = useId();
-  const autoPrintSwitchId = useId();
   const maxReprintsInputId = useId();
   const footerTextareaId = useId();
   const showTaxIdSwitchId = useId();
@@ -127,7 +126,7 @@ export default function PrinterSettingPage() {
               </h1>
             </div>
             <p className="mt-1.5 text-sm text-stone-600">
-              กำหนดขนาดกระดาษความร้อน พฤติกรรมการพิมพ์อัตโนมัติ และปรับแต่งข้อความท้ายใบเสร็จของร้าน
+              กำหนดขนาดกระดาษความร้อน และปรับแต่งข้อความท้ายใบเสร็จของร้าน
             </p>
           </div>
 
@@ -250,29 +249,7 @@ export default function PrinterSettingPage() {
                 </div>
               </div>
 
-              {/* พิมพ์อัตโนมัติ Auto-Print */}
-              <div className="mt-6 flex items-start justify-between gap-4 rounded-xl border border-stone-200/80 bg-stone-50/50 p-4">
-                <div className="min-w-0">
-                  <label
-                    htmlFor={autoPrintSwitchId}
-                    className="block text-sm font-semibold text-[#2D241E] cursor-pointer"
-                  >
-                    พิมพ์ใบเสร็จอัตโนมัติ (Auto-Print)
-                  </label>
-                  <p className="mt-0.5 text-xs text-stone-500 leading-relaxed">
-                    เปิดหน้าต่างพิมพ์ของเบราว์เซอร์ทันทีเมื่อแคชเชียร์ชำระเงินสำเร็จ
-                  </p>
-                </div>
-                <input
-                  id={autoPrintSwitchId}
-                  type="checkbox"
-                  checked={form.autoPrint}
-                  onChange={(e) =>
-                    setForm((prev) => ({ ...prev, autoPrint: e.target.checked }))
-                  }
-                  className="mt-1 h-5 w-5 rounded-md border-stone-300 text-[#8C6D58] focus:ring-[#8C6D58] cursor-pointer"
-                />
-              </div>
+
             </section>
 
             {/* Section 2: นโยบายและข้อความใบเสร็จของร้าน */}
