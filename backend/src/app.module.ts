@@ -9,7 +9,10 @@ import { RegistersModule } from './modules/register/register.module';
 import { MenuModule } from './modules/menu/menu.module';
 import { TenantContextInterceptor } from './common/interceptors/tenant-context.interceptor';
 import { APP_INTERCEPTOR, APP_GUARD } from '@nestjs/core';
-import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
+import { ThrottlerModule } from '@nestjs/throttler';
+import { JwtAuthGuard } from './modules/auth/guards/jwtAuth.guard';
+import { PermissionsGuard } from './modules/auth/guards/permissions.guard';
+import { UserThrottlerGuard } from './common/guards/user-throttler.guard';
 import { TablesModule } from './modules/tables/tables.module';
 import { FloorsModule } from './modules/floors/floors.module';
 import { KdsModule } from './modules/kds/kds.module';
@@ -29,7 +32,9 @@ import { ShiftEscalationService } from './common/shift-escalation.service';
       isGlobal: true,
       cache: true,
       validationSchema: Joi.object({
-        NODE_ENV: Joi.string().valid('development', 'production', 'test').default('development'),
+        NODE_ENV: Joi.string()
+          .valid('development', 'production', 'test')
+          .default('development'),
         PORT: Joi.number().default(3000),
         DB_HOST: Joi.string().required(),
         DB_PORT: Joi.number().default(5432),
@@ -39,7 +44,11 @@ import { ShiftEscalationService } from './common/shift-escalation.service';
         DB_SSL: Joi.boolean().default(false),
         JWT_SECRET: Joi.string().min(32).required(),
         JWT_EXPIRES_IN: Joi.string().default('1d'),
-        REFRESH_EXPIRES_HOURS: Joi.number().integer().min(1).max(72).default(16),
+        REFRESH_EXPIRES_HOURS: Joi.number()
+          .integer()
+          .min(1)
+          .max(72)
+          .default(16),
         CORS_ORIGIN: Joi.string().required(),
       }),
     }),
@@ -58,17 +67,21 @@ import { ShiftEscalationService } from './common/shift-escalation.service';
     PaymentModule,
     ReportsModule,
     AuditLogsModule,
-    ThrottlerModule.forRoot([{
-      ttl: 60000,
-      limit: 100,
-    }]),
+    ThrottlerModule.forRoot([
+      {
+        ttl: 60000,
+        limit: 300,
+      },
+    ]),
   ],
   controllers: [AppController],
   providers: [
     AppService,
     ShiftEscalationService,
-    { provide: APP_GUARD, useClass: ThrottlerGuard },
-    { provide: APP_INTERCEPTOR, useClass: TenantContextInterceptor, },
+    { provide: APP_GUARD, useClass: JwtAuthGuard },
+    { provide: APP_GUARD, useClass: PermissionsGuard },
+    { provide: APP_GUARD, useClass: UserThrottlerGuard },
+    { provide: APP_INTERCEPTOR, useClass: TenantContextInterceptor },
   ],
 })
-export class AppModule { }
+export class AppModule {}
