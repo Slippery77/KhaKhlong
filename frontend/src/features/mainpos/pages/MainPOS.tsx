@@ -1,23 +1,32 @@
-import Header from "../../../components/Header"
-import { useEffect, useState } from "react"
-import MenuCard from "../components/MenuCard"
-import MenuSidebar from "../components/MenuSidebar"
-import OrderSidebar from "../components/OrderSidebar"
-import ModifierPopup from "../components/ModifierPopup"
-import PaymentModal from "../components/PaymentModal"
-import SearchBar from "../components/SearchBar"
-import VoidItemModal from "../components/VoidItemModal"
-import CompItemModal from "../components/CompItemModal"
-import { ArrowLeft, Search, ChefHat, CheckCircle2, X } from "lucide-react"
-import { useKDS } from "../../kds/context/KDSContext"
-import { useNavigate, useSearchParams } from "react-router-dom"
-import { useFullMenu } from "../hooks/useFullMenu"
-import { useOrderCartHydration, type ApiOrderDetail } from "../hooks/useOrderCartHydration"
-import type { Menu, CartMenu, ModifierOption } from "../types/pos.types"
-import { useAuth } from "../../auth/context/AuthContext"
-import { apiFetch,ApiError } from "../../../libs/appClient"
-import { voidOrderItems, compOrderItems, cancelOrder } from "../api/orders.api"
+import Header from "../../../components/Header";
+import { useEffect, useState, useRef } from "react";
+import MenuCard from "../components/MenuCard";
+import MenuSidebar from "../components/MenuSidebar";
+import OrderSidebar from "../components/OrderSidebar";
+import ModifierPopup from "../components/ModifierPopup";
+import PaymentModal from "../components/PaymentModal";
+import SearchBar from "../components/SearchBar";
+import VoidItemModal from "../components/VoidItemModal";
+import CompItemModal from "../components/CompItemModal";
+import { ArrowLeft, Search, ChefHat, CheckCircle2, X, CloudUpload, AlertTriangle } from "lucide-react";
+// import { useKDS } from "../../kds/context/KDSContext";
+import { useNavigate, useSearchParams } from "react-router-dom";
+import { useFullMenu } from "../hooks/useFullMenu";
+import { useOrderCartHydration, type ApiOrderDetail } from "../hooks/useOrderCartHydration";
+import type { Menu, CartMenu, ModifierOption } from "../types/pos.types";
+import { useAuth } from "../../auth/context/AuthContext";
+import { apiFetch,ApiError } from "../../../libs/appClient";
+import { voidOrderItems, compOrderItems, cancelOrder } from "../api/orders.api";
 import CancelBillModal, { type BillActionPayload } from "../components/CancelBillModal"
+import { enqueueOrder, hasUnsentOrder, type NewOrderItem } from "../../offline/outbox"
+import { flushOutbox } from "../../offline/flush"
+import { fetchWithSnapshot, readSnapshot } from "../../offline/snapshotCache"
+import { useOutbox } from "../../offline/hooks/useOutbox"
+import { useConnectionStatus } from "../../offline/hooks/useConnectionStatus"
+import { openOutboxPanel } from "../../offline/outboxPanel"
+import OfflineBillSummary from "../../offline/components/OfflineBillSummary"
+import type { DiningTable } from "../../tables/types/table.types"
+import type { Shift } from "../../shifts/types/shift.types"
 
 /** รายการที่ยกเลิกได้: ครัวยังไม่เสิร์ฟ (queued/preparing) */
 const getVoidableItemIds = (item: CartMenu) =>
@@ -37,7 +46,7 @@ const getCompableItemIds = (item: CartMenu) =>
 
 export default function MainPOS() {
     const [sendError , setSendError] = useState<string|null>(null);
-    const { sendOrderToKitchen } = useKDS()
+    // const { sendOrderToKitchen } = useKDS()
     const navigate = useNavigate()
     const { user, accessToken } = useAuth()
     const [searchParams] = useSearchParams()
@@ -65,10 +74,12 @@ export default function MainPOS() {
         show: boolean
         tableName: string
         itemCount: number
+        queued:boolean //true = บันทึกในเครื่องแล้ว แต่ยังไม่ถึง server
     }>({
         show: false,
         tableName: "",
         itemCount: 0,
+        queued:false,
     })
 
     // State สำหรับเปิดหน้าต่างชำระเงิน
@@ -113,6 +124,39 @@ export default function MainPOS() {
             setOrder(true)
         },
     })
+
+    // ── [ใหม่] สถานะ outbox ของ "บิลนี้" ─────────────────────────────
+    // useOutbox อ่าน IndexedDB แบบสด → ส่งสำเร็จ/ล้ม เมื่อไหร่ หน้านี้รู้ทันที (แม้ runner เป็นคนส่ง)
+    const { status: connection } = useConnectionStatus()
+    const { entries: outboxEntries } = useOutbox(user?.tenantSlug)
+    const billQueue = orderId ? outboxEntries.filter((e) => e.orderId === orderId) : []
+    const billQueuedItems = billQueue.reduce(
+        (n, e) => n + (e.kind === 'addItems' ? e.payload.items.length : 0),
+        0,
+    )
+    const billFailed = billQueue.find((e) => e.status === 'failed')
+
+    // โหลดรายการจริงจาก server เมื่อ "บิลนี้ไม่มีของค้างแล้ว" และเพิ่งเกิดเหตุการณ์ใดเหตุการณ์หนึ่ง
+    //   1. คิวของบิลนี้เพิ่งว่าง (ส่งครบ) → ได้ order_item_id/สถานะครัว ใช้ void/comp ได้
+    //   2. เพิ่งกลับมาออนไลน์ → แทนที่ตะกร้าว่าง/ข้อมูลเก่าตอนเข้าโต๊ะแบบออฟไลน์
+    // ข้ามถ้าตะกร้ามีรายการที่ยังไม่ได้กดส่งครัว — refresh จะเขียนทับจนรายการนั้นหาย
+    // เก็บฟังก์ชันล่าสุดไว้ใน ref (แบบเดียวกับ useOrderCartHydration) — effect ด้านล่างจะได้ไม่ต้องใส่ใน deps
+    const refreshRef = useRef(refreshCartFromServer)
+    useEffect(() => {
+        refreshRef.current = refreshCartFromServer
+    })
+    const lastSync = useRef({ queueSize: billQueue.length, connection })
+    useEffect(() => {
+        const prev = lastSync.current
+        lastSync.current = { queueSize: billQueue.length, connection }
+        if (!orderId || connection !== 'online' || billQueue.length > 0) return
+        const drained = prev.queueSize > 0
+        const reconnected = prev.connection !== 'online'
+        if (!drained && !reconnected) return
+        const hasDraft = cartMenu.some((item) => item.quantity > (item.sentQuantity ?? 0))
+        if (hasDraft) return
+        void refreshRef.current(orderId).catch(() => undefined)
+    }, [billQueue.length, connection, orderId, cartMenu])
 
     function handlePaymentSuccess() {
         // ชำระเงินสำเร็จ = จบออเดอร์ → เคลียร์ Sidebar และกลับไปหน้าโต๊ะ
@@ -351,65 +395,37 @@ export default function MainPOS() {
             )
         }
 
-        const showSentToast = () => {
-            setSentToast({ show: true, tableName: currentTable, itemCount: pendingCount })
+        const showSentToast = (queued: boolean) => {
+            setSentToast({ show: true, tableName: currentTable, itemCount: pendingCount, queued })
             setTimeout(() => setSentToast((prev) => ({ ...prev, show: false })), 4500)
         }
 
-        if (!tableIdFromUrl || !accessToken) {
-            // fallback: ไม่มี tableId → push localStorage อย่างเดียว (เฉพาะรายการใหม่)
-            sendOrderToKitchen(
-                currentTable,
-                pendingEntries.map((entry) => ({ ...entry.item, quantity: entry.quantity })),
-            )
-            markAsSent()
-            showSentToast()
+        // [ใหม่] ไม่มีโต๊ะ / ยังไม่รู้ว่าเป็นใคร → ส่งไม่ได้ (เดิมส่งเข้า localStorage ซึ่งครัวไม่เห็นจริง)
+        const tenantSlug = user?.tenantSlug
+        if (!tableIdFromUrl || !tenantSlug || !user?.sub) {
+            setSendError('ไม่พบข้อมูลโต๊ะ กรุณากลับไปเลือกโต๊ะใหม่')
             return
         }
 
         setIsSending(true)
         setSendError(null)
         try {
-            const kitchenTicketId = crypto.randomUUID() // 1 ค่าต่อการกดส่งครัว 1 รอบ
-
-            // ── 1. หา orderId ที่ใช้จริง ──────────────────────────────
-            // ลำดับความสำคัญ:
-            //   a. open_order_id จาก URL (ส่งมาตอนกดโต๊ะที่ occupied)
-            //   b. ดึงจาก GET /tables เพื่อหา open_order_id ล่าสุด
-            //   c. สร้างบิลใหม่ (โต๊ะว่าง)
-            let resolvedOrderId  = orderId
-
+            // ── 1. หาเลขบิลของโต๊ะนี้ ───────────────────────────────
+            //   a. orderId ที่หน้านี้รู้อยู่แล้ว (มาจาก URL หรือเพิ่งหย่อนรอบก่อน)
+            //   b. ถาม server ก่อน ติดต่อไม่ได้ใช้ผังโต๊ะในเครื่อง (enqueue อัปเดตให้แล้วถ้าเปิดบิลตอนออฟไลน์)
+            //   c. ไม่เจอ = โต๊ะว่าง → ส่ง null ให้ enqueueOrder สร้างบิลใหม่
+            let resolvedOrderId = orderId
             if (!resolvedOrderId) {
-                // ดึง open_order_id จาก table ปัจจุบัน
-                const tablesRes = await apiFetch<{ status: string; data: { table_id: string; open_order_id: string | null }[] }>(
-                    '/tables',
-                    accessToken,
-                )
-                const thisTable = tablesRes.data.find((t) => t.table_id === tableIdFromUrl)
-                resolvedOrderId = thisTable?.open_order_id ?? null
+                const { data: tables } = await fetchWithSnapshot(tenantSlug, 'tables', async () => {
+                    const res = await apiFetch<{ status: string; data: DiningTable[] }>('/tables', accessToken)
+                    return res.data
+                })
+                resolvedOrderId = tables.find((t) => t.table_id === tableIdFromUrl)?.open_order_id ?? null
             }
 
-            if (!resolvedOrderId) {
-                // โต๊ะว่างจริง → สร้างบิลใหม่
-                const newOrderId = crypto.randomUUID()
-                const createRes = await apiFetch<{ status: string; data: { order_id: string } }>(
-                    '/orders',
-                    accessToken,
-                    'POST',
-                    { orderId: newOrderId, tableId: tableIdFromUrl },
-                )
-                resolvedOrderId = createRes.data?.order_id ?? newOrderId
-            }
-            setOrderId(resolvedOrderId);
-
-            // ── 2. แปลงเฉพาะรายการที่ยังไม่ส่ง → items (1 จาน = 1 แถว) ──
-            const itemsToSend: {
-                orderItemId: string
-                menuItemId: string
-                specialRequest?: string
-                modifierIds?: string[]
-            }[] = []
-
+            // ── 2. แปลงเฉพาะรายการที่ยังไม่ส่ง → 1 จาน = 1 รายการ ─────
+            // ไม่ต้องสร้าง orderItemId เอง — enqueueOrder สร้าง UUID ให้ครั้งเดียว (ส่งซ้ำกี่รอบก็ id เดิม)
+            const items: NewOrderItem[] = []
             for (const { item: cartItem, quantity } of pendingEntries) {
                 const modifierIds = cartItem.selectedAddons?.map((a) => a.id) ?? []
                 const specialRequest = [cartItem.selectedSpiciness, cartItem.note]
@@ -417,8 +433,7 @@ export default function MainPOS() {
                     .join(", ") || undefined
 
                 for (let i = 0; i < quantity; i++) {
-                    itemsToSend.push({
-                        orderItemId: crypto.randomUUID(),
+                    items.push({
                         menuItemId: cartItem.id,
                         specialRequest,
                         modifierIds: modifierIds.length > 0 ? modifierIds : undefined,
@@ -426,22 +441,27 @@ export default function MainPOS() {
                 }
             }
 
-            // ── 3. POST /orders/:id/items + kitchenTicketId ───────────
-            // backend จะ INSERT items ด้วย status='queued' + kitchen_ticket_id ทันที
-            await apiFetch(
-                `/orders/${resolvedOrderId}/items`,
-                accessToken,
-                'POST',
-                { items: itemsToSend, kitchenTicketId },
-            )
+            // ── 3. หย่อนลง outbox (บันทึกในเครื่องก่อนเสมอ ทั้งออนไลน์และออฟไลน์) ──
+            const shift = await readSnapshot<Shift | null>(tenantSlug, 'currentShift')
+            const { orderId: queuedOrderId } = await enqueueOrder({
+                tenantSlug,
+                userId: user.sub,
+                shiftId: shift?.data?.shiftId ?? null,
+                tableId: tableIdFromUrl,
+                orderId: resolvedOrderId,
+                items,
+            })
+            setOrderId(queuedOrderId)
+            markAsSent() // ถึงตรงนี้ของไม่หายแล้ว (อยู่ใน IndexedDB) → ล็อกจำนวนในตะกร้า
 
-            // ── 4. คงตะกร้าไว้ (ล้างตอนชำระเงินเท่านั้น) + toast ─────
-            markAsSent()
-            showSentToast()
-            // โหลดข้อมูลจาก DB เพื่อให้ได้ order_item_id และสถานะสำหรับ void/comp
-            await refreshCartFromServer(resolvedOrderId).catch(() => undefined)
+            // ── 4. ส่งทันที ไม่รอรอบ 30 วินาที ─────────────────────────
+            // ออฟไลน์ = คืน 'unreachable' เร็ว ๆ ของยังอยู่ในคิว runner ส่งให้เมื่อเน็ตกลับ
+            // ส่งครบแล้ว effect "คิวของบิลนี้เพิ่งว่าง" ด้านบนจะโหลดรายการจริงจาก server เอง
+            await flushOutbox()
+            showSentToast(await hasUnsentOrder(queuedOrderId))
         } catch (err) {
-            setSendError(err instanceof ApiError ? err.message : 'ส่งครัวไม่สำเร็จ เชื่อมต่อเซิร์ฟเวอร์ไม่ได้')
+            // มาถึงตรงนี้ = ยังไม่ได้หย่อนลงคิว (หาโต๊ะไม่ได้ / IndexedDB ใช้ไม่ได้) → ตะกร้ายังไม่ถูกล็อก กดใหม่ได้
+            setSendError(err instanceof ApiError ? err.message : 'ส่งครัวไม่สำเร็จ ไม่พบข้อมูลโต๊ะในเครื่อง ลองเชื่อมต่อแล้วกดใหม่')
         } finally {
             setIsSending(false)
         }
@@ -500,6 +520,33 @@ export default function MainPOS() {
                             <SearchBar value={currentText} onSearch={setcurrentText} />
                         </div>
                     </div>
+
+                    {/* [ใหม่] สถานะออฟไลน์ของบิลนี้ */}
+                    {(billQueue.length > 0 || (connection !== 'online' && orderId)) && (
+                        <div className="space-y-2 px-6 pt-4 font-kanit">
+                            {/* (ค) เข้าโต๊ะที่มีบิลตอนออฟไลน์ — ดึงรายการเดิมไม่ได้ สรุปจากผังโต๊ะในเครื่องแทน */}
+                            {connection !== 'online' && orderId && tableIdFromUrl && user?.tenantSlug &&
+                                !cartMenu.some((item) => (item.orderItemIds?.length ?? 0) > 0) && (
+                                    <OfflineBillSummary tenantSlug={user.tenantSlug} tableId={tableIdFromUrl} />
+                                )}
+                            {billFailed ? (
+                                <div role="alert" className="flex items-center gap-2 rounded-xl border border-[#F4C7C3] bg-[#FEF3F2] px-4 py-2.5 text-sm text-[#B42318]">
+                                    <AlertTriangle className="h-4 w-4 shrink-0" aria-hidden="true" />
+                                    <span className="flex-1">ส่งครัวไม่สำเร็จ: {billFailed.lastError}</span>
+                                    <button type="button" onClick={openOutboxPanel} className="cursor-pointer font-semibold underline underline-offset-2">
+                                        ดูรายการ
+                                    </button>
+                                </div>
+                            ) : billQueue.length > 0 ? (
+                                <div role="status" className="flex items-center gap-2 rounded-xl border border-[#d9c6b0] bg-[#F3EDE4] px-4 py-2.5 text-sm text-[#2D241E]">
+                                    <CloudUpload className="h-4 w-4 shrink-0 text-[#8C6D58]" aria-hidden="true" />
+                                    <span className="flex-1">
+                                        {billQueuedItems} รายการของบิลนี้ยังไม่ถึงครัว · บันทึกไว้ในเครื่องแล้ว ส่งให้อัตโนมัติเมื่อเชื่อมต่อได้
+                                    </span>
+                                </div>
+                            ) : null}
+                        </div>
+                    )}
 
                     <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4 overflow-y-auto p-6 flex-1 content-start">
                         {isLoading ? (
@@ -725,9 +772,13 @@ export default function MainPOS() {
                             <CheckCircle2 className="w-5 h-5" />
                         </div>
                         <div className="flex flex-col">
-                            <span className="text-sm font-semibold">ส่งออเดอร์เข้าครัวสำเร็จ!</span>
+                            <span className="text-sm font-semibold">
+                                {sentToast.queued ? 'บันทึกออเดอร์แล้ว รอส่งครัว' : 'ส่งออเดอร์เข้าครัวสำเร็จ!'}
+                            </span>
                             <span className="text-xs text-stone-300">
-                                {sentToast.tableName} ({sentToast.itemCount} รายการใหม่) สร้างสถานะ 'รอทำ' ใน KDS แล้ว
+                                {sentToast.queued
+                                    ? `${sentToast.tableName} (${sentToast.itemCount} รายการใหม่) ยังติดต่อเซิร์ฟเวอร์ไม่ได้ จะส่งเข้าครัวให้อัตโนมัติ`
+                                    : `${sentToast.tableName} (${sentToast.itemCount} รายการใหม่) สร้างสถานะ 'รอทำ' ใน KDS แล้ว`}
                             </span>
                         </div>
                         <div className="flex items-center gap-2 ml-2">

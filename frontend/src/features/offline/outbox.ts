@@ -152,3 +152,9 @@ export async function hasPending(tenantSlug: string): Promise<boolean> {
     .count();
   return count > 0;
 }
+
+/** บิลนี้ยังมีของค้างในเครื่องไหม (รอส่งหรือล้ม) — หน้า POS ใช้ตัดสินข้อความหลังกดส่งครัว */
+export async function hasUnsentOrder(orderId: string): Promise<boolean> {
+  const count = await db.outbox.where('orderId').equals(orderId).count();
+  return count > 0;
+}
