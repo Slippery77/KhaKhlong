@@ -4,13 +4,13 @@ import KDSCard from "../components/KDSCard"
 import { useKDS } from "../context/KDSContext"
 import { useKDSQueue } from "../hooks/useKDSQueue"
 import type { KDSStatus } from "../types/kds.types"
-import { ChefHat, Bell, CheckCircle2, CookingPot, HelpCircle, X, RefreshCw, RotateCcw } from "lucide-react"
+import { ChefHat, Bell, CheckCircle2, CookingPot, HelpCircle, X, RefreshCw, RotateCcw, AlertCircle } from "lucide-react"
 
 export default function KDSPage() {
     const { clearAllOrders } = useKDS()
 
     // ข้อมูลจาก backend (polling ทุก 3 วินาที)
-    const { tickets, isLoading, error, reload, updateItemStatus } = useKDSQueue()
+    const { tickets, isLoading, isRefreshing, isVisible, error, reload, updateItemStatus } = useKDSQueue()
 
     // State สำหรับการกรองสถานะ (null หมายถึงแสดงทั้งหมดตามรูป mockup 2)
     const [filterStatus, setFilterStatus] = useState<KDSStatus | null>(null)
@@ -30,9 +30,31 @@ export default function KDSPage() {
 
             {/* แถบหัวเรื่อง Kitchen Display และแท็บสถานะสรุปด้านขวา */}
             <div className="h-14 border-b border-stone-200/80 px-8 flex items-center justify-between bg-[#F4EFE6]/80 shrink-0">
-                <div className="flex items-center gap-2.5">
+                <div className="flex items-center gap-3">
                     <ChefHat className="w-5 h-5 text-[#8C6D58] stroke-[2]" />
                     <h1 className="text-base font-semibold text-[#2D241E]">Kitchen Display</h1>
+                    {/* Live status badge: ออกแบบตาม UI/UX Pro Max เพื่อความชัดเจนในการทำงานของห้องครัว */}
+                    <div
+                        className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-medium transition-colors bg-[#EFE8DC]/80 text-[#7A6048] border border-[#E2D5C4]"
+                        title={
+                            !isVisible
+                                ? "หยุดดึงข้อมูลชั่วคราวเพื่อประหยัดพลังงานเนื่องจากพับหน้าต่าง"
+                                : isRefreshing
+                                    ? "กำลังอัปเดตข้อมูลล่าสุด..."
+                                    : "เชื่อมต่อคิวครัวแบบเรียลไทม์"
+                        }
+                    >
+                        <span
+                            className={`w-1.5 h-1.5 rounded-full ${
+                                !isVisible
+                                    ? "bg-stone-400"
+                                    : isRefreshing
+                                        ? "bg-amber-500 animate-pulse"
+                                        : "bg-emerald-500"
+                            }`}
+                        />
+                        <span>{!isVisible ? "พักหน้าจอ" : isRefreshing ? "กำลังอัปเดต..." : "สด"}</span>
+                    </div>
                 </div>
 
                 {/* เมื่อไม่มีออเดอร์ หรือมีออเดอร์จะแสดง Badge ตามรูป screenshot */}
@@ -103,12 +125,12 @@ export default function KDSPage() {
 
             {/* เนื้อหาหลักของหน้า KDS */}
             <main className="flex-1 overflow-y-auto p-6 md:p-8 relative">
-                {isLoading ? (
+                {isLoading && totalOrdersCount === 0 ? (
                     <div className="h-full flex flex-col items-center justify-center text-center select-none py-12">
                         <div className="w-10 h-10 border-2 border-stone-300 border-t-[#A68874] rounded-full animate-spin mb-4" />
                         <p className="text-sm text-stone-400 font-kanit">กำลังโหลดคิวครัว...</p>
                     </div>
-                ) : error ? (
+                ) : error && totalOrdersCount === 0 ? (
                     <div className="h-full flex flex-col items-center justify-center text-center select-none py-12 gap-3">
                         <p className="text-sm text-red-500 font-kanit">{error}</p>
                         <button
@@ -134,6 +156,23 @@ export default function KDSPage() {
                 ) : (
                     /* รูปแบบเมื่อมีออเดอร์ แบ่งเป็น 3 ส่วน (ตรงตาม Screenshot 2) */
                     <div className="flex flex-col gap-8 pb-12">
+                        {/* Resilient Error Banner (UI/UX Pro Max): หากมีข้อผิดพลาดระหว่างดึงข้อมูลอัตโนมัติ จะคงตั๋วเดิมไว้เพื่อไม่ให้ขัดจังหวะการทำอาหาร */}
+                        {error && (
+                            <div className="flex items-center justify-between gap-3 px-4 py-3 rounded-2xl bg-[#FFF8ED] border border-[#F5E2C8] text-[#8C5E2E] text-xs shadow-xs animate-in fade-in duration-200">
+                                <div className="flex items-center gap-2.5">
+                                    <AlertCircle className="w-4 h-4 text-[#C27803] shrink-0" aria-hidden="true" />
+                                    <span>{error} — หน้าจอกำลังแสดงคิวก่อนหน้า</span>
+                                </div>
+                                <button
+                                    type="button"
+                                    onClick={reload}
+                                    className="flex items-center gap-1 px-3 py-1.5 rounded-xl bg-[#F5E2C8]/70 hover:bg-[#F5E2C8] text-[#6E4820] font-medium transition-colors cursor-pointer"
+                                >
+                                    <RotateCcw className="w-3 h-3" aria-hidden="true" />
+                                    <span>ลองใหม่</span>
+                                </button>
+                            </div>
+                        )}
                         {/* 1. ส่วน: รอทำ */}
                         {(!filterStatus ? pendingOrders.length > 0 : filterStatus === "รอทำ") && (
                             <section className="flex flex-col gap-3.5">
