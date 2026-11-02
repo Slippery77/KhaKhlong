@@ -34,6 +34,7 @@ export default function Register_page() {
             username: owner.username,
             email: owner.email,
             password: owner.password,
+            pin: owner.pin,
             // backend บังคับ display_name — ถ้าไม่ได้กรอกแยก ให้ใช้ชื่อผู้ใช้แทน
             display_name: owner.display_name?.trim() || owner.username,
         };
