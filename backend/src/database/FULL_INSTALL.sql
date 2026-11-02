@@ -634,18 +634,18 @@ CREATE FUNCTION has_permission(p_user uuid, p_key text) RETURNS boolean LANGUAGE
 
 -- วันทำการ: ก่อน business_day_start_hour ยังนับเป็นวันก่อนหน้า
 CREATE FUNCTION compute_business_date(p_tenant uuid, p_ts timestamptz DEFAULT now())
-RETURNS date LANGUAGE sql STABLE AS $
+RETURNS date LANGUAGE sql STABLE AS $$
   SELECT ((p_ts AT TIME ZONE t.timezone)
           - make_interval(hours => cfg(p_tenant, 'business_day_start_hour')::int))::date
-  FROM tenants t WHERE t.tenant_id = p_tenant $;
+  FROM tenants t WHERE t.tenant_id = p_tenant $$;
 
-CREATE FUNCTION trg_inventory_tx_before_insert() RETURNS trigger LANGUAGE plpgsql AS $
+CREATE FUNCTION trg_inventory_tx_before_insert() RETURNS trigger LANGUAGE plpgsql AS $$
 BEGIN
   IF NEW.business_date IS NULL THEN
     NEW.business_date := compute_business_date(NEW.tenant_id, COALESCE(NEW.created_at, now()));
   END IF;
   RETURN NEW;
-END $;
+END $$;
 CREATE TRIGGER before_insert_inventory_transactions
   BEFORE INSERT ON inventory_transactions
   FOR EACH ROW EXECUTE FUNCTION trg_inventory_tx_before_insert();
@@ -1019,7 +1019,7 @@ CREATE TRIGGER lock_ingredient BEFORE INSERT ON inventory_transactions
 -- พนักงานกรอกยอดคงเหลือตอนจบวัน ระบบคิดส่วนต่างให้ และ audit ถ้าเพี้ยนมาก
 CREATE FUNCTION record_stock_count(p_tenant uuid, p_ingredient uuid, p_counted numeric,
                                    p_user uuid, p_note text DEFAULT NULL)
-RETURNS numeric LANGUAGE plpgsql AS $
+RETURNS numeric LANGUAGE plpgsql AS $$
 DECLARE cur numeric; d numeric; pct numeric; limit_pct numeric; v_note text;
 BEGIN
   PERFORM 1 FROM ingredients WHERE ingredient_id = p_ingredient AND tenant_id = p_tenant FOR UPDATE;
