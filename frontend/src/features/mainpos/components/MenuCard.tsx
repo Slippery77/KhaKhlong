@@ -31,14 +31,14 @@ export default function MenuCard({ menu, cartCount = 0, onClickMenuCard }: MenuC
                     onClickMenuCard(menu)
                 }
             }}
-            className={`group relative flex h-[204px] flex-col overflow-hidden rounded-2xl border text-left font-kanit transition-all duration-200 select-none focus:outline-none focus-visible:ring-2 focus-visible:ring-[#8C6D58] focus-visible:ring-offset-2 ${
+            className={`group relative flex h-204px flex-col overflow-hidden rounded-2xl border text-left font-kanit transition-all duration-200 select-none focus:outline-none focus-visible:ring-2 focus-visible:ring-[#8C6D58] focus-visible:ring-offset-2 ${
                 isSoldOut
                     ? "cursor-not-allowed border-[#E2D9CE] bg-[#F5F1EB] opacity-65"
                     : "cursor-pointer border-[#E2D6C5] bg-white shadow-[0_2px_10px_rgba(45,36,30,0.04)] hover:-translate-y-0.5 hover:border-[#C5B19C] hover:shadow-[0_8px_20px_rgba(45,36,30,0.09)] active:scale-[0.98]"
             }`}
         >
             {/* ── กรอบรูปอาหารด้านบน (~65% ของความสูงการ์ด) ────────────────── */}
-            <div className="relative h-[132px] w-full shrink-0 overflow-hidden bg-linear-to-br from-[#F3ECE1] to-[#E6DBC9]">
+            <div className="relative h-132px w-full shrink-0 overflow-hidden bg-linear-to-br from-[#F3ECE1] to-[#E6DBC9]">
                 {hasImage ? (
                     <img
                         src={menu.imageUrl!}
@@ -89,7 +89,7 @@ export default function MenuCard({ menu, cartCount = 0, onClickMenuCard }: MenuC
             </div>
 
             {/* ── รายละเอียดชื่อเมนูและราคาด้านล่าง (~35% ของความสูงการ์ด) ─── */}
-            <div className="flex h-[72px] shrink-0 flex-col justify-between bg-white px-3.5 py-2.5">
+            <div className="flex h-72px shrink-0 flex-col justify-between bg-white px-3.5 py-2.5">
                 <h3 className="truncate text-sm leading-snug font-semibold text-[#2D241E]">
                     {menu.name}
                 </h3>
