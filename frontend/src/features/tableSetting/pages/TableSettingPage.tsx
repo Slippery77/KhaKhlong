@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { AlertCircle, ArrowLeft, Plus, RefreshCw } from 'lucide-react';
+import { AlertCircle, ArrowLeft, Plus, RefreshCw, Users, Pencil } from 'lucide-react';
 import ConfirmDialog from '../../users/components/ConfirmDialog';
 import { useAuth } from '../../auth/context/AuthContext';
 import { useFloorsList, useFloorActions } from '../hooks/useFloors';
@@ -119,30 +119,32 @@ export default function TableSettingPage() {
     };
 
     return (
-        <main className="flex-1 overflow-y-auto bg-[#FAF7F2] p-6 font-kanit">
+        <main className="flex-1 overflow-y-auto px-4 sm:px-6 py-4 sm:py-6 max-w-5xl mx-auto w-full font-kanit">
             {/* ============ หน้าชั้น (ดู/เพิ่ม/แก้ไขโต๊ะ) ============ */}
             {selectedFloor ? (
                 <>
-                    <div className="mb-4 flex flex-wrap items-start justify-between gap-4">
+                    <div className="mb-4 sm:mb-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                         <div>
                             <button
                                 type="button"
                                 onClick={() => setSelectedFloorId(null)}
-                                className="mb-2 flex cursor-pointer items-center gap-1 text-sm text-stone-500 transition hover:text-[#8C6D58]"
+                                className="mb-1.5 inline-flex cursor-pointer items-center gap-1.5 text-xs sm:text-sm text-stone-500 transition hover:text-[#8C6D58]"
                             >
                                 <ArrowLeft size={15} />
-                                กลับไปรายการชั้น
+                                <span>กลับไปรายการชั้น</span>
                             </button>
 
-                            <h1 className="text-2xl font-semibold text-[#2D241E]">
-                                ชั้น {selectedFloor.floor_no}
+                            <div className="flex items-baseline gap-2">
+                                <h1 className="text-xl sm:text-2xl font-semibold text-[#2D241E]">
+                                    ชั้น {selectedFloor.floor_no}
+                                </h1>
                                 {selectedFloor.name && (
-                                    <span className="ml-2 text-lg font-normal text-stone-500">
+                                    <span className="text-sm sm:text-base font-normal text-stone-500">
                                         {selectedFloor.name}
                                     </span>
                                 )}
-                            </h1>
-                            <p className="text-sm text-stone-500">
+                            </div>
+                            <p className="text-xs sm:text-sm text-stone-500 mt-0.5">
                                 ตั้งไว้ {selectedFloor.table_count} โต๊ะ · มีจริง {floorTables.length} โต๊ะ
                             </p>
                         </div>
@@ -151,10 +153,10 @@ export default function TableSettingPage() {
                             <button
                                 type="button"
                                 onClick={openCreateTable}
-                                className="flex cursor-pointer items-center gap-1 rounded-xl bg-[#8C6D58] px-4 py-2 font-semibold text-white transition hover:bg-[#7a5c45] active:scale-95"
+                                className="w-full sm:w-auto inline-flex cursor-pointer items-center justify-center gap-1.5 rounded-xl bg-[#8C6D58] hover:bg-[#7a5c45] px-4 py-2.5 text-sm font-semibold text-white shadow-xs transition active:scale-95"
                             >
                                 <Plus size={18} />
-                                เพิ่มโต๊ะ
+                                <span>เพิ่มโต๊ะ</span>
                             </button>
                         )}
                     </div>
@@ -162,67 +164,124 @@ export default function TableSettingPage() {
                     {actions.error && <p className="mb-3 text-sm text-red-600">{actions.error}</p>}
 
                     {floorTables.length === 0 ? (
-                        <div className="rounded-2xl border border-dashed border-[#d9c6b0] bg-white/60 p-12 text-center">
+                        <div className="rounded-2xl border border-dashed border-[#d9c6b0] bg-white/60 p-8 sm:p-12 text-center">
                             <p className="text-sm text-stone-500">
                                 ยังไม่มีโต๊ะในชั้นนี้
                                 {canManage && ' — กด "เพิ่มโต๊ะ" เพื่อใส่หมายเลขโต๊ะและจำนวนที่นั่ง'}
                             </p>
                         </div>
                     ) : (
-                        <div className="overflow-x-auto rounded-2xl border border-[#E8DFD5] bg-white">
-                            <table className="w-full text-left text-sm">
-                                <thead className="border-b border-[#E8DFD5] text-stone-500">
-                                    <tr>
-                                        <th className="px-4 py-3 font-medium">ลำดับ</th>
-                                        <th className="px-4 py-3 font-medium">หมายเลขโต๊ะ</th>
-                                        <th className="px-4 py-3 font-medium">จำนวนคนที่นั่งได้</th>
-                                        <th className="px-4 py-3 font-medium">สถานะ</th>
-                                        {canManage && <th className="px-4 py-3 text-right font-medium">จัดการ</th>}
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {floorTables.map((table, index) => (
-                                        <tr key={table.table_id} className="border-b border-[#F0EAE2] last:border-0">
-                                            <td className="px-4 py-3 text-stone-400">{index + 1}</td>
-                                            <td className="px-4 py-3 font-medium text-[#2D241E]">
+                        <>
+                            {/* Mobile View: การ์ดรายการโต๊ะ สวยงาม ไม่เบียด อ่านง่าย */}
+                            <div className="md:hidden space-y-2.5">
+                                {floorTables.map((table, index) => (
+                                    <div
+                                        key={table.table_id}
+                                        className="bg-white border border-[#E8DFD5] rounded-xl p-3.5 shadow-2xs flex items-center justify-between gap-3"
+                                    >
+                                        <div className="flex items-center gap-3 min-w-0">
+                                            <div className="w-10 h-10 rounded-xl bg-[#FAF7F2] border border-[#E8DFD5] flex items-center justify-center font-semibold text-sm sm:text-base text-[#2D241E] shrink-0">
                                                 {table.table_number}
-                                            </td>
-                                            <td className="px-4 py-3 text-stone-600">{table.capacity} ที่นั่ง</td>
-                                            <td className="px-4 py-3">
-                                                <span
-                                                    className={`rounded-full px-2.5 py-1 text-xs font-medium ${
-                                                        STATUS_BADGE[table.status] ?? 'bg-stone-100 text-stone-600'
-                                                    }`}
-                                                >
-                                                    {TABLE_STATUS_LABEL[table.status] ?? table.status}
-                                                </span>
-                                            </td>
-                                            {canManage && (
-                                                <td className="px-4 py-3 text-right">
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => openEditTable(table.table_id)}
-                                                        disabled={actions.isSubmitting}
-                                                        className="cursor-pointer rounded-lg px-2.5 py-1.5 text-stone-600 transition enabled:hover:bg-[#FAF7F2] enabled:hover:text-[#8C6D58] disabled:opacity-50"
+                                            </div>
+                                            <div className="min-w-0">
+                                                <div className="flex items-center gap-2">
+                                                    <span className="font-semibold text-sm text-[#2D241E] truncate">
+                                                        โต๊ะ {table.table_number}
+                                                    </span>
+                                                    <span
+                                                        className={`rounded-full px-2 py-0.5 text-[11px] font-medium shrink-0 ${
+                                                            STATUS_BADGE[table.status] ?? 'bg-stone-100 text-stone-600'
+                                                        }`}
                                                     >
-                                                        แก้ไข
-                                                    </button>
-                                                </td>
-                                            )}
+                                                        {TABLE_STATUS_LABEL[table.status] ?? table.status}
+                                                    </span>
+                                                </div>
+                                                <div className="flex items-center gap-1.5 text-xs text-stone-500 mt-0.5">
+                                                    <Users className="w-3.5 h-3.5 text-stone-400 shrink-0" />
+                                                    <span>{table.capacity} ที่นั่ง</span>
+                                                    <span className="text-stone-300">·</span>
+                                                    <span className="text-stone-400">ลำดับ #{index + 1}</span>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {canManage && (
+                                            <button
+                                                type="button"
+                                                onClick={() => openEditTable(table.table_id)}
+                                                disabled={actions.isSubmitting}
+                                                className="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border border-[#d9c6b0] hover:border-[#8C6D58] bg-white hover:bg-[#FAF7F2] text-xs font-medium text-[#8C6D58] shrink-0 transition cursor-pointer"
+                                            >
+                                                <Pencil className="w-3 h-3" />
+                                                <span>แก้ไข</span>
+                                            </button>
+                                        )}
+                                    </div>
+                                ))}
+                            </div>
+
+                            {/* Desktop View: ตารางเต็ม 5 คอลัมน์ สะอาดตา จัดกึ่งกลาง */}
+                            <div className="hidden md:block overflow-hidden rounded-2xl border border-[#E8DFD5] bg-white shadow-xs">
+                                <table className="w-full text-left text-sm">
+                                    <thead className="bg-[#FBF9F6] border-b border-[#E8DFD5] text-stone-500 text-xs">
+                                        <tr>
+                                            <th className="px-5 py-3 font-medium text-center w-16">ลำดับ</th>
+                                            <th className="px-5 py-3 font-medium">หมายเลขโต๊ะ</th>
+                                            <th className="px-5 py-3 font-medium">จำนวนคนที่นั่งได้</th>
+                                            <th className="px-5 py-3 font-medium">สถานะ</th>
+                                            {canManage && <th className="px-5 py-3 text-right font-medium">จัดการ</th>}
                                         </tr>
-                                    ))}
-                                </tbody>
-                            </table>
-                        </div>
+                                    </thead>
+                                    <tbody className="divide-y divide-[#F0EAE2]">
+                                        {floorTables.map((table, index) => (
+                                            <tr key={table.table_id} className="hover:bg-[#FAF7F2]/60 transition-colors">
+                                                <td className="px-5 py-3 text-center text-stone-400 text-xs">{index + 1}</td>
+                                                <td className="px-5 py-3 font-medium text-[#2D241E]">
+                                                    {table.table_number}
+                                                </td>
+                                                <td className="px-5 py-3 text-stone-600">
+                                                    <span className="inline-flex items-center gap-1.5">
+                                                        <Users className="w-4 h-4 text-stone-400" />
+                                                        {table.capacity} ที่นั่ง
+                                                    </span>
+                                                </td>
+                                                <td className="px-5 py-3">
+                                                    <span
+                                                        className={`inline-block rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                                                            STATUS_BADGE[table.status] ?? 'bg-stone-100 text-stone-600'
+                                                        }`}
+                                                    >
+                                                        {TABLE_STATUS_LABEL[table.status] ?? table.status}
+                                                    </span>
+                                                </td>
+                                                {canManage && (
+                                                    <td className="px-5 py-3 text-right">
+                                                        <button
+                                                            type="button"
+                                                            onClick={() => openEditTable(table.table_id)}
+                                                            disabled={actions.isSubmitting}
+                                                            className="inline-flex items-center gap-1 cursor-pointer rounded-lg px-2.5 py-1.5 text-xs font-medium text-stone-600 hover:text-[#8C6D58] hover:bg-[#FAF7F2] transition disabled:opacity-50"
+                                                        >
+                                                            <Pencil className="w-3.5 h-3.5" />
+                                                            <span>แก้ไข</span>
+                                                        </button>
+                                                    </td>
+                                                )}
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </>
                     )}
                 </>
             ) : (
                 /* ============ หน้ารายการชั้น ============ */
                 <>
-                    <div className="mb-4 flex flex-wrap items-start justify-between gap-4">
+                    <div className="mb-4 sm:mb-5 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
                         <div>
-                            <h1 className="text-2xl font-semibold text-[#2D241E]">ตั้งค่าโต๊ะ</h1>
-                            <p className="text-sm text-stone-500">
+                            <h1 className="text-xl sm:text-2xl font-semibold text-[#2D241E]">ตั้งค่าโต๊ะ</h1>
+                            <p className="text-xs sm:text-sm text-stone-500 mt-0.5">
                                 {isInitialLoading ? (
                                     'กำลังโหลดข้อมูลชั้นและโต๊ะ...'
                                 ) : hasData ? (
@@ -238,10 +297,10 @@ export default function TableSettingPage() {
                                 type="button"
                                 disabled={isInitialLoading}
                                 onClick={openCreateFloor}
-                                className="flex cursor-pointer items-center gap-1 rounded-xl bg-[#8C6D58] px-4 py-2 font-semibold text-white transition hover:bg-[#7a5c45] active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+                                className="w-full sm:w-auto inline-flex cursor-pointer items-center justify-center gap-1.5 rounded-xl bg-[#8C6D58] hover:bg-[#7a5c45] px-4 py-2.5 text-sm font-semibold text-white shadow-xs transition active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
                             >
                                 <Plus size={18} />
-                                เพิ่มชั้น
+                                <span>เพิ่มชั้น</span>
                             </button>
                         )}
                     </div>
@@ -259,7 +318,7 @@ export default function TableSettingPage() {
                                 className="flex cursor-pointer items-center gap-1.5 rounded-xl border border-rose-300 bg-white px-3 py-1.5 text-xs font-semibold text-rose-700 shadow-xs hover:bg-rose-50 transition active:scale-95"
                             >
                                 <RefreshCw className="h-3.5 w-3.5" />
-                                ลองใหม่
+                                <span>ลองใหม่</span>
                             </button>
                         </div>
                     )}
@@ -273,7 +332,7 @@ export default function TableSettingPage() {
                             ))}
                         </div>
                     ) : floors.length === 0 ? (
-                        <div className="rounded-2xl border border-dashed border-[#d9c6b0] bg-white/60 p-12 text-center">
+                        <div className="rounded-2xl border border-dashed border-[#d9c6b0] bg-white/60 p-8 sm:p-12 text-center">
                             <p className="text-sm text-stone-500">
                                 ยังไม่มีชั้นในร้าน
                                 {canManage && ' — กด "เพิ่มชั้น" เพื่อเริ่มตั้งค่าผังโต๊ะ'}

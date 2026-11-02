@@ -1,3 +1,5 @@
+import { Receipt, Info, Sparkles } from 'lucide-react';
+
 interface ExampleCardProps {
     vatEnabled: boolean;   // true เฉพาะโหมด inclusive
     vatRate: number;
@@ -19,11 +21,29 @@ function calcExample(vatEnabled: boolean, vatRate: number, serviceRate: number) 
 const baht = (satang: number) =>
     (satang / 100).toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
-function Row({ label, value, bold = false }: { label: string; value: number; bold?: boolean }) {
+function ReceiptRow({
+    label,
+    value,
+    bold = false,
+    highlight = false,
+}: {
+    label: string;
+    value: number;
+    bold?: boolean;
+    highlight?: boolean;
+}) {
     return (
-        <div className={`flex justify-between ${bold ? 'font-semibold text-[#2D241E]' : ''}`}>
+        <div
+            className={`flex justify-between items-center text-sm ${
+                highlight
+                    ? 'font-bold text-[#8C6D58] text-base py-1'
+                    : bold
+                        ? 'font-semibold text-[#2D241E]'
+                        : 'text-stone-600'
+            }`}
+        >
             <span>{label}</span>
-            <span>{baht(value)}</span>
+            <span className="font-mono tabular-nums">฿{baht(value)}</span>
         </div>
     );
 }
@@ -32,24 +52,73 @@ export default function ExampleCard({ vatEnabled, vatRate, serviceRate }: Exampl
     const r = calcExample(vatEnabled, vatRate, serviceRate);
 
     return (
-        <div className="w-72 rounded-xl border border-[#B79479] bg-[#F3EADF] p-4 text-sm text-stone-700">
-            <p className="mb-3 font-semibold text-[#2D241E]">ตัวอย่าง</p>
-
-            <div className="space-y-1">
-                <Row label="ยอดอาหาร" value={r.food} />
-                {serviceRate > 0 && <Row label={`ค่าบริการ ${serviceRate}%`} value={r.service} />}
+        <section className="w-full bg-white border border-[#E8DFD5] rounded-2xl shadow-xs overflow-hidden font-kanit">
+            {/* Header */}
+            <div className="px-5 py-4 border-b border-[#E8DFD5] bg-[#FBF9F6] flex items-center justify-between">
+                <div className="flex items-center gap-2.5">
+                    <div className="w-8 h-8 rounded-lg bg-[#EFE8DC] flex items-center justify-center text-[#8C6D58] shrink-0">
+                        <Receipt className="w-4 h-4" />
+                    </div>
+                    <div>
+                        <h3 className="text-sm sm:text-base font-semibold text-[#2D241E]">ตัวอย่างการคำนวณบิล</h3>
+                        <p className="text-xs text-stone-500">จำลองออเดอร์ยอดอาหาร 1,000.00 บาท</p>
+                    </div>
+                </div>
+                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">
+                    <Sparkles className="w-3 h-3" />
+                    คำนวณสด
+                </span>
             </div>
 
-            <hr className="my-2 border-[#B79479]" />
-            <Row label="ลูกค้าจ่าย" value={r.total} bold />
+            {/* Receipt Body */}
+            <div className="p-5 space-y-4">
+                <div className="space-y-2 bg-[#FAF7F2] p-4 rounded-xl border border-[#E8DFD5]/80">
+                    <ReceiptRow label="ยอดรวมค่าอาหาร" value={r.food} />
+                    {serviceRate > 0 ? (
+                        <ReceiptRow label={`ค่าบริการ Service Charge (${serviceRate}%)`} value={r.service} />
+                    ) : (
+                        <div className="flex justify-between items-center text-xs text-stone-400 py-0.5">
+                            <span>ค่าบริการ (Service Charge)</span>
+                            <span className="font-mono">ไม่คิด (0%)</span>
+                        </div>
+                    )}
 
-            {vatEnabled && (
-                <div className="mt-3 space-y-1 border-t border-dashed border-stone-300 pt-2 text-xs text-stone-500">
-                    <p>ในยอดนี้มี</p>
-                    <Row label="มูลค่าก่อน VAT" value={r.beforeVat} />
-                    <Row label={`VAT ${vatRate}%`} value={r.vat} />
+                    <div className="border-t border-[#d9c6b0] my-2 pt-2">
+                        <ReceiptRow label="ยอดรวมที่ลูกค้าจ่าย" value={r.total} bold highlight />
+                    </div>
                 </div>
-            )}
-        </div>
+
+                {/* VAT breakdown */}
+                {vatEnabled ? (
+                    <div className="space-y-2 rounded-xl bg-amber-50/60 border border-amber-200/60 p-3.5 text-xs text-stone-600">
+                        <div className="flex items-center justify-between font-medium text-amber-900 border-b border-amber-200/50 pb-1.5">
+                            <span className="flex items-center gap-1.5">
+                                <Info className="w-3.5 h-3.5 text-amber-700 shrink-0" />
+                                ในยอดนี้รวมภาษีมูลค่าเพิ่มแล้ว (VAT Inclusive)
+                            </span>
+                        </div>
+                        <div className="space-y-1.5 pt-0.5">
+                            <div className="flex justify-between text-stone-600">
+                                <span>มูลค่าสินค้าก่อน VAT:</span>
+                                <span className="font-mono tabular-nums">฿{baht(r.beforeVat)}</span>
+                            </div>
+                            <div className="flex justify-between text-stone-700 font-semibold">
+                                <span>ภาษีมูลค่าเพิ่ม VAT ({vatRate}%):</span>
+                                <span className="font-mono tabular-nums text-amber-800">฿{baht(r.vat)}</span>
+                            </div>
+                        </div>
+                    </div>
+                ) : (
+                    <div className="rounded-xl bg-stone-50 border border-stone-200/80 p-3 text-xs text-stone-500 flex items-center gap-2">
+                        <Info className="w-4 h-4 text-stone-400 shrink-0" />
+                        <span>ร้านไม่ได้เปิดคิดภาษีมูลค่าเพิ่ม (VAT 0%)</span>
+                    </div>
+                )}
+
+                <p className="text-[11px] text-stone-400 leading-relaxed text-center">
+                    ระบบจะนำอัตรานี้ไปคำนวณและแสดงผลในใบเสร็จของแคชเชียร์โดยอัตโนมัติ
+                </p>
+            </div>
+        </section>
     );
 }

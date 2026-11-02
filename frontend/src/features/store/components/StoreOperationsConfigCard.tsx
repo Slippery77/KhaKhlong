@@ -406,8 +406,8 @@ export default function StoreOperationsConfigCard() {
                   </span>
                 </div>
 
-                {/* Quick Presets */}
-                <div className="flex items-center gap-1.5 pt-1">
+                {/* Quick Presets (Desktop: Inline compact เหมือนเดิม) */}
+                <div className="hidden sm:flex items-center gap-1.5 pt-1">
                   <span className="text-[11px] text-stone-400">เลือกด่วน:</span>
                   {[2, 4, 8, 24].map((hours) => (
                     <button
@@ -424,6 +424,28 @@ export default function StoreOperationsConfigCard() {
                       {hours} ชม.{hours === 4 ? ' (แนะนำ)' : ''}
                     </button>
                   ))}
+                </div>
+
+                {/* Quick Presets (Mobile: 2x2 touch-friendly) */}
+                <div className="sm:hidden pt-1.5 space-y-1.5">
+                  <span className="text-xs font-medium text-stone-500 block">เลือกด่วน:</span>
+                  <div className="grid grid-cols-2 gap-2">
+                    {[2, 4, 8, 24].map((hours) => (
+                      <button
+                        key={hours}
+                        type="button"
+                        onClick={() => handleEscalationPreset(hours)}
+                        disabled={isLoading || isLoadError || isSaving || !isOwner}
+                        className={`flex items-center justify-center py-2 px-3 text-xs font-medium rounded-xl border transition-all duration-150 min-h-[40px] focus:outline-none focus:ring-2 focus:ring-[#8C6D58]/30 ${
+                          parsedEscalation === hours
+                            ? 'bg-[#8C6D58] text-white border-[#8C6D58] shadow-xs'
+                            : 'bg-[#FAF7F2] text-stone-700 border-[#E8DFD5] hover:border-[#8C6D58] hover:bg-white'
+                        } disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer`}
+                      >
+                        {hours} ชม.{hours === 4 ? ' (แนะนำ)' : ''}
+                      </button>
+                    ))}
+                  </div>
                 </div>
 
                 <p
@@ -479,8 +501,8 @@ export default function StoreOperationsConfigCard() {
                   </span>
                 </div>
 
-                {/* Quick Presets */}
-                <div className="flex items-center gap-1.5 pt-1">
+                {/* Quick Presets (Desktop: Inline compact เหมือนเดิม) */}
+                <div className="hidden sm:flex items-center gap-1.5 pt-1">
                   <span className="text-[11px] text-stone-400">เลือกด่วน:</span>
                   {[10, 20, 30, 50].map((percent) => (
                     <button
@@ -497,6 +519,28 @@ export default function StoreOperationsConfigCard() {
                       {percent}%{percent === 20 ? ' (มาตรฐาน)' : ''}
                     </button>
                   ))}
+                </div>
+
+                {/* Quick Presets (Mobile: 2x2 touch-friendly) */}
+                <div className="sm:hidden pt-1.5 space-y-1.5">
+                  <span className="text-xs font-medium text-stone-500 block">เลือกด่วน:</span>
+                  <div className="grid grid-cols-2 gap-2">
+                    {[10, 20, 30, 50].map((percent) => (
+                      <button
+                        key={percent}
+                        type="button"
+                        onClick={() => handleVariancePreset(percent)}
+                        disabled={isLoading || isLoadError || isSaving || !isOwner}
+                        className={`flex items-center justify-center py-2 px-3 text-xs font-medium rounded-xl border transition-all duration-150 min-h-[40px] focus:outline-none focus:ring-2 focus:ring-[#8C6D58]/30 ${
+                          parsedVariance === percent
+                            ? 'bg-[#8C6D58] text-white border-[#8C6D58] shadow-xs'
+                            : 'bg-[#FAF7F2] text-stone-700 border-[#E8DFD5] hover:border-[#8C6D58] hover:bg-white'
+                        } disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer`}
+                      >
+                        {percent}%{percent === 20 ? ' (มาตรฐาน)' : ''}
+                      </button>
+                    ))}
+                  </div>
                 </div>
 
                 <p

@@ -17,6 +17,7 @@ interface Props {
     editError: string|null;
     isLoading?: boolean;
     onReorder?: (newCategories: Category[]) => Promise<boolean>;
+    isMobileDrawer?: boolean;
 }
 
 export default function SidebarCategory({
@@ -32,6 +33,7 @@ export default function SidebarCategory({
     editError,
     isLoading = false,
     onReorder,
+    isMobileDrawer = false,
 }: Props) {
     const [ showPopup, setShowPopup ] = useState(false);
     const [ showEdit, setShowEdit ] = useState(false);
@@ -86,8 +88,12 @@ export default function SidebarCategory({
 
     const isInitialLoading = isLoading && categories.length === 0;
 
+    const asideClass = isMobileDrawer
+        ? "flex h-full w-full flex-col bg-[#f7f3ee]"
+        : "hidden md:flex h-full w-64 shrink-0 flex-col border-r border-[#d9c6b0] bg-[#f7f3ee]";
+
     return (
-          <aside className="flex h-full w-64 flex-col border-r border-[#d9c6b0] bg-[#f7f3ee]">
+          <aside className={asideClass}>
               <div className="flex items-center justify-between px-4 py-4">
                   <div className="flex items-center gap-2.5">
                       <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-white shadow-sm ring-1 ring-[#e5d9c8] text-[#8C6D58]">

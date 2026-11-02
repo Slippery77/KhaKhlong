@@ -71,21 +71,29 @@ export default function UserFormPopup({ user, onSubmit, onClose, isSubmitting, e
     const showError = (value: string | null) => (touched && value ? value : null);
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-            <div className="w-full max-w-md rounded-2xl bg-white p-5 shadow-lg">
-                <h2 className="mb-1 text-lg font-semibold text-[#2D241E]">
-                    {isEdit ? 'แก้ไขบัญชีผู้ใช้' : 'เพิ่มบัญชีผู้ใช้'}
-                </h2>
-                <p className="mb-4 text-xs text-stone-500">
-                    {isEdit
-                        ? 'เว้นว่างในช่องรหัสผ่าน = ไม่เปลี่ยนรหัสผ่านเดิม'
-                        : 'ผู้ใช้ใหม่จะใช้ชื่อผู้ใช้และรหัสผ่านนี้เข้าสู่ระบบ'}
-                </p>
+        <div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 overflow-y-auto backdrop-blur-xs font-kanit animate-in fade-in duration-150"
+            onClick={(e) => {
+                if (e.target === e.currentTarget && !isSubmitting) onClose();
+            }}
+        >
+            <div className="relative w-full max-w-md rounded-2xl bg-white p-5 sm:p-6 shadow-2xl my-auto max-h-[92dvh] sm:max-h-none flex flex-col overflow-hidden sm:overflow-visible animate-in zoom-in-95 duration-150">
+                <div className="shrink-0 mb-3">
+                    <h2 className="text-lg font-semibold text-[#2D241E]">
+                        {isEdit ? 'แก้ไขบัญชีผู้ใช้' : 'เพิ่มบัญชีผู้ใช้'}
+                    </h2>
+                    <p className="mt-0.5 text-xs text-stone-500">
+                        {isEdit
+                            ? 'เว้นว่างในช่องรหัสผ่าน = ไม่เปลี่ยนรหัสผ่านเดิม'
+                            : 'ผู้ใช้ใหม่จะใช้ชื่อผู้ใช้และรหัสผ่านนี้เข้าสู่ระบบ'}
+                    </p>
+                </div>
 
-                <form onSubmit={handleSubmit} className="flex flex-col gap-3">
-                    <label className="flex flex-col gap-1 text-sm text-stone-600">
-                        ชื่อ-นามสกุล
+                <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto sm:overflow-visible pr-1 sm:pr-0 flex flex-col gap-3 min-h-0">
+                    <div className="flex flex-col gap-1 text-sm text-stone-600">
+                        <label htmlFor="user-display-name">ชื่อ-นามสกุล</label>
                         <input
+                            id="user-display-name"
                             autoFocus
                             value={displayName}
                             onChange={e => setDisplayName(e.target.value)}
@@ -97,11 +105,12 @@ export default function UserFormPopup({ user, onSubmit, onClose, isSubmitting, e
                         {showError(displayNameError) && (
                             <span className="text-xs text-red-600">{displayNameError}</span>
                         )}
-                    </label>
+                    </div>
 
-                    <label className="flex flex-col gap-1 text-sm text-stone-600">
-                        ชื่อผู้ใช้
+                    <div className="flex flex-col gap-1 text-sm text-stone-600">
+                        <label htmlFor="user-username">ชื่อผู้ใช้</label>
                         <input
+                            id="user-username"
                             value={username}
                             onChange={e => setUsername(e.target.value)}
                             onBlur={() => setTouched(true)}
@@ -113,13 +122,14 @@ export default function UserFormPopup({ user, onSubmit, onClose, isSubmitting, e
                         {showError(usernameError) && (
                             <span className="text-xs text-red-600">{usernameError}</span>
                         )}
-                    </label>
+                    </div>
 
-                    <label className="flex flex-col gap-1 text-sm text-stone-600">
-                        ตำแหน่ง
+                    <div className="flex flex-col gap-1 text-sm text-stone-600">
+                        <label htmlFor="user-role">ตำแหน่ง</label>
                         {isOwner ? (
                             <>
                                 <input
+                                    id="user-role"
                                     value={ROLE_LABEL.owner}
                                     readOnly
                                     className="rounded-xl border border-[#E8DFD5] bg-[#FAF7F2] px-3 py-2 text-[#8C6D58]"
@@ -130,6 +140,7 @@ export default function UserFormPopup({ user, onSubmit, onClose, isSubmitting, e
                             </>
                         ) : (
                             <select
+                                id="user-role"
                                 value={role}
                                 onChange={e => setRole(e.target.value as AssignableRole)}
                                 className="rounded-xl border border-[#d9c6b0] bg-white px-3 py-2 text-[#2D241E] outline-none focus:border-[#8C6D58]"
@@ -139,13 +150,13 @@ export default function UserFormPopup({ user, onSubmit, onClose, isSubmitting, e
                                 ))}
                             </select>
                         )}
-                    </label>
+                    </div>
 
                     <div className="flex flex-col gap-1 text-sm text-stone-600">
                         <label htmlFor="user-pin">
                             PIN 6 หลัก (ไม่บังคับ)
                         </label>
-                        <div className="flex w-full justify-center">
+                        <div className="flex w-full justify-center py-1">
                             <PinInput
                                 id="user-pin"
                                 value={pin}
@@ -163,10 +174,12 @@ export default function UserFormPopup({ user, onSubmit, onClose, isSubmitting, e
                         )}
                     </div>
 
-                    <label className="flex flex-col gap-1 text-sm text-stone-600">
-                        รหัสผ่าน{isEdit && ' (ไม่บังคับ)'}
-                        <div className="relative">
+                    <div className="flex flex-col gap-1 text-sm text-stone-600">
+                        <label htmlFor="user-password">รหัสผ่าน{isEdit && ' (ไม่บังคับ)'}</label>
+                        {/* Flex Input Group: Input และปุ่มดวงตาอยู่ใน Flow เดียวกัน ไม่ใช้ position: absolute ป้องกันดวงตาลอย 100% */}
+                        <div className="flex items-center w-full rounded-xl border border-[#d9c6b0] bg-white px-3 py-2 focus-within:border-[#8C6D58] focus-within:ring-2 focus-within:ring-[#8C6D58]/10 transition-colors">
                             <input
+                                id="user-password"
                                 type={showPassword ? 'text' : 'password'}
                                 value={password}
                                 onChange={e => setPassword(e.target.value)}
@@ -174,13 +187,13 @@ export default function UserFormPopup({ user, onSubmit, onClose, isSubmitting, e
                                 maxLength={72}
                                 autoComplete="new-password"
                                 placeholder={`อย่างน้อย ${MIN_PASSWORD_LENGTH} ตัวอักษร`}
-                                className="w-full rounded-xl border border-[#d9c6b0] px-3 py-2 pr-10 text-[#2D241E] outline-none focus:border-[#8C6D58]"
+                                className="w-full flex-1 border-0 bg-transparent p-0 text-[#2D241E] outline-none focus:outline-none placeholder:text-stone-400 text-sm"
                             />
                             <button
                                 type="button"
                                 onClick={() => setShowPassword(!showPassword)}
                                 title={showPassword ? 'ซ่อนรหัสผ่าน' : 'แสดงรหัสผ่าน'}
-                                className="absolute right-2 top-1/2 -translate-y-1/2 cursor-pointer rounded-lg p-1 text-stone-400 transition hover:bg-[#FAF7F2] hover:text-stone-600"
+                                className="ml-1.5 shrink-0 cursor-pointer rounded-lg p-1 text-stone-400 transition hover:bg-[#FAF7F2] hover:text-stone-600"
                             >
                                 {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                             </button>
@@ -188,40 +201,52 @@ export default function UserFormPopup({ user, onSubmit, onClose, isSubmitting, e
                         {showError(passwordError) && (
                             <span className="text-xs text-red-600">{passwordError}</span>
                         )}
-                    </label>
+                    </div>
 
-                    <label className="flex flex-col gap-1 text-sm text-stone-600">
-                        ยืนยันรหัสผ่าน{isEdit && ' (ไม่บังคับ)'}
-                        <input
-                            type={showPassword ? 'text' : 'password'}
-                            value={confirmPassword}
-                            onChange={e => setConfirmPassword(e.target.value)}
-                            onBlur={() => setTouched(true)}
-                            maxLength={72}
-                            autoComplete="new-password"
-                            placeholder="พิมพ์รหัสผ่านอีกครั้ง"
-                            className="rounded-xl border border-[#d9c6b0] px-3 py-2 text-[#2D241E] outline-none focus:border-[#8C6D58]"
-                        />
+                    <div className="flex flex-col gap-1 text-sm text-stone-600">
+                        <label htmlFor="user-confirm-password">ยืนยันรหัสผ่าน{isEdit && ' (ไม่บังคับ)'}</label>
+                        {/* Flex Input Group: Input และปุ่มดวงตาอยู่ใน Flow เดียวกัน */}
+                        <div className="flex items-center w-full rounded-xl border border-[#d9c6b0] bg-white px-3 py-2 focus-within:border-[#8C6D58] focus-within:ring-2 focus-within:ring-[#8C6D58]/10 transition-colors">
+                            <input
+                                id="user-confirm-password"
+                                type={showPassword ? 'text' : 'password'}
+                                value={confirmPassword}
+                                onChange={e => setConfirmPassword(e.target.value)}
+                                onBlur={() => setTouched(true)}
+                                maxLength={72}
+                                autoComplete="new-password"
+                                placeholder="พิมพ์รหัสผ่านอีกครั้ง"
+                                className="w-full flex-1 border-0 bg-transparent p-0 text-[#2D241E] outline-none focus:outline-none placeholder:text-stone-400 text-sm"
+                            />
+                            <button
+                                type="button"
+                                onClick={() => setShowPassword(!showPassword)}
+                                title={showPassword ? 'ซ่อนรหัสผ่าน' : 'แสดงรหัสผ่าน'}
+                                className="ml-1.5 shrink-0 cursor-pointer rounded-lg p-1 text-stone-400 transition hover:bg-[#FAF7F2] hover:text-stone-600"
+                            >
+                                {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                            </button>
+                        </div>
                         {showError(confirmError) && (
                             <span className="text-xs text-red-600">{confirmError}</span>
                         )}
-                    </label>
+                    </div>
 
                     {error && <p className="text-xs text-red-600">{error}</p>}
 
-                    <div className="mt-1 flex gap-2">
+                    <div className="mt-2 flex gap-2 shrink-0 pt-2 border-t border-stone-100">
                         <button
                             type="button"
                             onClick={onClose}
                             disabled={isSubmitting}
-                            className="flex-1 rounded-xl border border-[#d9c6b0] py-2 text-[#2D241E] transition enabled:hover:bg-[#FAF7F2] enabled:active:scale-95 disabled:opacity-50"
+                            className="flex-1 rounded-xl border border-[#d9c6b0] py-2.5 text-sm font-medium text-[#2D241E] transition enabled:hover:bg-[#FAF7F2] enabled:active:scale-95 disabled:opacity-50 cursor-pointer"
                         >
                             ยกเลิก
                         </button>
                         <button
                             type="submit"
                             disabled={!canSubmit}
-                            className="flex-1 rounded-xl bg-[#8C6D58] py-2 font-semibold text-white transition enabled:hover:bg-[#7a5c45] enabled:active:scale-95 disabled:opacity-50"
+                            className="flex-1 rounded-xl bg-[#8C6D58] py-2.5 text-sm font-semibold text-white transition enabled:hover:bg-[#7a5c45] enabled:active:scale-95 disabled:opacity-50 cursor-pointer"
                         >
                             {isSubmitting ? 'กำลังบันทึก...' : 'บันทึก'}
                         </button>

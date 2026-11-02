@@ -1,4 +1,4 @@
-﻿import { Plus } from 'lucide-react';
+import { Plus } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import type { ModifierGroup, ModifierGroupInput, SelectionType } from '../types/modifier.types';
 import ModifierOptionRow from './ModifierOptionRow';
@@ -36,18 +36,18 @@ export default function ModifierGroupEditor({ group, busy, error, onSaveGroup, o
   };
 
   return (
-    <main className="min-w-0 flex-1 overflow-y-auto bg-[#FAF7F2] px-4 py-6 sm:px-8">
+    <main className="min-w-0 flex-1 overflow-y-auto bg-[#FAF7F2] p-4 sm:px-8 sm:py-6">
       <div className="mx-auto max-w-2xl">
-        <section className="rounded-2xl border border-[#E8DFD5] bg-white shadow-sm">
-          <header className="border-b border-[#E8DFD5] px-6 py-4">
-            <h2 className="text-base font-medium text-[#2D241E]">{group ? 'รายละเอียดกลุ่มตัวเลือก' : 'สร้างกลุ่มตัวเลือกใหม่'}</h2>
-            <p className="mt-0.5 text-sm text-stone-500">
+        <section className="rounded-2xl border border-[#E8DFD5] bg-white shadow-xs">
+          <header className="border-b border-[#E8DFD5] px-4 py-3.5 sm:px-6 sm:py-4">
+            <h2 className="text-base font-semibold sm:font-medium text-[#2D241E]">{group ? 'รายละเอียดกลุ่มตัวเลือก' : 'สร้างกลุ่มตัวเลือกใหม่'}</h2>
+            <p className="mt-0.5 text-xs sm:text-sm text-stone-500">
               {group ? 'แก้ไขชื่อ ประเภทการเลือก และตัวเลือกภายในกลุ่ม' : 'ตั้งชื่อกลุ่มและประเภทการเลือกสำหรับเมนู'}
             </p>
           </header>
-          <div className="space-y-5 px-6 py-5">
+          <div className="space-y-4 px-4 py-4 sm:space-y-5 sm:px-6 sm:py-5">
             <div>
-              <label className="mb-1.5 block text-sm font-medium text-[#2D241E]">
+              <label className="mb-1.5 block text-xs sm:text-sm font-medium text-[#2D241E]">
                 ชื่อกลุ่ม <span className="text-red-500">*</span>
               </label>
               <input
@@ -61,7 +61,7 @@ export default function ModifierGroupEditor({ group, busy, error, onSaveGroup, o
             </div>
 
             <div>
-              <p className="mb-2 block text-sm font-medium text-[#2D241E]">ประเภทการเลือก</p>
+              <p className="mb-2 block text-xs sm:text-sm font-medium text-[#2D241E]">ประเภทการเลือก</p>
               <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
                 {([
                   ['single', 'เลือกได้ 1 ตัวเลือก'],
@@ -72,9 +72,9 @@ export default function ModifierGroupEditor({ group, busy, error, onSaveGroup, o
                     type="button"
                     disabled={isDisabled}
                     onClick={() => setDraft((current) => ({ ...current, selection_type: type as SelectionType }))}
-                    className={`rounded-xl border px-4 py-2.5 text-sm transition-colors ${
+                    className={`rounded-xl border px-4 py-2 sm:py-2.5 text-sm transition-colors cursor-pointer ${
                       draft.selection_type === type
-                        ? 'border-[#8C6D58] bg-[#f6f1ec] text-[#2D241E]'
+                        ? 'border-[#8C6D58] bg-[#f6f1ec] text-[#2D241E] font-medium'
                         : 'border-[#E8DFD5] bg-white text-stone-600 hover:bg-[#FBF9F6]'
                     } disabled:cursor-not-allowed disabled:opacity-50`}
                   >
@@ -84,23 +84,23 @@ export default function ModifierGroupEditor({ group, busy, error, onSaveGroup, o
               </div>
             </div>
 
-            <label className="flex items-center gap-2.5 text-sm text-[#2D241E]">
+            <label className="flex items-center gap-2.5 text-sm text-[#2D241E] cursor-pointer">
               <input
                 type="checkbox"
                 checked={draft.is_required}
                 disabled={isDisabled}
                 onChange={(event) => setDraft((current) => ({ ...current, is_required: event.target.checked }))}
-                className="h-4 w-4 rounded border-[#d9c6b0] text-[#8C6D58] focus:ring-[#8C6D58]/20"
+                className="h-4 w-4 rounded border-[#d9c6b0] text-[#8C6D58] focus:ring-[#8C6D58]/20 cursor-pointer"
               />
-              บังคับให้ลูกค้าเลือก
+              <span>บังคับให้ลูกค้าเลือก</span>
             </label>
 
-            <div className="flex flex-col gap-2 sm:flex-row sm:justify-end">
+            <div className="flex flex-col gap-2 sm:flex-row sm:justify-end pt-1">
               <button
                 type="button"
                 disabled={isDisabled || !draft.name.trim()}
                 onClick={() => void onSaveGroup({ ...draft, name: draft.name.trim() })}
-                className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#8C6D58] px-5 py-2 text-sm font-medium text-white transition-colors hover:bg-[#7a5c45] disabled:cursor-not-allowed disabled:opacity-50"
+                className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#8C6D58] px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-[#7a5c45] active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer shadow-xs"
               >
                 {busy ? 'กำลังบันทึก...' : group ? 'บันทึกกลุ่ม' : 'สร้างกลุ่ม'}
               </button>
@@ -110,13 +110,13 @@ export default function ModifierGroupEditor({ group, busy, error, onSaveGroup, o
         </section>
 
         {group && (
-          <section className="mt-6 rounded-2xl border border-[#E8DFD5] bg-white shadow-sm">
-            <header className="border-b border-[#E8DFD5] px-6 py-4">
-              <h2 className="text-base font-medium text-[#2D241E]">ตัวเลือกภายในกลุ่ม</h2>
-              <p className="mt-0.5 text-sm text-stone-500">เพิ่ม แก้ไข หรือลบตัวเลือกเสริมของกลุ่มนี้</p>
+          <section className="mt-5 sm:mt-6 rounded-2xl border border-[#E8DFD5] bg-white shadow-xs">
+            <header className="border-b border-[#E8DFD5] px-4 py-3.5 sm:px-6 sm:py-4">
+              <h2 className="text-base font-semibold sm:font-medium text-[#2D241E]">ตัวเลือกภายในกลุ่ม</h2>
+              <p className="mt-0.5 text-xs sm:text-sm text-stone-500">เพิ่ม แก้ไข หรือลบตัวเลือกเสริมของกลุ่มนี้</p>
             </header>
-            <div className="px-6 py-5">
-              <div className="mb-3 grid grid-cols-[minmax(0,1fr)_5rem_2.25rem] items-center gap-3 px-1 text-xs text-stone-500">
+            <div className="px-4 py-4 sm:px-6 sm:py-5">
+              <div className="mb-3 grid grid-cols-[minmax(0,1fr)_5rem_2.25rem] items-center gap-2 sm:gap-3 px-1 text-xs text-stone-500">
                 <span>ชื่อตัวเลือก</span>
                 <span className="text-right">ราคา (+)</span>
                 <span />
@@ -143,7 +143,7 @@ export default function ModifierGroupEditor({ group, busy, error, onSaveGroup, o
                 )}
               </div>
               {group.is_active && (
-                <div className="mt-4 grid grid-cols-1 gap-2 rounded-xl border border-[#E8DFD5] bg-[#FBF9F6] p-3 sm:grid-cols-[minmax(0,1fr)_5rem_auto]">
+                <div className="mt-4 grid grid-cols-1 sm:grid-cols-[minmax(0,1fr)_5rem_auto] gap-2 rounded-xl border border-[#E8DFD5] bg-[#FBF9F6] p-3">
                   <input
                     value={optionName}
                     disabled={busy}
@@ -152,23 +152,25 @@ export default function ModifierGroupEditor({ group, busy, error, onSaveGroup, o
                     placeholder="ชื่อตัวเลือก เช่น นมข้น, ไข่มุก"
                     className="min-w-0 rounded-xl border border-[#d9c6b0] bg-white px-3 py-2 text-sm outline-none transition-colors focus:border-[#8C6D58] focus:ring-2 focus:ring-[#8C6D58]/10 disabled:bg-[#f6f3ef]"
                   />
-                  <input
-                    value={optionPrice}
-                    disabled={busy}
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    onChange={(event) => setOptionPrice(event.target.value)}
-                    className="w-full rounded-xl border border-[#d9c6b0] bg-white px-2 py-2 text-right text-sm outline-none transition-colors focus:border-[#8C6D58] focus:ring-2 focus:ring-[#8C6D58]/10 disabled:bg-[#f6f3ef]"
-                  />
-                  <button
-                    type="button"
-                    disabled={busy || !optionName.trim() || Number(optionPrice) < 0}
-                    onClick={() => void submitOption()}
-                    className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-[#8C6D58] px-3 py-2 text-sm text-[#8C6D58] transition-colors hover:bg-[#f6f1ec] disabled:cursor-not-allowed disabled:opacity-50"
-                  >
-                    <Plus size={16} /> เพิ่มตัวเลือก
-                  </button>
+                  <div className="grid grid-cols-[minmax(0,1fr)_auto] sm:contents gap-2">
+                    <input
+                      value={optionPrice}
+                      disabled={busy}
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      onChange={(event) => setOptionPrice(event.target.value)}
+                      className="w-full rounded-xl border border-[#d9c6b0] bg-white px-2 py-2 text-right text-sm outline-none transition-colors focus:border-[#8C6D58] focus:ring-2 focus:ring-[#8C6D58]/10 disabled:bg-[#f6f3ef]"
+                    />
+                    <button
+                      type="button"
+                      disabled={busy || !optionName.trim() || Number(optionPrice) < 0}
+                      onClick={() => void submitOption()}
+                      className="inline-flex items-center justify-center gap-1.5 rounded-xl border border-[#8C6D58] px-3.5 py-2 text-sm font-medium text-[#8C6D58] hover:bg-[#8C6D58] hover:text-white transition-colors disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer"
+                    >
+                      <Plus size={16} /> <span>เพิ่มตัวเลือก</span>
+                    </button>
+                  </div>
                 </div>
               )}
             </div>

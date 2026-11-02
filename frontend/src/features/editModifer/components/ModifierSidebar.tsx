@@ -1,4 +1,4 @@
-﻿import { EyeOff, Plus } from 'lucide-react';
+import { EyeOff, Plus } from 'lucide-react';
 import type { ModifierGroup } from '../types/modifier.types';
 
 interface Props {
@@ -8,11 +8,24 @@ interface Props {
   onCreate: () => void;
   onToggleActive: (group: ModifierGroup) => void;
   isLoading?: boolean;
+  isMobileDrawer?: boolean;
 }
 
-export default function ModifierSidebar({ groups, selectedId, onSelect, onCreate, onToggleActive, isLoading = false }: Props) {
+export default function ModifierSidebar({
+  groups,
+  selectedId,
+  onSelect,
+  onCreate,
+  onToggleActive,
+  isLoading = false,
+  isMobileDrawer = false,
+}: Props) {
+  const asideClass = isMobileDrawer
+    ? "flex h-full w-full flex-col bg-[#FBF9F6]"
+    : "hidden md:flex h-full w-72 shrink-0 flex-col border-r border-[#E8DFD5] bg-[#FBF9F6]";
+
   return (
-    <aside className="flex h-full w-72 shrink-0 flex-col border-r border-[#E8DFD5] bg-[#FBF9F6]">
+    <aside className={asideClass}>
       <div className="border-b border-[#E8DFD5] px-4 py-4">
         <div className="flex items-center justify-between">
           <div>

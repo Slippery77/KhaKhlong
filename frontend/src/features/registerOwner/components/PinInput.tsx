@@ -51,7 +51,7 @@ export function PinInput({ id, value, onChange, length = 6, hasError = false, di
     };
 
     return (
-        <div className="flex gap-2" role="group" aria-label="PIN 6 หลัก">
+        <div className="flex gap-1.5 sm:gap-2" role="group" aria-label="PIN 6 หลัก">
             {digits.map((d, i) => (
                 <input
                     key={i}
@@ -68,7 +68,7 @@ export function PinInput({ id, value, onChange, length = 6, hasError = false, di
                     onKeyDown={(e) => handleKeyDown(i, e)}
                     onPaste={handlePaste}
                     onFocus={(e) => e.target.select()}
-                    className={`h-12 w-12 rounded-xl border text-center text-lg font-medium text-[#2D241E] transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-[#8C6D58]/20 focus:border-[#8C6D58] disabled:opacity-50 ${
+                    className={`h-10 w-10 sm:h-12 sm:w-12 rounded-xl border text-center text-base sm:text-lg font-medium text-[#2D241E] transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-[#8C6D58]/20 focus:border-[#8C6D58] disabled:opacity-50 ${
                         hasError ? "border-red-400" : "border-[#d9c6b0]"
                     }`}
                 />

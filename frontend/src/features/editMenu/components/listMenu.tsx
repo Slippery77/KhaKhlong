@@ -81,7 +81,134 @@ export default function ListMenuEdit({
 
     return (
         <div className="overflow-hidden rounded-2xl border border-[#e5d9c8] bg-white shadow-xs">
-            <table className="w-full text-sm">
+            {/* ── Mobile View: การ์ดรายการเมนู สะอาด อ่านง่าย ไม่โดนบีบ ── */}
+            <div className="md:hidden divide-y divide-[#efe6da]">
+                {filterMenu.length === 0 ? (
+                    <div className="p-8 text-center text-sm text-stone-400">
+                        ไม่พบรายการเมนูในเงื่อนไขที่เลือก
+                    </div>
+                ) : (
+                    filterMenu.map((m) => (
+                        <div
+                            key={m.menu_item_id}
+                            className={`p-3.5 transition-colors ${
+                                m.is_active ? 'bg-white' : 'bg-[#f5f0e8]/80 opacity-80'
+                            }`}
+                        >
+                            {/* ส่วนบน: รูป Thumbnail + ชื่อ + ราคา + คำอธิบาย */}
+                            <div className="flex items-start gap-3">
+                                <MenuThumbnail item={m} onClick={() => onEdit(m)} />
+                                <div className="min-w-0 flex-1">
+                                    <div className="flex items-start justify-between gap-2">
+                                        <h3 className="font-semibold text-sm text-[#2D241E] line-clamp-1">
+                                            {m.name}
+                                        </h3>
+                                        <span className="font-bold text-sm text-[#8C6D58] shrink-0 tabular-nums">
+                                            ฿{m.price.toLocaleString()}
+                                        </span>
+                                    </div>
+                                    {m.description ? (
+                                        <p className="mt-0.5 line-clamp-1 text-xs text-stone-500">
+                                            {m.description}
+                                        </p>
+                                    ) : (
+                                        <p className="mt-0.5 text-[11px] text-stone-400">ไม่มีคำอธิบาย</p>
+                                    )}
+                                    {!m.is_active && (
+                                        <span className="mt-1 inline-block rounded-full bg-[#e5d9c8] px-2 py-0.5 text-[10px] font-medium text-[#7a5c45]">
+                                            เลิกขาย
+                                        </span>
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* ส่วนล่าง: ปุ่มผูกตัวเลือก + สวิตช์สถานะ + ปุ่มจัดการ */}
+                            <div className="mt-3 pt-2.5 border-t border-[#efe6da] flex flex-wrap items-center justify-between gap-2">
+                                {/* ปุ่มตัวเลือกเสริม */}
+                                <button
+                                    type="button"
+                                    onClick={() => onLinkModifiers(m)}
+                                    className={`inline-flex items-center gap-1.5 rounded-xl border px-2.5 py-1.5 text-xs font-medium transition-all ${
+                                        m.modifier_group_ids.length > 0
+                                            ? 'border-[#d9c6b0] bg-[#FAF7F2] text-[#7a5c45] hover:bg-[#EFE8DC]'
+                                            : 'border-dashed border-stone-300 text-stone-500 hover:border-[#8C6D58]'
+                                    }`}
+                                >
+                                    <SlidersHorizontal size={12} aria-hidden="true" />
+                                    <span>
+                                        {m.modifier_group_ids.length > 0
+                                            ? `ตัวเลือก (${m.modifier_group_ids.length})`
+                                            : 'ผูกตัวเลือก'}
+                                    </span>
+                                </button>
+
+                                {/* สถานะและปุ่มแก้ไข */}
+                                <div className="flex items-center gap-2.5">
+                                    {m.is_active ? (
+                                        <>
+                                            <label className="inline-flex cursor-pointer items-center gap-1.5">
+                                                <button
+                                                    type="button"
+                                                    role="switch"
+                                                    aria-checked={m.is_available}
+                                                    aria-label={`สลับสถานะพร้อมขายของ ${m.name}`}
+                                                    onClick={() => onToggleAvailable(m)}
+                                                    className={`relative h-6 w-11 cursor-pointer rounded-full transition-all duration-200 ${
+                                                        m.is_available ? 'bg-[#5f7a52]' : 'bg-[#8a7a6c]'
+                                                    }`}
+                                                >
+                                                    <span
+                                                        className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow-xs transition-all duration-200 ${
+                                                            m.is_available ? 'left-5.5' : 'left-0.5'
+                                                        }`}
+                                                    />
+                                                </button>
+                                                <span
+                                                    className={`text-xs font-medium ${
+                                                        m.is_available ? 'text-[#3F6B35]' : 'text-amber-700'
+                                                    }`}
+                                                >
+                                                    {m.is_available ? 'พร้อมขาย' : 'หมดวันนี้'}
+                                                </span>
+                                            </label>
+
+                                            <div className="flex items-center gap-1 pl-1.5 border-l border-stone-200">
+                                                <button
+                                                    type="button"
+                                                    title="แก้ไขเมนู"
+                                                    onClick={() => onEdit(m)}
+                                                    className="flex h-8 w-8 items-center justify-center rounded-lg border border-[#d9c6b0] text-[#2D241E] hover:border-[#8C6D58] hover:text-[#8C6D58] transition active:scale-95 cursor-pointer"
+                                                >
+                                                    <Pencil size={13} />
+                                                </button>
+                                                <button
+                                                    type="button"
+                                                    title="เลิกขาย"
+                                                    onClick={() => onDisable(m)}
+                                                    className="flex h-8 w-8 items-center justify-center rounded-lg border border-[#d9c6b0] text-[#2D241E] hover:border-red-300 hover:text-red-600 transition active:scale-95 cursor-pointer"
+                                                >
+                                                    <EyeOff size={13} />
+                                                </button>
+                                            </div>
+                                        </>
+                                    ) : (
+                                        <button
+                                            type="button"
+                                            onClick={() => onEnable(m)}
+                                            className="cursor-pointer rounded-xl border border-[#b08968]/70 bg-white px-3 py-1.5 text-xs font-medium text-[#2D241E] transition hover:bg-[#FAF7F2] active:scale-95"
+                                        >
+                                            เปิดขายอีกครั้ง
+                                        </button>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+                    ))
+                )}
+            </div>
+
+            {/* ── Desktop View: ตารางเต็ม 5 คอลัมน์แบบเดิม 100% ── */}
+            <table className="hidden md:table w-full text-sm">
                 <thead className="bg-[#f7f3ee] text-xs text-stone-500">
                     <tr>
                         <th className="px-5 py-3 text-left font-medium">เมนูอาหาร</th>

@@ -10,6 +10,8 @@ import {
   Sliders,
   Store,
   Sparkles,
+  Eye,
+  X,
 } from 'lucide-react';
 import { useAuth } from '../../auth/context/AuthContext';
 import { usePrinterSettings } from '../hooks/usePrinterSettings';
@@ -31,9 +33,21 @@ export default function PrinterSettingPage() {
     error,
   } = usePrinterSettings();
 
+
   // Local form state for instant preview & editing before save
   const [form, setForm] = useState(settings);
   const [isTestPrinting, setIsTestPrinting] = useState(false);
+  const [showPreviewModal, setShowPreviewModal] = useState(false);
+
+  // Close preview modal on ESC key
+  useEffect(() => {
+    if (!showPreviewModal) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setShowPreviewModal(false);
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [showPreviewModal]);
   const isInitialSyncDone = useRef(false);
 
   // Sync initial settings into form only when initial API load finishes
@@ -125,11 +139,12 @@ export default function PrinterSettingPage() {
           </div>
 
           <div className="flex items-center gap-3">
+            {/* Desktop test print: คงเดิม 100% */}
             <button
               type="button"
               onClick={handleTestPrint}
               disabled={isTestPrinting || isLoading}
-              className="inline-flex items-center gap-2 rounded-xl border border-[#d9c6b0] bg-white px-4 py-2.5 text-sm font-semibold text-[#8C6D58] shadow-xs transition-colors duration-200 hover:bg-[#F3EDE4] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#8C6D58]/40 disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer"
+              className="hidden sm:inline-flex items-center gap-2 rounded-xl border border-[#d9c6b0] bg-white px-4 py-2.5 text-sm font-semibold text-[#8C6D58] shadow-xs transition-colors duration-200 hover:bg-[#F3EDE4] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#8C6D58]/40 disabled:cursor-not-allowed disabled:opacity-50 cursor-pointer"
             >
               {isTestPrinting ? (
                 <Loader2 className="h-4 w-4 animate-spin motion-reduce:animate-none" />
@@ -137,6 +152,16 @@ export default function PrinterSettingPage() {
                 <Printer className="h-4 w-4" />
               )}
               พิมพ์ทดสอบ
+            </button>
+
+            {/* Mobile: ปุ่มตัวอย่างใบเสร็จ */}
+            <button
+              type="button"
+              onClick={() => setShowPreviewModal(true)}
+              className="inline-flex sm:hidden items-center gap-1.5 rounded-xl border border-[#8C6D58] bg-white px-3.5 py-2 text-xs font-semibold text-[#8C6D58] shadow-2xs hover:bg-[#FAF7F2] active:scale-95 transition cursor-pointer"
+            >
+              <Eye className="h-4 w-4" />
+              <span>ตัวอย่างใบเสร็จ</span>
             </button>
           </div>
         </div>
@@ -427,6 +452,15 @@ export default function PrinterSettingPage() {
 
             {/* Submit Button */}
             <div className="pt-2">
+              {/* Mobile only: ปุ่มดูตัวอย่างใบเสร็จก่อนบันทึก */}
+              <button
+                type="button"
+                onClick={() => setShowPreviewModal(true)}
+                className="w-full sm:hidden mb-3 flex items-center justify-center gap-2 rounded-xl border border-[#8C6D58] bg-white py-2.5 text-sm font-semibold text-[#8C6D58] shadow-2xs hover:bg-[#FAF7F2] active:scale-95 transition cursor-pointer"
+              >
+                <Eye className="h-4 w-4" />
+                <span>ดูตัวอย่างใบเสร็จ</span>
+              </button>
               <button
                 type="submit"
                 disabled={isSaving || isLoading || isFooterOverLimit}
@@ -443,7 +477,7 @@ export default function PrinterSettingPage() {
           </form>
 
           {/* Live Preview Column */}
-          <aside className="lg:col-span-5">
+          <aside className="hidden lg:block lg:col-span-5">
             <div className="sticky top-6 rounded-2xl border border-[#E8DFD5] bg-[#F6F1EA] p-5 shadow-xs">
               <div className="mb-4 flex items-center justify-between">
                 <div className="flex items-center gap-2">
@@ -479,7 +513,81 @@ export default function PrinterSettingPage() {
             </div>
           </aside>
         </div>
-          {/* Hidden test print portal */}
+                {/* Mobile Preview Modal */}
+      {showPreviewModal && (
+        <div
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="preview-modal-title"
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-xs animate-in fade-in duration-200"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setShowPreviewModal(false);
+          }}
+        >
+          <div className="relative flex max-h-[90vh] w-full max-w-sm flex-col rounded-2xl border border-[#E8DFD5] bg-[#FAF7F2] shadow-2xl overflow-hidden font-kanit">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between border-b border-[#E8DFD5] bg-white px-4 py-3">
+              <div className="flex items-center gap-2">
+                <Sparkles className="h-4 w-4 text-[#8C6D58]" />
+                <h3 id="preview-modal-title" className="text-sm font-semibold text-[#2D241E]">
+                  ตัวอย่างใบเสร็จ (Live Preview)
+                </h3>
+                <span className="rounded-full border border-[#d9c6b0] bg-[#FAF7F2] px-2 py-0.5 text-[10px] font-semibold text-[#8C6D58]">
+                  {form.paperSize === '58mm' ? '58 มม.' : '80 มม.'}
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowPreviewModal(false)}
+                className="rounded-lg p-1 text-stone-400 hover:bg-stone-100 hover:text-stone-700 transition cursor-pointer"
+                aria-label="ปิดหน้าต่างตัวอย่าง"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            {/* Modal Content - Thermal Paper Simulation */}
+            <div className="flex-1 overflow-y-auto bg-[#F6F1EA] p-4 flex justify-center">
+              <div className="rounded-sm bg-white shadow-[0_10px_25px_-5px_rgba(45,36,30,0.18)] ring-1 ring-black/5">
+                <ReceiptPaper
+                  receipt={mockReceipt}
+                  paperSize={form.paperSize}
+                  customFooter={form.receiptFooter}
+                  showTaxId={form.showTaxId}
+                  showCashier={form.showCashier}
+                  showAddress={form.showAddress}
+                />
+              </div>
+            </div>
+
+            {/* Modal Footer - ปุ่มพิมพ์ทดสอบ + ปุ่มปิด */}
+            <div className="flex items-center gap-2.5 border-t border-[#E8DFD5] bg-white px-4 py-3">
+              <button
+                type="button"
+                onClick={handleTestPrint}
+                disabled={isTestPrinting}
+                className="flex-1 inline-flex items-center justify-center gap-2 rounded-xl bg-[#8C6D58] py-2.5 text-sm font-semibold text-white shadow-xs hover:bg-[#7a5c45] active:scale-95 transition disabled:opacity-50 cursor-pointer"
+              >
+                {isTestPrinting ? (
+                  <Loader2 className="h-4 w-4 animate-spin motion-reduce:animate-none" />
+                ) : (
+                  <Printer className="h-4 w-4" />
+                )}
+                <span>พิมพ์ทดสอบ</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setShowPreviewModal(false)}
+                className="rounded-xl border border-[#d9c6b0] bg-white px-4 py-2.5 text-sm font-medium text-stone-700 hover:bg-[#FAF7F2] active:scale-95 transition cursor-pointer"
+              >
+                ปิด
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Hidden test print portal */}
         {testPrintArea}
       </main>
   );

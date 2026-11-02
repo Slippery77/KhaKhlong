@@ -136,7 +136,7 @@ export default function MenuFormPopup({
 
     return (
         <div
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4 py-6 backdrop-blur-[1px]"
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-3 sm:p-6 backdrop-blur-[1px]"
             onClick={(e) => {
                 if (e.target === e.currentTarget && !isSubmitting) onClose();
             }}
@@ -145,14 +145,14 @@ export default function MenuFormPopup({
                 role="dialog"
                 aria-modal="true"
                 aria-labelledby="menu-form-title"
-                className="max-h-[92vh] w-full max-w-lg overflow-y-auto rounded-2xl bg-white p-6 shadow-xl ring-1 ring-black/5 font-kanit"
+                className="max-h-[92vh] w-full max-w-lg overflow-y-auto rounded-2xl bg-white p-4 sm:p-6 shadow-xl ring-1 ring-black/5 font-kanit"
             >
-                <div className="mb-5 flex items-center justify-between">
+                <div className="mb-3.5 sm:mb-5 flex items-center justify-between">
                     <div>
-                        <h2 id="menu-form-title" className="text-lg font-semibold text-[#2D241E]">
+                        <h2 id="menu-form-title" className="text-base sm:text-lg font-semibold text-[#2D241E]">
                             {isEdit ? 'แก้ไขเมนูอาหาร' : 'เพิ่มเมนูอาหารใหม่'}
                         </h2>
-                        <p className="text-xs text-[#8A7A6B]">
+                        <p className="text-xs text-[#8A7A6B] hidden sm:block">
                             กำหนดรูปภาพ ชื่อเมนู ราคา และรายละเอียดสำหรับแสดงหน้าร้าน
                         </p>
                     </div>
@@ -167,10 +167,10 @@ export default function MenuFormPopup({
                     </button>
                 </div>
 
-                <form onSubmit={handleSubmit} className="flex flex-col gap-4">
+                <form onSubmit={handleSubmit} className="flex flex-col gap-3 sm:gap-4">
                     {/* ── ส่วนจัดการรูปภาพเมนูอาหาร ─────────────────────────── */}
-                    <div className="rounded-2xl border border-[#E8DFD5] bg-[#FAF7F2] p-3.5">
-                        <div className="mb-2.5 flex items-center justify-between">
+                    <div className="rounded-2xl border border-[#E8DFD5] bg-[#FAF7F2] p-2.5 sm:p-3.5">
+                        <div className="mb-2 flex items-center justify-between">
                             <span className="text-xs font-medium text-[#4A4038]">
                                 รูปเมนูอาหาร (ไม่บังคับ)
                             </span>
@@ -178,33 +178,34 @@ export default function MenuFormPopup({
                                 <button
                                     type="button"
                                     onClick={() => setImageMode('upload')}
-                                    className={`flex cursor-pointer items-center gap-1 rounded-md px-2.5 py-1 font-medium transition-colors ${
+                                    className={`flex cursor-pointer items-center gap-1 rounded-md px-2 py-0.5 sm:px-2.5 sm:py-1 text-xs font-medium transition-colors ${
                                         imageMode === 'upload'
                                             ? 'bg-[#8C6D58] text-white'
                                             : 'text-[#6B5A49] hover:text-[#2D241E]'
                                     }`}
                                 >
                                     <Upload size={12} aria-hidden="true" />
-                                    อัปโหลดไฟล์
+                                    <span>อัปโหลด</span>
                                 </button>
                                 <button
                                     type="button"
                                     onClick={() => setImageMode('url')}
-                                    className={`flex cursor-pointer items-center gap-1 rounded-md px-2.5 py-1 font-medium transition-colors ${
+                                    className={`flex cursor-pointer items-center gap-1 rounded-md px-2 py-0.5 sm:px-2.5 sm:py-1 text-xs font-medium transition-colors ${
                                         imageMode === 'url'
                                             ? 'bg-[#8C6D58] text-white'
                                             : 'text-[#6B5A49] hover:text-[#2D241E]'
                                     }`}
                                 >
                                     <Link2 size={12} aria-hidden="true" />
-                                    วางลิงก์ URL
+                                    <span>ลิงก์ URL</span>
                                 </button>
                             </div>
                         </div>
 
-                        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-                            {/* กรอบพรีวิว 4:3 */}
-                            <div className="relative aspect-4/3 w-full shrink-0 overflow-hidden rounded-xl border border-[#d9c6b0] bg-linear-to-br from-[#F3ECE1] to-[#E6DBC9] sm:w-36">
+                        {/* กรอบพรีวิว + พื้นที่เลือกรูปภาพ จัดเรียงเคียงข้างทั้งบนมือถือและเดสก์ท็อป */}
+                        <div className="flex flex-row items-center gap-2.5 sm:gap-3">
+                            {/* กรอบพรีวิว: บนมือถือเป็นขนาดพอเหมาะ 80x80px บนคอมเป็น w-36 aspect-4/3 เหมือนเดิม */}
+                            <div className="relative h-20 w-20 sm:h-auto sm:aspect-4/3 sm:w-36 shrink-0 overflow-hidden rounded-xl border border-[#d9c6b0] bg-linear-to-br from-[#F3ECE1] to-[#E6DBC9]">
                                 {hasPreview ? (
                                     <img
                                         src={imageUrl}
@@ -214,8 +215,8 @@ export default function MenuFormPopup({
                                     />
                                 ) : (
                                     <div className="flex h-full w-full flex-col items-center justify-center gap-1 text-[#9C8671]">
-                                        <Utensils className="h-6 w-6" aria-hidden="true" />
-                                        <span className="text-[11px]">
+                                        <Utensils className="h-5 w-5 sm:h-6 sm:w-6" aria-hidden="true" />
+                                        <span className="text-[10px] sm:text-[11px]">
                                             {previewBroken ? 'โหลดรูปไม่สำเร็จ' : 'ยังไม่มีรูป'}
                                         </span>
                                     </div>
@@ -231,9 +232,9 @@ export default function MenuFormPopup({
                                         }}
                                         title="ลบรูปภาพ"
                                         aria-label="ลบรูปภาพ"
-                                        className="absolute top-1.5 right-1.5 flex h-7 w-7 cursor-pointer items-center justify-center rounded-lg bg-[#2D241E]/75 text-white transition-colors hover:bg-red-600"
+                                        className="absolute top-1 right-1 sm:top-1.5 sm:right-1.5 flex h-6 w-6 sm:h-7 sm:w-7 cursor-pointer items-center justify-center rounded-lg bg-[#2D241E]/75 text-white transition-colors hover:bg-red-600"
                                     >
-                                        <Trash2 size={14} />
+                                        <Trash2 size={13} />
                                     </button>
                                 )}
                             </div>
@@ -249,7 +250,7 @@ export default function MenuFormPopup({
                                         onDragLeave={() => setIsDragging(false)}
                                         onDrop={handleDrop}
                                         onClick={() => fileInputRef.current?.click()}
-                                        className={`flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed px-3 py-4 text-center transition-colors ${
+                                        className={`flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed px-2 py-2 sm:px-3 sm:py-4 text-center transition-colors ${
                                             isDragging
                                                 ? 'border-[#8C6D58] bg-[#EFE8DC]'
                                                 : 'border-[#d9c6b0] bg-white hover:border-[#8C6D58] hover:bg-[#FAF7F2]/60'
@@ -263,18 +264,19 @@ export default function MenuFormPopup({
                                             onChange={(e) => handleFileSelect(e.target.files?.[0])}
                                         />
                                         <ImagePlus
-                                            className="mb-1.5 h-5 w-5 text-[#8C6D58]"
+                                            className="mb-1 h-4 w-4 sm:h-5 sm:w-5 text-[#8C6D58]"
                                             aria-hidden="true"
                                         />
                                         <p className="text-xs font-medium text-[#2D241E]">
-                                            คลิกเลือกไฟล์ หรือลากรูปมาวางที่นี่
+                                            <span className="sm:hidden">แตะเลือกรูป</span>
+                                            <span className="hidden sm:inline">คลิกเลือกไฟล์ หรือลากรูปมาวางที่นี่</span>
                                         </p>
-                                        <p className="mt-0.5 text-[11px] text-[#8A7A6B]">
-                                            JPG, PNG, WebP (ย่อขนาดอัตโนมัติ)
+                                        <p className="mt-0.5 text-[10px] sm:text-[11px] text-[#8A7A6B]">
+                                            JPG, PNG, WebP
                                         </p>
                                     </div>
                                 ) : (
-                                    <div className="space-y-1.5">
+                                    <div className="space-y-1">
                                         <label
                                             htmlFor="menu-image-url"
                                             className="block text-xs font-medium text-[#4A4038]"
@@ -291,15 +293,15 @@ export default function MenuFormPopup({
                                                 setImageUrl(e.target.value);
                                             }}
                                             placeholder="https://example.com/food.jpg"
-                                            className="w-full rounded-xl border border-[#d9c6b0] bg-white px-3 py-2 text-xs text-[#2D241E] outline-none transition-colors focus:border-[#8C6D58] focus:ring-2 focus:ring-[#8C6D58]/15"
+                                            className="w-full rounded-xl border border-[#d9c6b0] bg-white px-3 py-1.5 sm:py-2 text-xs text-[#2D241E] outline-none transition-colors focus:border-[#8C6D58] focus:ring-2 focus:ring-[#8C6D58]/15"
                                         />
-                                        <p className="text-[11px] text-[#8A7A6B]">
-                                            วางลิงก์รูปอาหารโดยตรง หรือสลับไปอัปโหลดจากเครื่อง
+                                        <p className="text-[10px] sm:text-[11px] text-[#8A7A6B]">
+                                            วางลิงก์รูปอาหารโดยตรง
                                         </p>
                                     </div>
                                 )}
                                 {imageError && (
-                                    <p role="alert" className="mt-1.5 text-xs text-red-600">
+                                    <p role="alert" className="mt-1 text-xs text-red-600">
                                         {imageError}
                                     </p>
                                 )}
@@ -307,8 +309,9 @@ export default function MenuFormPopup({
                         </div>
                     </div>
 
-                    <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-3">
-                        <label className="flex flex-col gap-1.5 text-sm text-stone-600 sm:col-span-2">
+                    {/* ชื่อเมนู และ ราคา จัดเรียงในแถวเดียวกัน (2:1) บนมือถือ และ 3 คอลัมน์บน Desktop */}
+                    <div className="grid grid-cols-3 gap-2.5 sm:gap-3.5">
+                        <label className="col-span-2 flex flex-col gap-1 text-xs sm:text-sm text-stone-600">
                             <span>
                                 ชื่อเมนู <span className="text-red-500">*</span>
                             </span>
@@ -318,13 +321,13 @@ export default function MenuFormPopup({
                                 onChange={(e) => setName(e.target.value)}
                                 maxLength={150}
                                 placeholder="เช่น ข้าวผัดหมู"
-                                className="rounded-xl border border-[#d9c6b0]/80 px-3 py-2.5 text-[#2D241E] shadow-xs outline-none transition-all duration-200 focus:border-[#8C6D58] focus:ring-2 focus:ring-[#8C6D58]/10 hover:border-[#c4b09a]"
+                                className="rounded-xl border border-[#d9c6b0]/80 px-3 py-2 sm:py-2.5 text-[#2D241E] text-sm shadow-xs outline-none transition-all duration-200 focus:border-[#8C6D58] focus:ring-2 focus:ring-[#8C6D58]/10 hover:border-[#c4b09a]"
                             />
                         </label>
 
-                        <label className="flex flex-col gap-1.5 text-sm text-stone-600">
+                        <label className="col-span-1 flex flex-col gap-1 text-xs sm:text-sm text-stone-600">
                             <span>
-                                ราคา (บาท) <span className="text-red-500">*</span>
+                                ราคา <span className="text-red-500">*</span>
                             </span>
                             <input
                                 type="number"
@@ -334,18 +337,18 @@ export default function MenuFormPopup({
                                 value={price}
                                 onChange={(e) => setPrice(e.target.value)}
                                 placeholder="0.00"
-                                className="rounded-xl border border-[#d9c6b0]/80 px-3 py-2.5 text-[#2D241E] shadow-xs outline-none transition-all duration-200 focus:border-[#8C6D58] focus:ring-2 focus:ring-[#8C6D58]/10 hover:border-[#c4b09a]"
+                                className="rounded-xl border border-[#d9c6b0]/80 px-3 py-2 sm:py-2.5 text-[#2D241E] text-sm shadow-xs outline-none transition-all duration-200 focus:border-[#8C6D58] focus:ring-2 focus:ring-[#8C6D58]/10 hover:border-[#c4b09a]"
                             />
                         </label>
                     </div>
 
                     {isEdit && categories.length > 0 && (
-                        <label className="flex flex-col gap-1.5 text-sm text-stone-600">
+                        <label className="flex flex-col gap-1 text-xs sm:text-sm text-stone-600">
                             หมวดหมู่เมนู
                             <select
                                 value={categoryId}
                                 onChange={(e) => setCategoryId(e.target.value)}
-                                className="cursor-pointer rounded-xl border border-[#d9c6b0]/80 bg-white px-3 py-2.5 text-[#2D241E] shadow-xs outline-none transition-all duration-200 focus:border-[#8C6D58] focus:ring-2 focus:ring-[#8C6D58]/10 hover:border-[#c4b09a]"
+                                className="cursor-pointer rounded-xl border border-[#d9c6b0]/80 bg-white px-3 py-2 sm:py-2.5 text-[#2D241E] text-sm shadow-xs outline-none transition-all duration-200 focus:border-[#8C6D58] focus:ring-2 focus:ring-[#8C6D58]/10 hover:border-[#c4b09a]"
                             >
                                 {categories.map((cat) => (
                                     <option key={cat.category_id} value={cat.category_id}>
@@ -356,7 +359,7 @@ export default function MenuFormPopup({
                         </label>
                     )}
 
-                    <label className="flex flex-col gap-1.5 text-sm text-stone-600">
+                    <label className="flex flex-col gap-1 text-xs sm:text-sm text-stone-600">
                         คำอธิบาย (ไม่บังคับ)
                         <textarea
                             value={description}
@@ -364,29 +367,29 @@ export default function MenuFormPopup({
                             maxLength={1000}
                             rows={2}
                             placeholder="เช่น เสิร์ฟพร้อมไข่ดาว แตงกวา พริกน้ำปลา"
-                            className="resize-none rounded-xl border border-[#d9c6b0]/80 px-3 py-2.5 text-[#2D241E] shadow-xs outline-none transition-all duration-200 focus:border-[#8C6D58] focus:ring-2 focus:ring-[#8C6D58]/10 hover:border-[#c4b09a]"
+                            className="resize-none rounded-xl border border-[#d9c6b0]/80 px-3 py-2 sm:py-2.5 text-[#2D241E] text-sm shadow-xs outline-none transition-all duration-200 focus:border-[#8C6D58] focus:ring-2 focus:ring-[#8C6D58]/10 hover:border-[#c4b09a]"
                         />
                     </label>
 
                     {error && (
-                        <p role="alert" className="rounded-xl bg-red-50 px-3.5 py-2.5 text-xs text-red-600">
+                        <p role="alert" className="rounded-xl bg-red-50 px-3.5 py-2 text-xs text-red-600">
                             {error}
                         </p>
                     )}
 
-                    <div className="mt-1 flex gap-2.5">
+                    <div className="mt-1 flex gap-2.5 pt-1 border-t border-stone-100 sm:border-0">
                         <button
                             type="button"
                             onClick={onClose}
                             disabled={isSubmitting}
-                            className="flex-1 cursor-pointer rounded-xl border border-[#d9c6b0] py-2.5 text-[#2D241E] transition-all duration-200 enabled:hover:bg-[#FAF7F2] enabled:active:scale-[0.98] disabled:opacity-50"
+                            className="flex-1 cursor-pointer rounded-xl border border-[#d9c6b0] py-2 sm:py-2.5 text-sm text-[#2D241E] transition-all duration-200 enabled:hover:bg-[#FAF7F2] enabled:active:scale-[0.98] disabled:opacity-50"
                         >
                             ยกเลิก
                         </button>
                         <button
                             type="submit"
                             disabled={!canSubmit}
-                            className="flex-1 cursor-pointer rounded-xl bg-[#8C6D58] py-2.5 font-semibold text-white shadow-xs transition-all duration-200 enabled:hover:bg-[#7a5c45] enabled:hover:shadow-md enabled:active:scale-[0.98] disabled:opacity-50"
+                            className="flex-1 cursor-pointer rounded-xl bg-[#8C6D58] py-2 sm:py-2.5 text-sm font-semibold text-white shadow-xs transition-all duration-200 enabled:hover:bg-[#7a5c45] enabled:hover:shadow-md enabled:active:scale-[0.98] disabled:opacity-50"
                         >
                             {isSubmitting ? 'กำลังบันทึก...' : 'บันทึกเมนู'}
                         </button>

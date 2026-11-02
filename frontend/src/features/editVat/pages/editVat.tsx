@@ -4,32 +4,39 @@ import { useAuth } from '../../auth/context/AuthContext';
 import { useState } from 'react';
 import type { ConfigValue } from '../types/vatEdit.types';
 import ExampleCard from '../components/ExampleCard';
-import { AlertCircle, RefreshCw } from 'lucide-react';
+import { AlertCircle, Percent, RefreshCw, Sparkles } from 'lucide-react';
 
 const vat_rate = 7;
 
 function RateCardSkeleton() {
     return (
-        <div className="w-80 rounded-2xl border border-[#E8DFD5] bg-white p-5 shadow-xs" aria-busy="true">
+        <div className="w-full rounded-2xl border border-[#E8DFD5] bg-white p-5 shadow-xs" aria-busy="true">
             <div className="flex items-center justify-between mb-4">
-                <div className="h-5 w-36 rounded-md bg-stone-200/70 animate-pulse" />
+                <div className="flex items-center gap-3">
+                    <div className="h-8 w-8 rounded-lg bg-stone-200/70 animate-pulse" />
+                    <div className="space-y-1.5">
+                        <div className="h-4 w-32 rounded-md bg-stone-200/70 animate-pulse" />
+                        <div className="h-3 w-40 rounded-md bg-stone-200/50 animate-pulse" />
+                    </div>
+                </div>
                 <div className="h-6 w-11 rounded-full bg-stone-200/70 animate-pulse" />
             </div>
-            <div className="h-4 w-44 rounded-md bg-stone-200/50 animate-pulse mb-6" />
-            <div className="h-10 w-full rounded-xl bg-stone-200/60 animate-pulse mb-3" />
-            <div className="h-4 w-28 rounded-md bg-stone-200/50 animate-pulse" />
+            <div className="h-10 w-28 rounded-xl bg-stone-200/60 animate-pulse mb-3" />
+            <div className="h-12 w-full rounded-xl bg-stone-200/40 animate-pulse" />
         </div>
     );
 }
 
 function ExampleCardSkeleton() {
     return (
-        <div className="max-w-xl rounded-2xl border border-[#E8DFD5] bg-white p-6 shadow-xs" aria-busy="true">
-            <div className="h-5 w-40 rounded-md bg-stone-200/70 animate-pulse mb-4" />
+        <div className="w-full rounded-2xl border border-[#E8DFD5] bg-white p-5 shadow-xs" aria-busy="true">
+            <div className="flex items-center gap-3 mb-4">
+                <div className="h-8 w-8 rounded-lg bg-stone-200/70 animate-pulse" />
+                <div className="h-4 w-36 rounded-md bg-stone-200/70 animate-pulse" />
+            </div>
             <div className="space-y-3">
-                <div className="h-4 w-full rounded-md bg-stone-200/50 animate-pulse" />
-                <div className="h-4 w-3/4 rounded-md bg-stone-200/50 animate-pulse" />
-                <div className="h-4 w-1/2 rounded-md bg-stone-200/50 animate-pulse" />
+                <div className="h-20 w-full rounded-xl bg-stone-200/50 animate-pulse" />
+                <div className="h-14 w-full rounded-xl bg-stone-200/40 animate-pulse" />
             </div>
         </div>
     );
@@ -69,8 +76,21 @@ export default function EditVat() {
     };
 
     return (
-        <main className="flex-1 overflow-y-auto bg-[#FAF7F2] p-6 font-kanit">
-            <h1 className="mb-4 text-2xl font-semibold text-[#2D241E]">ภาษีและค่าบริการ</h1>
+        <main className="flex-1 overflow-y-auto px-4 sm:px-6 py-4 sm:py-6 max-w-5xl mx-auto w-full font-kanit">
+            {/* Header */}
+            <div className="mb-5 sm:mb-6">
+                <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-[#EFE8DC] flex items-center justify-center text-[#8C6D58] shrink-0">
+                        <Percent className="w-5 h-5" />
+                    </div>
+                    <div>
+                        <h1 className="text-lg sm:text-xl font-semibold text-[#2D241E]">ภาษีและค่าบริการ</h1>
+                        <p className="text-xs sm:text-sm text-stone-500">
+                            กำหนดอัตราภาษีมูลค่าเพิ่ม (VAT) และค่าบริการ (Service Charge) สำหรับการคิดเงิน
+                        </p>
+                    </div>
+                </div>
+            </div>
 
             {/* เกิดข้อผิดพลาดตอนดึงข้อมูลครั้งแรก */}
             {error && !hasData && (
@@ -92,12 +112,12 @@ export default function EditVat() {
 
             {/* โหลดครั้งแรก: แสดง Skeleton คงขนาด ไม่ทำให้จอกระพริบ */}
             {isLoading && !hasData && (
-                <div className="space-y-6" role="status" aria-label="กำลังโหลดข้อมูลภาษีและค่าบริการ">
-                    <div className="flex flex-wrap items-start gap-6">
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start" role="status" aria-label="กำลังโหลดข้อมูลภาษีและค่าบริการ">
+                    <div className="lg:col-span-7 space-y-5">
                         <RateCardSkeleton />
                         <RateCardSkeleton />
                     </div>
-                    <div className="py-2">
+                    <div className="lg:col-span-5">
                         <ExampleCardSkeleton />
                     </div>
                 </div>
@@ -107,55 +127,89 @@ export default function EditVat() {
             {hasData && (
                 <>
                     {!canEdit && (
-                        <p className="mb-4 w-fit rounded-xl bg-amber-50 px-4 py-2 text-sm text-amber-800">
-                            เฉพาะเจ้าของร้านเท่านั้นที่แก้ไขหน้านี้ได้
-                        </p>
+                        <div className="mb-4 rounded-xl bg-amber-50 border border-amber-200/80 px-4 py-2.5 text-xs sm:text-sm text-amber-800 flex items-center gap-2">
+                            <AlertCircle className="w-4 h-4 text-amber-600 shrink-0" />
+                            <span>เฉพาะเจ้าของร้าน (Owner) เท่านั้นที่สามารถแก้ไขอัตราภาษีและค่าบริการได้</span>
+                        </div>
                     )}
 
-                    <div className="flex flex-wrap items-start gap-6">
-                        <div>
+                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+                        {/* ฝั่งซ้าย: การ์ดตั้งค่า VAT และ Service Charge */}
+                        <div className="lg:col-span-7 space-y-5">
                             <RateCard
                                 title="ภาษีมูลค่าเพิ่ม (VAT)"
-                                subtitle="ราคาเมนูรวม VAT แล้ว"
+                                subtitle="คำนวณแบบราคารวมภาษีแล้ว (VAT Inclusive)"
+                                icon={<Percent className="w-4 h-4" />}
                                 enabled={vatMode !== 'none'}
                                 rate={vatRate}
                                 min={vatRateItem?.min ?? 0}
                                 max={vatRateItem?.max ?? 100}
                                 disabled={disabled}
+                                presets={[
+                                    { label: '7% (มาตรฐาน)', value: 7 },
+                                    { label: '0% (ยกเว้น)', value: 0 },
+                                ]}
+                                infoNotice={
+                                    vatMode === 'inclusive' ? (
+                                        <span>
+                                            ราคาเมนูขายหน้าร้านจะไม่เปลี่ยนแปลง แต่ประมาณ{' '}
+                                            <strong>{((vatRate / (100 + vatRate)) * 100).toFixed(2)}%</strong> ของยอดขายจะถูกบันทึกเป็นภาษีที่ร้านต้องนำส่งสรรพากร
+                                        </span>
+                                    ) : vatMode === 'exclusive' ? (
+                                        <span className="text-amber-800">
+                                            ขณะนี้ระบบตั้งเป็นโหมดบวก VAT เพิ่มจากราคาเมนู หากกดปิดแล้วเปิดใหม่จะเปลี่ยนเป็นราคารวม VAT
+                                        </span>
+                                    ) : (
+                                        <span>ร้านไม่ได้เปิดคิดภาษีมูลค่าเพิ่ม (ยอดขายทั้งหมดจะไม่มีการคำนวณภาษี VAT)</span>
+                                    )
+                                }
                                 onToggle={next => save('vat_mode', next ? 'inclusive' : 'none')}
                                 onRateSave={value => save('vat_rate', value)}
                             />
-                            {vatMode === 'inclusive' && (
-                                <p className="mt-2 w-72 text-xs text-stone-500">
-                                    ราคาเมนูไม่เปลี่ยน แต่ประมาณ {(vatRate / (100 + vatRate) * 100).toFixed(2)}% ของยอดขายเป็นภาษีที่ร้านต้องนำส่ง
-                                </p>
-                            )}
-                            {vatMode === 'exclusive' && (
-                                <p className="mt-2 w-72 text-xs text-amber-700">
-                                    ร้านตั้งเป็นโหมดบวก VAT เพิ่มจากราคา ซึ่งหน้านี้ยังไม่รองรับ ถ้าปิดแล้วเปิดใหม่จะเปลี่ยนเป็นราคารวม VAT
-                                </p>
+
+                            <RateCard
+                                title="ค่าบริการ (Service Charge)"
+                                subtitle="คิดเปอร์เซ็นต์เพิ่มจากยอดรวมอาหารในบิล"
+                                icon={<Sparkles className="w-4 h-4" />}
+                                enabled={serviceRate > 0}
+                                rate={serviceRate}
+                                min={serviceItem?.min ?? 0}
+                                max={serviceItem?.max ?? 100}
+                                disabled={disabled}
+                                presets={[
+                                    { label: '0%', value: 0 },
+                                    { label: '5%', value: 5 },
+                                    { label: '10%', value: 10 },
+                                ]}
+                                infoNotice={
+                                    serviceRate > 0 ? (
+                                        <span>
+                                            ระบบจะนำอัตรา <strong>{serviceRate}%</strong> ไปคิดเพิ่มจากยอดอาหาร แล้วรวมเป็นยอดสุทธิที่ลูกค้าต้องชำระ
+                                        </span>
+                                    ) : (
+                                        <span>ไม่ได้คิดค่าบริการเพิ่มเติมจากลูกค้า</span>
+                                    )
+                                }
+                                onToggle={toggleService}
+                                onRateSave={value => save('service_charge_rate', value)}
+                            />
+
+                            {saveError && (
+                                <div className="p-3 bg-red-50 text-red-700 border border-red-200 rounded-xl text-xs sm:text-sm flex items-center gap-2">
+                                    <AlertCircle className="w-4 h-4 shrink-0 text-red-500" />
+                                    <span>{saveError}</span>
+                                </div>
                             )}
                         </div>
 
-                        <RateCard
-                            title="ค่าบริการ (Service Charge)"
-                            subtitle="คิดจากยอดอาหาร"
-                            enabled={serviceRate > 0}
-                            rate={serviceRate}
-                            min={serviceItem?.min ?? 0}
-                            max={serviceItem?.max ?? 100}
-                            disabled={disabled}
-                            onToggle={toggleService}
-                            onRateSave={value => save('service_charge_rate', value)}
-                        />
-                    </div>
-                    {saveError && <p className="mt-4 text-sm text-red-600">{saveError}</p>}
-                    <div className="py-5">
-                        <ExampleCard
-                            vatEnabled={vatMode === 'inclusive'}
-                            vatRate={vatRate}
-                            serviceRate={serviceRate}
-                        />
+                        {/* ฝั่งขวา: จำลองบิล / Live Preview Receipt (Sticky บน Desktop) */}
+                        <div className="lg:col-span-5 lg:sticky lg:top-4">
+                            <ExampleCard
+                                vatEnabled={vatMode === 'inclusive'}
+                                vatRate={vatRate}
+                                serviceRate={serviceRate}
+                            />
+                        </div>
                     </div>
                 </>
             )}

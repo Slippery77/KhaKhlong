@@ -96,7 +96,7 @@ export default function UsersPage() {
     };
 
     return (
-        <main className="flex-1 overflow-y-auto bg-[#FAF7F2] p-6 font-kanit">
+        <main className="flex-1 overflow-y-auto bg-[#FAF7F2] p-4 sm:p-6 font-kanit">
             <div className="mb-4 flex flex-wrap items-start justify-between gap-4">
                 <div>
                     <h1 className="text-2xl font-semibold text-[#2D241E]">บัญชีผู้ใช้</h1>
@@ -107,8 +107,8 @@ export default function UsersPage() {
                     </p>
                 </div>
 
-                <div className="flex items-center gap-3">
-                    <div className="relative">
+                <div className="flex items-center gap-2.5 sm:gap-3 w-full sm:w-auto">
+                    <div className="relative flex-1 sm:w-48 sm:flex-initial">
                         <Search
                             size={15}
                             className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-stone-400"
@@ -117,7 +117,7 @@ export default function UsersPage() {
                             value={search}
                             onChange={e => setSearch(e.target.value)}
                             placeholder="ค้นหาชื่อผู้ใช้"
-                            className="w-48 rounded-xl border border-[#d9c6b0] bg-white py-2 pl-9 pr-3 text-sm outline-none focus:border-[#8C6D58]"
+                            className="w-full rounded-xl border border-[#d9c6b0] bg-white py-2 pl-9 pr-3 text-sm outline-none focus:border-[#8C6D58]"
                         />
                     </div>
 
@@ -125,7 +125,7 @@ export default function UsersPage() {
                         type="button"
                         disabled={isInitialLoading}
                         onClick={openCreateForm}
-                        className="flex cursor-pointer items-center gap-1 rounded-xl bg-[#8C6D58] px-4 py-2 font-semibold text-white transition hover:bg-[#7a5c45] active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="flex cursor-pointer items-center justify-center gap-1 rounded-xl bg-[#8C6D58] px-3.5 sm:px-4 py-2 text-xs sm:text-sm font-semibold text-white transition hover:bg-[#7a5c45] active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed shrink-0"
                     >
                         <Plus size={18} />
                         เพิ่มบัญชีผู้ใช้

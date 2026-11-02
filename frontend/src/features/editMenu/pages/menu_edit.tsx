@@ -11,9 +11,10 @@ import {
 } from '../hooks/useAdminMenu';
 import type { Category, MenuItem } from '../types/menu.types';
 import { useState } from 'react';
-import { AlertCircle, Plus, RefreshCw, Search, X } from 'lucide-react';
+import { AlertCircle, Plus, RefreshCw, Search, X, FolderOpen } from 'lucide-react';
 import MenuFormPopup, { type MenuFormValues } from '../components/menuFormPopup';
 import LinkModifierPopup from '../components/linkModifier';
+import CreateCategoryPopUp from '../components/createCategoryPopup';
 
 function MenuTableSkeleton() {
     return (
@@ -28,8 +29,8 @@ function MenuTableSkeleton() {
                         ))}
                     </div>
                 </div>
-                <div className="flex gap-2.5">
-                    <div className="h-10 w-64 rounded-xl bg-stone-200/50 animate-pulse" />
+                <div className="flex gap-2.5 w-full sm:w-auto">
+                    <div className="h-10 w-full sm:w-64 rounded-xl bg-stone-200/50 animate-pulse" />
                     <div className="h-10 w-28 rounded-xl bg-stone-200/70 animate-pulse" />
                 </div>
             </div>
@@ -67,6 +68,8 @@ export function MenuEdit() {
     const [selectedId, setSelectedId] = useState<string | null>(null);
     const [statusFilter, setStatusFilter] = useState<MenuStatusFilter>('all');
     const [search, setSearch] = useState('');
+    const [showMobileCategories, setShowMobileCategories] = useState(false);
+    const [showAddCategoryPopup, setShowAddCategoryPopup] = useState(false);
     const { createCategory, isSubmitting, error: createError } = useCreateCategory();
     const { setAvailability, disable, enable, error: statusError } = useMenuItemStatus();
     const { editMenuItem, isSubmitting: submitEdit, error: editMenuError } = useEditMenu();
@@ -200,6 +203,7 @@ export function MenuEdit() {
 
     return (
         <div className="flex min-h-0 flex-1 font-kanit">
+            {/* Desktop: Sidebar หมวดหมู่ด้านซ้าย (เหมือนเดิม 100%) */}
             <SidebarCategory
                 categories={categories}
                 selectedId={selected?.category_id ?? null}
@@ -214,7 +218,109 @@ export function MenuEdit() {
                 isLoading={isLoading}
                 onReorder={handleReorderCategory}
             />
-            <main className="flex-1 overflow-y-auto bg-[#FAF7F2] p-6 lg:p-8">
+
+            {/* Mobile: Slide-over Drawer จัดการหมวดหมู่ */}
+            {showMobileCategories && (
+                <div className="fixed inset-0 z-50 md:hidden flex" role="dialog" aria-modal="true">
+                    <div
+                        className="fixed inset-0 bg-black/40 backdrop-blur-xs transition-opacity animate-in fade-in duration-200"
+                        onClick={() => setShowMobileCategories(false)}
+                    />
+                    <div className="relative flex flex-col w-[85%] max-w-xs h-full bg-[#f7f3ee] z-10 shadow-2xl animate-in slide-in-from-left duration-200">
+                        <div className="flex items-center justify-between px-4 py-3.5 border-b border-[#e5d9c8] bg-white">
+                            <div className="flex items-center gap-2 text-[#2D241E]">
+                                <FolderOpen size={18} className="text-[#8C6D58]" />
+                                <span className="font-semibold text-sm">จัดการหมวดหมู่</span>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={() => setShowMobileCategories(false)}
+                                aria-label="ปิด"
+                                className="p-1 rounded-lg text-stone-400 hover:text-stone-700 cursor-pointer"
+                            >
+                                <X size={18} />
+                            </button>
+                        </div>
+                        <div className="flex-1 min-h-0 overflow-hidden flex flex-col">
+                            <SidebarCategory
+                                categories={categories}
+                                selectedId={selected?.category_id ?? null}
+                                onSelect={(id) => {
+                                    setSelectedId(id);
+                                    setShowMobileCategories(false);
+                                }}
+                                onAdd={handleAdd}
+                                isSubmitting={isSubmitting}
+                                error={createError}
+                                onRenameCategory={handleRenameCategory}
+                                onToggleCategory={handleToggleCategory}
+                                editIsSubmitting={submitCategory}
+                                editError={editCategoryError}
+                                isLoading={isLoading}
+                                onReorder={handleReorderCategory}
+                                isMobileDrawer
+                            />
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            <main className="flex-1 overflow-y-auto bg-[#FAF7F2] p-4 sm:p-6 lg:p-8">
+                {/* ── Mobile Category Navigation Bar (เฉพาะ Mobile) ── */}
+                {hasData && (
+                    <div className="md:hidden mb-4 -mx-4 -mt-1 px-4 py-2.5 bg-white border-b border-[#e5d9c8] sticky top-0 z-10 shadow-2xs">
+                        <div className="flex items-center justify-between mb-2">
+                            <span className="text-xs font-semibold text-stone-500">
+                                หมวดหมู่ ({categories.length})
+                            </span>
+                            <button
+                                type="button"
+                                onClick={() => setShowMobileCategories(true)}
+                                className="inline-flex items-center gap-1.5 text-xs font-medium text-[#8C6D58] hover:text-[#7a5c45] transition cursor-pointer"
+                            >
+                                <FolderOpen size={14} />
+                                <span>จัดการหมวดหมู่</span>
+                            </button>
+                        </div>
+
+                        <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5">
+                            {categories.map((c) => {
+                                const isSelected = c.category_id === (selected?.category_id ?? null);
+                                const itemCount = c.items?.length ?? 0;
+                                return (
+                                    <button
+                                        key={c.category_id}
+                                        type="button"
+                                        onClick={() => setSelectedId(c.category_id)}
+                                        className={`inline-flex shrink-0 items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-medium transition-all cursor-pointer ${
+                                            isSelected
+                                                ? 'bg-[#8C6D58] text-white shadow-2xs font-semibold'
+                                                : 'bg-[#FAF7F2] text-stone-700 border border-[#d9c6b0]/70 hover:border-[#8C6D58]'
+                                        } ${c.is_active ? '' : 'opacity-60'}`}
+                                    >
+                                        <span className="truncate max-w-[120px]">{c.name}</span>
+                                        <span
+                                            className={`rounded-full px-1.5 py-0.2 text-[10px] tabular-nums ${
+                                                isSelected ? 'bg-white/20 text-white' : 'bg-[#e5d9c8]/70 text-[#7a5c45]'
+                                            }`}
+                                        >
+                                            {itemCount}
+                                        </span>
+                                    </button>
+                                );
+                            })}
+                            <button
+                                type="button"
+                                onClick={() => setShowAddCategoryPopup(true)}
+                                className="inline-flex shrink-0 items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-medium border border-dashed border-[#8C6D58] text-[#8C6D58] bg-white hover:bg-[#FAF7F2] cursor-pointer"
+                            >
+                                <Plus size={13} />
+                                <span>เพิ่มหมวด</span>
+                            </button>
+                        </div>
+                    </div>
+                )}
+
                 {/* เกิดข้อผิดพลาดตอนดึงข้อมูลครั้งแรก */}
                 {error && !hasData && (
                     <div className="mb-6 flex max-w-xl items-center justify-between rounded-2xl border border-rose-200 bg-rose-50 p-4 text-rose-800 shadow-xs">
@@ -239,13 +345,13 @@ export function MenuEdit() {
                 {/* มีข้อมูลแล้ว */}
                 {hasData && (
                     <>
-                        <div className="mb-5 flex flex-wrap items-start justify-between gap-4">
+                        <div className="mb-5 flex flex-col md:flex-row md:items-start justify-between gap-4">
                             <div>
-                                <h1 className="text-2xl font-semibold text-[#2D241E]">
+                                <h1 className="text-xl sm:text-2xl font-semibold text-[#2D241E]">
                                     {selected?.name ?? 'ยังไม่มีหมวดหมู่'}
                                 </h1>
                                 {/* ปุ่มตัวกรองสถานะแบบคลิกได้ด่วน */}
-                                <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
+                                <div className="mt-2.5 flex items-center gap-1.5 overflow-x-auto no-scrollbar sm:flex-wrap py-0.5">
                                     {filterTabs.map((tab) => {
                                         const active = statusFilter === tab.id;
                                         return (
@@ -253,7 +359,7 @@ export function MenuEdit() {
                                                 key={tab.id}
                                                 type="button"
                                                 onClick={() => setStatusFilter(tab.id)}
-                                                className={`inline-flex cursor-pointer items-center gap-1.5 rounded-xl border px-3 py-1.5 text-xs font-medium transition-all duration-200 ${
+                                                className={`inline-flex shrink-0 cursor-pointer items-center gap-1.5 rounded-xl border px-3 py-1.5 text-xs font-medium transition-all duration-200 ${
                                                     active
                                                         ? 'border-[#8C6D58] bg-[#8C6D58] text-white shadow-xs'
                                                         : 'border-[#d9c6b0]/80 bg-white text-[#5C4E43] hover:bg-[#EFE8DC]/60'
@@ -275,8 +381,8 @@ export function MenuEdit() {
                                 </div>
                             </div>
 
-                            <div className="flex flex-wrap items-center gap-2.5">
-                                <div className="relative">
+                            <div className="flex flex-col sm:flex-row sm:items-center gap-2.5 w-full md:w-auto">
+                                <div className="relative w-full sm:w-64">
                                     <Search
                                         size={15}
                                         className="pointer-events-none absolute top-1/2 left-3.5 -translate-y-1/2 text-[#9B8E82]"
@@ -285,7 +391,7 @@ export function MenuEdit() {
                                         value={search}
                                         onChange={(e) => setSearch(e.target.value)}
                                         placeholder="ค้นหาชื่อเมนู หรือคำอธิบาย..."
-                                        className="w-64 rounded-xl border border-[#d9c6b0]/80 bg-white py-2 pr-8 pl-9 text-sm text-[#2D241E] shadow-xs outline-none transition-all duration-200 focus:border-[#8C6D58] focus:ring-2 focus:ring-[#8C6D58]/10 hover:border-[#c4b09a]"
+                                        className="w-full rounded-xl border border-[#d9c6b0]/80 bg-white py-2 pr-8 pl-9 text-sm text-[#2D241E] shadow-xs outline-none transition-all duration-200 focus:border-[#8C6D58] focus:ring-2 focus:ring-[#8C6D58]/10 hover:border-[#c4b09a]"
                                     />
                                     {search && (
                                         <button
@@ -305,10 +411,10 @@ export function MenuEdit() {
                                         setFormItem(undefined);
                                         setShowForm(true);
                                     }}
-                                    className="flex cursor-pointer items-center gap-1.5 rounded-xl bg-[#8C6D58] px-4 py-2 font-medium text-white shadow-xs transition-all duration-200 hover:bg-[#7a5c45] hover:shadow-md active:scale-[0.98]"
+                                    className="w-full sm:w-auto flex cursor-pointer items-center justify-center gap-1.5 rounded-xl bg-[#8C6D58] px-4 py-2 font-medium text-white shadow-xs transition-all duration-200 hover:bg-[#7a5c45] hover:shadow-md active:scale-[0.98]"
                                 >
                                     <Plus size={18} />
-                                    เพิ่มเมนู
+                                    <span>เพิ่มเมนู</span>
                                 </button>
                             </div>
                         </div>
@@ -322,6 +428,15 @@ export function MenuEdit() {
                                 onClose={() => setShowForm(false)}
                                 isSubmitting={formItem ? submitEdit : submitCreate}
                                 error={formItem ? editMenuError : createMenuError}
+                            />
+                        )}
+
+                        {showAddCategoryPopup && (
+                            <CreateCategoryPopUp
+                                onAdd={handleAdd}
+                                onClose={() => setShowAddCategoryPopup(false)}
+                                isSubmitting={isSubmitting}
+                                error={createError}
                             />
                         )}
 

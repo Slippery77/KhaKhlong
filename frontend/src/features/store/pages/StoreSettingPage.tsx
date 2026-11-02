@@ -1,5 +1,5 @@
 ﻿import { useEffect, useState, useMemo } from 'react';
-import { ArrowLeft, CheckCircle2, Info, QrCode, Save, Smartphone, Store } from 'lucide-react';
+import { CheckCircle2, Info, QrCode, Save, Smartphone, Store, Sliders } from 'lucide-react';
 import { useAuth } from '../../auth/context/AuthContext';
 import { apiFetch } from '../../../libs/appClient';
 import { getDistricts, getProvinces, getSubdistricts, getZipCode } from '../../../data/thailandAddress';
@@ -79,6 +79,7 @@ export default function StoreSettingPage() {
   const [isPromptPayFocused, setIsPromptPayFocused] = useState(false);
 
   const canConfigure = currentUser?.role === 'owner' || currentUser?.role === 'manager';
+  const [activeTab, setActiveTab] = useState<'info' | 'operations'>('info');
 
   const districts = form.province ? getDistricts(form.province) : [];
   const subdistricts = form.province && form.district ? getSubdistricts(form.province, form.district) : [];
@@ -200,26 +201,49 @@ export default function StoreSettingPage() {
   };
 
   return (
-    <main className="flex-1 overflow-y-auto px-6 py-6 space-y-8 max-w-5xl mx-auto w-full font-kanit">
-        <div className="mb-6">
-          <div className="flex items-center gap-2 text-sm text-stone-500 mb-2">
-            <ArrowLeft className="w-4 h-4" />
-            <span>ตั้งค่า</span>
-            <span>/</span>
-            <span className="text-[#2D241E]">ร้านอาหาร</span>
-          </div>
+    <main className="flex-1 overflow-y-auto px-4 sm:px-6 py-4 sm:py-6 space-y-5 sm:space-y-6 max-w-5xl mx-auto w-full font-kanit">
+        <div className="mb-1 sm:mb-2">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-[#EFE8DC] flex items-center justify-center text-[#8C6D58]">
+            <div className="w-10 h-10 rounded-xl bg-[#EFE8DC] flex items-center justify-center text-[#8C6D58] shrink-0">
               <Store className="w-5 h-5" />
             </div>
             <div>
-              <h1 className="text-xl font-semibold text-[#2D241E]">ข้อมูลร้านอาหาร</h1>
-              <p className="text-sm text-stone-500">จัดการข้อมูลพื้นฐานของร้าน</p>
+              <h1 className="text-lg sm:text-xl font-semibold text-[#2D241E]">ข้อมูลร้านอาหาร</h1>
+              <p className="text-xs sm:text-sm text-stone-500">จัดการข้อมูลพื้นฐานและการทำงานของร้าน</p>
             </div>
           </div>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
+        {/* ── Segmented Tabs: ข้อมูลร้านค้าและบัญชี vs การทำงานของร้านและกะ ── */}
+        <div className="flex md:hidden bg-stone-200/60 p-1 rounded-2xl gap-1">
+          <button
+            type="button"
+            onClick={() => setActiveTab('info')}
+            className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl text-xs sm:text-sm font-medium transition-all duration-200 cursor-pointer ${
+              activeTab === 'info'
+                ? 'bg-white text-[#8C6D58] shadow-xs font-semibold'
+                : 'text-stone-600 hover:text-stone-900'
+            }`}
+          >
+            <Store className="w-4 h-4 stroke-[2]" />
+            <span>ข้อมูลร้านค้าและบัญชี</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab('operations')}
+            className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl text-xs sm:text-sm font-medium transition-all duration-200 cursor-pointer ${
+              activeTab === 'operations'
+                ? 'bg-white text-[#8C6D58] shadow-xs font-semibold'
+                : 'text-stone-600 hover:text-stone-900'
+            }`}
+          >
+            <Sliders className="w-4 h-4 stroke-[2]" />
+            <span>การทำงานของร้านและกะ</span>
+          </button>
+        </div>
+
+        <div className={activeTab === 'info' ? 'block' : 'hidden md:block'}>
+          <form onSubmit={handleSubmit} className="space-y-6">
           <section className="bg-white border border-[#E8DFD5] rounded-2xl shadow-sm overflow-hidden">
             <div className="px-6 py-4 border-b border-[#E8DFD5] bg-[#FBF9F6]">
               <h2 className="text-base font-medium text-[#2D241E]">ข้อมูลร้าน</h2>
@@ -499,26 +523,32 @@ export default function StoreSettingPage() {
                   </div>
                 </div>
 
-                {/* ขวา: ตัวอย่าง QR */}
+                {/* ขวา: ตัวอย่าง QR พร้อมเพย์ */}
                 <div className="md:col-span-2">
-                  <div className="flex h-full flex-col items-center justify-center rounded-2xl border border-dashed border-[#d9c6b0] bg-[#FBF9F6] px-4 py-5 text-center">
-                    <div
-                      role="img"
-                      aria-label="ตัวอย่าง QR พร้อมเพย์"
-                      className="flex h-[132px] w-[132px] items-center justify-center rounded-xl border border-[#E8DFD5] bg-white shadow-sm"
-                    >
-                      {ppPayload ? (
-                        <QRCodeSVG value={ppPayload} size={112} fgColor="#2D241E" bgColor="#FFFFFF" />
-                      ) : (
-                        <QrCode className="h-10 w-10 text-[#d9c6b0]" aria-hidden="true" />
-                      )}
-                    </div>
-                    <p className="mt-3 text-xs font-medium text-[#2D241E]">ตัวอย่าง QR พร้อมเพย์</p>
-                    <p className="mt-1 text-[11px] leading-relaxed text-stone-500">
-                      {ppPayload
-                        ? 'สแกนด้วยแอปธนาคารเพื่อตรวจชื่อบัญชี แล้วกดยกเลิก ไม่ต้องโอน'
-                        : 'กรอกเบอร์พร้อมเพย์ 10 หลัก เพื่อดูตัวอย่าง'}
-                    </p>
+                  <div className="flex h-full flex-col items-center justify-center rounded-2xl border border-dashed border-[#d9c6b0] bg-[#FBF9F6] p-4 text-center transition-all">
+                    {ppPayload ? (
+                      <>
+                        <div
+                          role="img"
+                          aria-label="ตัวอย่าง QR พร้อมเพย์"
+                          className="flex h-[132px] w-[132px] items-center justify-center rounded-xl border border-[#E8DFD5] bg-white shadow-sm"
+                        >
+                          <QRCodeSVG value={ppPayload} size={112} fgColor="#2D241E" bgColor="#FFFFFF" />
+                        </div>
+                        <p className="mt-2.5 text-xs font-medium text-[#2D241E]">ตัวอย่าง QR พร้อมเพย์</p>
+                        <p className="mt-1 text-[11px] leading-relaxed text-stone-500">
+                          สแกนด้วยแอปธนาคารเพื่อตรวจชื่อบัญชี แล้วกดยกเลิก ไม่ต้องโอน
+                        </p>
+                      </>
+                    ) : (
+                      <div className="py-2 sm:py-6 flex flex-col items-center">
+                        <QrCode className="h-8 w-8 sm:h-10 sm:w-10 text-[#d9c6b0]" aria-hidden="true" />
+                        <p className="mt-2 text-xs font-medium text-[#2D241E]">ตัวอย่าง QR พร้อมเพย์</p>
+                        <p className="mt-1 text-[11px] text-stone-500">
+                          กรอกเบอร์พร้อมเพย์ 10 หลัก เพื่อดูตัวอย่าง QR
+                        </p>
+                      </div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -542,7 +572,7 @@ export default function StoreSettingPage() {
               <button
                 type="submit"
                 disabled={isLoading || isSaving}
-                className="inline-flex items-center gap-2 px-5 py-2 bg-[#8C6D58] hover:bg-[#7a5c45] text-white rounded-xl transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-6 py-2.5 bg-[#8C6D58] hover:bg-[#7a5c45] text-white rounded-xl text-sm font-medium transition-colors cursor-pointer shadow-xs disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <Save className="w-4 h-4" />
                 {isSaving ? 'กำลังบันทึก...' : 'บันทึกข้อมูลร้าน'}
@@ -556,9 +586,12 @@ export default function StoreSettingPage() {
             </div>
           )}
         </form>
+        </div>
 
         {/* การตั้งค่าการทำงานร้านและกะ (System Config) */}
-        <StoreOperationsConfigCard />
+        <div className={activeTab === 'operations' ? 'block' : 'hidden md:block'}>
+          <StoreOperationsConfigCard />
+        </div>
       </main>
   );
 }
