@@ -120,6 +120,14 @@ export function listOutbox(tenantSlug: string): Promise<OutboxEntry[]> {
   return db.outbox.where('tenantSlug').equals(tenantSlug).sortBy('seq');
 }
 
+/** ปุ่ม "ย้ายเข้ากะปัจจุบัน" — อัปเดต shiftId ของบิลนี้เป็นกะใหม่ แล้วให้กลับไปรอส่ง */
+export async function migrateOrderToCurrentShift(orderId: string, newShiftId: string): Promise<void> {
+  await db.outbox
+    .where('orderId')
+    .equals(orderId)
+    .modify({ shiftId: newShiftId, status: 'pending', lastError: null });
+}
+
 /** ปุ่ม "ลองส่งอีกครั้ง" — รายการที่ล้มของบิลนี้กลับไปรอส่ง */
 export async function retryOrder(orderId: string): Promise<void> {
   await db.outbox
@@ -128,9 +136,33 @@ export async function retryOrder(orderId: string): Promise<void> {
     .modify({ status: 'pending', lastError: null });
 }
 
-/** ปุ่ม "ลบ" — ทิ้งทุกรายการของบิลนี้ที่ยังค้างในเครื่อง (ไม่แตะข้อมูลที่ส่งถึง server แล้ว) */
+/** ปุ่ม "ลบ" — ทิ้งทุกรายการของบิลนี้ที่ยังค้างในเครื่อง (ไม่แตะข้อมูลที่ส่งถึง server แล้ว) พร้อมคืนสถานะโต๊ะใน snapshot หากเป็นบิลใหม่ที่ยังไม่เคยส่ง */
 export async function discardOrder(orderId: string): Promise<void> {
-  await db.outbox.where('orderId').equals(orderId).delete();
+  await db.transaction('rw', db.outbox, db.snapshots, async () => {
+    const entries = await db.outbox.where('orderId').equals(orderId).toArray();
+    const createEntry = entries.find((e) => e.kind === 'createOrder');
+
+    if (createEntry && createEntry.kind === 'createOrder') {
+      const { tableId } = createEntry.payload;
+      const row = await db.snapshots.get([createEntry.tenantSlug, 'tables']);
+      if (row) {
+        const tables = (row.data as DiningTable[]).map((table) =>
+          table.table_id === tableId && table.open_order_id === orderId
+            ? {
+                ...table,
+                status: 'available' as const,
+                open_order_id: null,
+                item_count: 0,
+                total_amount: 0,
+              }
+            : table,
+        );
+        await db.snapshots.put({ ...row, data: tables });
+      }
+    }
+
+    await db.outbox.where('orderId').equals(orderId).delete();
+  });
 }
 
 /** มีของค้าง (รอส่งหรือล้ม) ของ user นี้ไหม — ใช้บล็อก logout ในส่วนที่ 2 */

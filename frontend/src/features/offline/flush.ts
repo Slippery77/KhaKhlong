@@ -16,12 +16,19 @@ export function setFlushAuth(auth: FlushAuth | null): void {
   currentAuth = auth;
 }
 
+/** อัปเดต accessToken ล่าสุดทันทีเมื่อมีการ refresh token สำเร็จ (กัน token rotation storm ในลูป flush) */
+export function updateFlushToken(token: string): void {
+  if (currentAuth) {
+    currentAuth.accessToken = token;
+  }
+}
+
 /**
  * ผลของการ flush 1 รอบ
  * done        ส่งครบทุกรายการที่ส่งได้ (อาจมีบางบิล failed)
  * unreachable ติดต่อ server ไม่ได้ หยุดกลางทาง
  * unauthorized ได้ 401 (refresh ไม่สำเร็จ) ต้อง login ใหม่
- * busy        แท็บอื่นกำลัง flush อยู่
+ * busy        แท็บอื่นกำลัง flush อยู่ หรือติด 429
  * skipped     ยังไม่ login
  */
 export type FlushResult = 'done' | 'unreachable' | 'unauthorized' | 'busy' | 'skipped';
@@ -54,7 +61,9 @@ async function runFlush(auth: FlushAuth): Promise<FlushResult> {
     if (blockedOrders.has(entry.orderId)) continue;
 
     try {
-      await send(entry, auth.accessToken);
+      // ดึง token สดจาก currentAuth ก่อนเสมอ เผื่อแถวก่อนหน้านี้เพิ่ง refresh ได้ใบใหม่
+      const token = currentAuth?.accessToken ?? auth.accessToken;
+      await send(entry, token);
       await db.outbox.delete(entry.seq!); // ส่งสำเร็จ = ลบออกจากกล่อง
       reportReachable();
     } catch (error) {
@@ -73,6 +82,12 @@ async function runFlush(auth: FlushAuth): Promise<FlushResult> {
         return 'unauthorized';
       }
 
+      if (error instanceof ApiError && error.status === 429) {
+        // คำขอถี่เกินไป (Rate Limit) — คง pending ไว้ ไม่เปลี่ยนเป็น failed และหยุดทั้งรอบให้ส่งใหม่ในรอบถัดไป
+        await db.outbox.update(entry.seq!, { attempts, lastError: 'คำขอถี่เกินไป กำลังรอส่งใหม่' });
+        return 'busy';
+      }
+
       // 4xx อื่น (409 โต๊ะมีบิลแล้ว / เมนูหมด / ไม่มีกะเปิด, 400) — ส่งซ้ำก็ได้ผลเดิม
       await db.outbox.update(entry.seq!, {
         status: 'failed',
@@ -89,7 +104,10 @@ async function runFlush(auth: FlushAuth): Promise<FlushResult> {
 /** ยิง API ตามชนิดรายการ — ใช้ endpoint เดิมที่หน้า POS ใช้อยู่ */
 function send(entry: OutboxEntry, accessToken: string | null): Promise<unknown> {
   if (entry.kind === 'createOrder') {
-    return apiFetch('/orders', accessToken, 'POST', entry.payload);
+    return apiFetch('/orders', accessToken, 'POST', {
+      ...entry.payload,
+      shiftId: entry.shiftId ?? undefined,
+    });
   }
   return apiFetch(`/orders/${entry.orderId}/items`, accessToken, 'POST', entry.payload);
 }

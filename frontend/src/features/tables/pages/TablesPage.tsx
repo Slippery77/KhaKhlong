@@ -17,6 +17,8 @@ import PaymentModal from '../../mainpos/components/PaymentModal'
 import { usePayment } from '../../mainpos/hooks/usePayment'
 import { cancelOrder, closeUnpaid } from '../../mainpos/api/orders.api'
 import { syncTableStatus } from '../api/tables.api'
+import { useOutbox } from '../../offline/hooks/useOutbox'
+import { openOutboxPanel } from '../../offline/outboxPanel'
 
 /** รวมคิดเงินได้สูงสุดตามข้อจำกัดของ POST /payments/attempts (orderIds ไม่เกิน 10) */
 const MAX_MERGE_TABLES = 10
@@ -47,6 +49,14 @@ export default function TablesPage() {
     const { tables, isLoading, error, staleSince, reload } = useTables()
     const navigate = useNavigate()
     const { user, accessToken } = useAuth()
+    const { entries: outboxEntries } = useOutbox(user?.tenantSlug)
+
+    const getTableOutboxCount = (table: DiningTable): number => {
+        return outboxEntries.filter((e) =>
+            (table.open_order_id && e.orderId === table.open_order_id) ||
+            (e.kind === 'createOrder' && e.payload.tableId === table.table_id)
+        ).length
+    }
     const { getOrdersSummary } = usePayment()
     // null = แสดงทุกชั้น, ตัวเลข = แสดงเฉพาะชั้นที่เลือกจาก sidebar
     const [selectedFloor, setSelectedFloor] = useState<number | null>(null)
@@ -83,7 +93,8 @@ export default function TablesPage() {
     const selectedOrderIds = selectedTables.map((t) => t.open_order_id as string)
     const selectedOrderKey = selectedOrderIds.join(',')
     const mergeLabel = selectedTables.map((t) => t.table_number).join(' + ')
-    const canMergePay = selectedTables.length >= 2
+    const hasAnyOutboxInSelected = selectedTables.some((t) => getTableOutboxCount(t) > 0)
+    const canMergePay = selectedTables.length >= 2 && !hasAnyOutboxInSelected
     const currentSummary = mergeSummary && mergeSummary.key === selectedOrderKey ? mergeSummary : null
     const isSummaryLoading = selectedOrderKey !== '' && currentSummary === null
 
@@ -158,6 +169,10 @@ export default function TablesPage() {
     }
 
     function toggleSelectTable(table: DiningTable) {
+        if (getTableOutboxCount(table) > 0) {
+            setToast(`โต๊ะ ${table.table_number} มีรายการค้างส่งในเครื่อง ไม่สามารถรวมคิดเงินได้`)
+            return
+        }
         setSelectedTableIds((prev) => {
             if (prev.includes(table.table_id)) return prev.filter((id) => id !== table.table_id)
             if (prev.length >= MAX_MERGE_TABLES) {
@@ -183,6 +198,10 @@ export default function TablesPage() {
     }
 
     function openBillModal(table: DiningTable, mode: BillActionMode) {
+        if (getTableOutboxCount(table) > 0) {
+            setToast(`โต๊ะ ${table.table_number} มีรายการค้างส่งในเครื่อง กรุณาส่งครัวหรือจัดการคิวก่อน`)
+            return
+        }
         if (!table.open_order_id) {
             setToast('โต๊ะนี้ไม่มีบิลเปิดอยู่ — ลองกด "ซิงค์สถานะโต๊ะ" ก่อน')
             return
@@ -194,6 +213,10 @@ export default function TablesPage() {
 
     async function handleBillConfirm(payload: BillActionPayload) {
         if (!billTarget) return
+        if (getTableOutboxCount(billTarget.table) > 0) {
+            setBillError('โต๊ะนี้มีรายการค้างส่งในเครื่อง กรุณาส่งครัวหรือจัดการคิวก่อน')
+            return
+        }
         const orderId = billTarget.table.open_order_id
         if (!orderId) {
             setBillError('ไม่พบบิลเปิดของโต๊ะนี้ กรุณาซิงค์สถานะโต๊ะก่อน')
@@ -261,6 +284,8 @@ export default function TablesPage() {
             selectionMode={isMergeMode}
             selected={selectedTableIds.includes(table.table_id)}
             onToggleSelect={toggleSelectTable}
+            outboxPendingCount={getTableOutboxCount(table)}
+            onShowOutbox={openOutboxPanel}
         />
     )
 

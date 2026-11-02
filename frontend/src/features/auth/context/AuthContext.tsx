@@ -4,6 +4,7 @@ import { apiFetch, refreshOnce, setAuthHandlers } from '../../../libs/appClient'
 import { clearSession, getSavedUser, saveSavedUser } from '../authStorage';
 import { getLastTenantSlug } from '../tenantStorage';
 import type { AuthUser, UserMeData } from '../types/auth.types';
+import { updateFlushToken } from '../../offline/flush';
 
 interface AuthContextValue {
   accessToken: string | null;
@@ -57,7 +58,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     // 1) ลงทะเบียนก่อน เพื่อให้ refresh ด้านล่างส่ง access ใบใหม่เข้า state ได้
     setAuthHandlers({
-      onRefreshed: (token) => setAccessToken(token),
+      onRefreshed: (token) => {
+        setAccessToken(token);
+        updateFlushToken(token);
+      },
       onSessionExpired: () => {
         // จำร้านจาก user ที่เพิ่งหมดอายุ หรือร้านที่เครื่องเคยจำไว้
         const slug = getSavedUser()?.tenantSlug ?? getLastTenantSlug();
@@ -73,6 +77,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       try {
         const token = await refreshOnce();
         if (token) {
+          updateFlushToken(token);
           const saved = getSavedUser();
           if (saved) {
             setUser(saved);
@@ -99,6 +104,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const setAuth = useCallback(
     (token: string, newUser: AuthUser) => {
       setAccessToken(token);
+      updateFlushToken(token);
       setUser(newUser);
       void syncUserFromServer(token, newUser);
     },

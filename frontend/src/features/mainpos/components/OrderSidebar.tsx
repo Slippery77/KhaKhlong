@@ -1,11 +1,12 @@
 import { type CartMenu } from "../types/pos.types"
-import { UtensilsCrossed, SendHorizontal, Trash2, Minus, Plus, Loader2, XCircle, BadgePercent } from "lucide-react"
+import { UtensilsCrossed, SendHorizontal, Trash2, Minus, Plus, Loader2, XCircle, BadgePercent, CloudUpload, AlertCircle } from "lucide-react"
 
 interface PropsOrderSidebar {
     cartMenu: CartMenu[]
     isOrdered: boolean
     canPay: boolean
     isSending?: boolean
+    outboxPendingCount?: number
     onDeleteFromCart?: (item: CartMenu) => void
     onDeleteFormCart?: (item: CartMenu) => void
     onReduceValue?: (item: CartMenu) => void
@@ -291,30 +292,49 @@ export default function OrderSidebar(props: PropsOrderSidebar) {
                                     : 'ส่งครัวแล้ว'}
                         </span>
                     </button>
-                    {/* ชำระเงินได้เมื่อรายการทั้งหมดถูกส่งครัวแล้ว — กันจ่ายเงินโดยที่ยังมีรายการค้างในตะกร้า */}
+
+                    {/* ชำระเงินได้เมื่อรายการทั้งหมดถูกส่งครัวแล้ว และไม่มีรายการค้างใน Outbox */}
                     <button
                         type="button"
                         onClick={props.onPayment}
-                        className="w-full py-2.5 px-4 rounded-full bg-[#A68874] text-white font-medium text-sm hover:bg-[#967763] active:scale-[0.99] transition-all cursor-pointer shadow-sm disabled:opacity-40 disabled:cursor-not-allowed"
-                        disabled={!props.canPay || totalPendingItems > 0}
-                        title={totalPendingItems > 0 ? 'ส่งครัวรายการที่ยังไม่ส่งก่อนชำระเงิน' : undefined}
+                        className="w-full py-2.5 px-4 rounded-full bg-[#8C6D58] text-white font-medium text-sm hover:bg-[#7a5c45] active:scale-[0.99] transition-all cursor-pointer shadow-sm disabled:opacity-40 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-[#8C6D58] focus-visible:ring-offset-2"
+                        disabled={!props.canPay}
+                        title={
+                            totalPendingItems > 0
+                                ? 'มีรายการในตะกร้าที่ยังไม่ได้ส่งครัว กรุณาส่งครัวก่อนชำระเงิน'
+                                : (props.outboxPendingCount ?? 0) > 0
+                                    ? 'ยังมีรายการค้างในคิวส่งครัว กรุณารอสักครู่...'
+                                    : undefined
+                        }
                     >
                         ชำระเงิน
                     </button>
+
+                    {/* ข้อความช่วยเหลือเมื่อปุ่มชำระเงินถูกปิดกั้น */}
                     {totalPendingItems > 0 && (
-                        <p className="text-[11px] text-stone-400 text-center">
-                            ส่งครัวรายการที่ยังไม่ส่งก่อน จึงจะชำระเงินได้
-                        </p>
+                        <div className="flex items-center justify-center gap-1.5 text-[11px] text-[#7A6048] bg-[#EFE8DC]/70 py-1.5 px-3 rounded-xl border border-[#E2D5C4]/80">
+                            <AlertCircle className="w-3.5 h-3.5 text-[#8C6D58] shrink-0" aria-hidden="true" />
+                            <span>มีรายการที่ยังไม่ส่งครัว กรุณาส่งครัวก่อนชำระเงิน</span>
+                        </div>
                     )}
+                    {(props.outboxPendingCount ?? 0) > 0 && totalPendingItems === 0 && (
+                        <div className="flex items-center justify-center gap-1.5 text-[11px] text-[#8C6D58] bg-[#F3EDE4] py-1.5 px-3 rounded-xl border border-[#d9c6b0]/80">
+                            <CloudUpload className="w-3.5 h-3.5 text-[#8C6D58] shrink-0 animate-pulse" aria-hidden="true" />
+                            <span>กำลังส่งออเดอร์เข้าครัว ({props.outboxPendingCount} รายการ) รอสักครู่...</span>
+                        </div>
+                    )}
+
                     {props.onCancelBill && (
                         <button
                             type="button"
                             onClick={props.onCancelBill}
-                            disabled={!props.isOrdered || props.isSending}
+                            disabled={!props.isOrdered || props.isSending || (props.outboxPendingCount ?? 0) > 0}
                             title={
-                                !props.isOrdered
-                                    ? 'ยังไม่มีรายการในบิลนี้'
-                                    : 'ยกเลิกทั้งบิล — ต้องมี PIN ผู้จัดการหรือเจ้าของร้าน'
+                                (props.outboxPendingCount ?? 0) > 0
+                                    ? 'มีรายการกำลังส่งเข้าครัว กรุณารอส่งสำเร็จหรือจัดการคิวก่อนยกเลิกบิล'
+                                    : !props.isOrdered
+                                        ? 'ยังไม่มีรายการในบิลนี้'
+                                        : 'ยกเลิกทั้งบิล — ต้องมี PIN ผู้จัดการหรือเจ้าของร้าน'
                             }
                             className="w-full py-2.5 px-4 rounded-full border border-rose-200 text-rose-600 font-medium text-sm hover:bg-rose-50 active:scale-[0.99] transition-all cursor-pointer flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-rose-400 focus-visible:ring-offset-1 focus-visible:ring-offset-[#FAF7F2]"
                         >

@@ -482,6 +482,11 @@ export default function MainPOS() {
         return sum + item.price * chargeable
     }, 0)
 
+    // ชำระเงินได้เมื่อ: มีบิล + ไม่อยู่ระหว่างส่ง + ไม่มีรายการค้างใน outbox + ไม่มีรายการ draft ในตะกร้า + มีจานในบิล > 0
+    const hasPendingOutbox = billQueue.length > 0;
+    const hasUnsentDraft = cartMenu.some((item) => item.quantity > (item.sentQuantity ?? 0));
+    const canPay = Boolean(orderId && !isSending && !hasPendingOutbox && !hasUnsentDraft && billItemCount > 0);
+
     return (
         <div className="flex flex-col h-screen w-screen overflow-hidden">
             <Header />
@@ -604,13 +609,14 @@ export default function MainPOS() {
                         <OrderSidebar
                             isOrdered={isOrdered}
                             cartMenu={cartMenu}
-                            canPay={!!orderId && !isSending}
+                            canPay={canPay}
+                            outboxPendingCount={billQueue.length}
                             isSending={isSending}
                             onDeleteFromCart={onDeleteFromCart}
                             onReduceValue={onReduceValue}
                             onIncreaseValue={onIncreaseValue}
                             onSendToKitchen={handleSendToKitchen}
-                            onPayment={() => orderId && setIsPaymentOpen(true)}
+                            onPayment={() => canPay && setIsPaymentOpen(true)}
                             onVoidItem={(item) => {
                                 setActionError(null)
                                 setVoidTarget(item)

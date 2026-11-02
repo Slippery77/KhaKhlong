@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react"
-import { Check, MoreVertical, RefreshCw, Trash2, UserX, Users, UtensilsCrossed } from 'lucide-react'
+import { Check, CloudUpload, MoreVertical, RefreshCw, Trash2, UserX, Users, UtensilsCrossed } from 'lucide-react'
 import type { DiningTable } from '../types/table.types'
 
 interface TableCardProps {
@@ -15,6 +15,10 @@ interface TableCardProps {
     selectionMode?: boolean
     /** โต๊ะนี้ถูกเลือกไว้ในโหมดรวมโต๊ะ */
     selected?: boolean
+    /** จำนวนคำสั่งที่ค้างส่งใน outbox ของเครื่องนี้สำหรับโต๊ะนี้ */
+    outboxPendingCount?: number
+    /** เปิดหน้าต่างรายการค้างส่ง */
+    onShowOutbox?: () => void
     onToggleSelect?: (table: DiningTable) => void
 }
 
@@ -27,13 +31,16 @@ export default function TableCard({
     selectionMode = false,
     selected = false,
     onToggleSelect,
+    outboxPendingCount = 0,
+    onShowOutbox,
 }: TableCardProps) {
     const isOccupied = table.status === 'occupied'
     const isDisabled = table.status === 'out_of_service'
+    const hasOutbox = outboxPendingCount > 0
     // มีรายการค้างจริง (เอาไว้แสดงจำนวนรายการ + ยอดบิล)
     const hasOrder = isOccupied && table.item_count > 0
-    // รวมคิดเงินได้เฉพาะโต๊ะที่มีบิลเปิดอยู่
-    const isSelectable = selectionMode && isOccupied && Boolean(table.open_order_id)
+    // รวมคิดเงินได้เฉพาะโต๊ะที่มีบิลเปิดอยู่ และไม่มีรายการค้างใน outbox ของเครื่องนี้
+    const isSelectable = selectionMode && isOccupied && Boolean(table.open_order_id) && !hasOutbox
     // ในโหมดรวมโต๊ะ โต๊ะที่เลือกไม่ได้จะถูกหรี่และกดไม่ได้
     const isBlockedBySelection = selectionMode && !isSelectable
     const [isMenuOpen, setIsMenuOpen] = useState(false)
@@ -111,10 +118,25 @@ export default function TableCard({
                     />
                 )}
 
-                {/* ป้ายสถานะ */}
-                <span className={`text-[11px] font-medium mb-1 ${isOccupied ? 'text-[#A0732E]' : 'text-stone-400'}`}>
-                    {isDisabled ? 'ปิดใช้งาน' : isOccupied ? (selected ? 'เลือกรวมบิลแล้ว' : 'มีลูกค้า') : 'ว่าง'}
-                </span>
+                {/* ป้ายสถานะ และป้ายรอส่งครัว */}
+                <div className="flex items-center gap-1.5 mb-1 min-w-0">
+                    <span className={`text-[11px] font-medium shrink-0 ${isOccupied ? 'text-[#A0732E]' : 'text-stone-400'}`}>
+                        {isDisabled ? 'ปิดใช้งาน' : isOccupied ? (selected ? 'เลือกรวมบิลแล้ว' : 'มีลูกค้า') : 'ว่าง'}
+                    </span>
+                    {hasOutbox && (
+                        <span
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                onShowOutbox?.();
+                            }}
+                            title={`มีรายการค้างส่งในเครื่องนี้ ${outboxPendingCount} รายการ คลิกเพื่อดู`}
+                            className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-full bg-[#FEF3F2] border border-[#F4C7C3] text-[#B42318] text-[10px] font-medium hover:bg-[#FEE4E2] transition-colors cursor-pointer pointer-events-auto"
+                        >
+                            <CloudUpload className="w-2.5 h-2.5 text-[#B42318] shrink-0" aria-hidden="true" />
+                            <span className="truncate">รอส่ง {outboxPendingCount}</span>
+                        </span>
+                    )}
+                </div>
 
                 {/* เลขโต๊ะ */}
                 <span className={`text-3xl font-bold leading-none truncate ${isOccupied ? 'text-[#5C3D1E]' : 'text-[#2D241E]'}`}>
@@ -192,8 +214,10 @@ export default function TableCard({
                                 <button
                                     type="button"
                                     role="menuitem"
+                                    disabled={hasOutbox}
                                     onClick={() => runAction(onCancelBill)}
-                                    className="flex w-full cursor-pointer items-center gap-2 rounded-lg px-3 py-2 text-left text-xs text-rose-600 transition-colors duration-150 hover:bg-rose-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-rose-400"
+                                    title={hasOutbox ? 'มีรายการค้างส่งในเครื่อง กรุณาส่งครัวหรือลบรายการก่อนยกเลิกบิล' : undefined}
+                                    className="flex w-full cursor-pointer items-center gap-2 rounded-lg px-3 py-2 text-left text-xs text-rose-600 transition-colors duration-150 hover:bg-rose-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-rose-400 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent"
                                 >
                                     <Trash2 className="h-3.5 w-3.5" aria-hidden="true" />
                                     ยกเลิกทั้งบิล
@@ -204,8 +228,10 @@ export default function TableCard({
                                 <button
                                     type="button"
                                     role="menuitem"
+                                    disabled={hasOutbox}
                                     onClick={() => runAction(onCloseUnpaid)}
-                                    className="flex w-full cursor-pointer items-center gap-2 rounded-lg px-3 py-2 text-left text-xs text-amber-700 transition-colors duration-150 hover:bg-amber-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-400"
+                                    title={hasOutbox ? 'มีรายการค้างส่งในเครื่อง กรุณาส่งครัวหรือลบรายการก่อนปิดบิล' : undefined}
+                                    className="flex w-full cursor-pointer items-center gap-2 rounded-lg px-3 py-2 text-left text-xs text-amber-700 transition-colors duration-150 hover:bg-amber-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-amber-400 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent"
                                 >
                                     <UserX className="h-3.5 w-3.5" aria-hidden="true" />
                                     ปิดบิลลูกค้าหนี (walkout)
