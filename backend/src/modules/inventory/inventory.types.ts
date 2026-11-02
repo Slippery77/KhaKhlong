@@ -36,6 +36,7 @@ export interface InventoryTransactionRow extends QueryResultRow {
   note: string | null;
   created_by: string;
   created_at: Date;
+  business_date?: string;
 }
 
 export interface StockCountResultRow extends QueryResultRow {

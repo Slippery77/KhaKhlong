@@ -156,4 +156,43 @@ describe('InventoryService', () => {
     ).rejects.toBeInstanceOf(BadRequestException);
     expect(repository.recordStockCount.mock.calls).toHaveLength(0);
   });
+
+  it('filters transactions by business_date and maps business_date field', async () => {
+    repository.findTransactions.mockResolvedValue([
+      {
+        transaction_id: 'tx-1',
+        ingredient_id: ingredient.ingredient_id,
+        ingredient_name: ingredient.name,
+        stock_unit: ingredient.stock_unit,
+        type: 'adjustment',
+        quantity_change: -10,
+        counted_quantity: 90,
+        waste_reason: null,
+        note: '[counted 90, system 100]',
+        created_by: 'user-1',
+        created_at: new Date('2026-10-31T20:00:00.000Z'),
+        business_date: '2026-10-31',
+      },
+    ]);
+    repository.countTransactions.mockResolvedValue(1);
+
+    const result = await service.getTransactions({
+      business_date: '2026-10-31',
+      type: 'adjustment',
+    });
+
+    expect(repository.findTransactions).toHaveBeenCalledWith(
+      undefined,
+      'adjustment',
+      50,
+      0,
+      '2026-10-31',
+    );
+    expect(repository.countTransactions).toHaveBeenCalledWith(
+      undefined,
+      'adjustment',
+      '2026-10-31',
+    );
+    expect(result.data[0].business_date).toBe('2026-10-31');
+  });
 });

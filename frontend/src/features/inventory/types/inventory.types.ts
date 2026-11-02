@@ -60,6 +60,7 @@ export interface InventoryTransaction {
   note: string | null;
   created_by: string;
   created_at: string;
+  business_date?: string;
 }
 
 export interface PaginatedApiEnvelope<T> extends ApiEnvelope<T> {

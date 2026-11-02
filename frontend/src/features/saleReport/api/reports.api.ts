@@ -3,6 +3,13 @@ import type { ApiEnvelope } from '../../shifts/types/shift.types';
 
 export type Period = 'TODAY' | 'WEEK' | 'MONTH';
 
+export interface ReportQueryParams {
+  period?: Period;
+  from?: string;
+  to?: string;
+  shiftId?: string;
+}
+
 export interface TopSellingItemRes {
   name: string;
   quantity: number;
@@ -24,15 +31,30 @@ export interface CreateCashMovementPayload {
   reason: string;
 }
 
+function buildQueryString(params: ReportQueryParams): string {
+  const q = new URLSearchParams();
+  if (params.shiftId) {
+    q.set('shiftId', params.shiftId);
+  } else if (params.from && params.to) {
+    q.set('from', params.from);
+    q.set('to', params.to);
+  } else if (params.period) {
+    q.set('period', params.period);
+  } else {
+    q.set('period', 'WEEK');
+  }
+  return q.toString();
+}
+
 export const reportsApi = {
-  getSummary: (token: string | null, period: Period = 'WEEK') =>
-    apiFetch<ApiEnvelope<any>>(`/reports/sales/summary?period=${period}`, token),
-  getByPeriod: (token: string | null, period: Period = 'WEEK') =>
-    apiFetch<ApiEnvelope<any[]>>(`/reports/sales/by-period?period=${period}`, token),
-  getTopItems: (token: string | null, period: Period = 'WEEK') =>
-    apiFetch<ApiEnvelope<TopSellingCategoryRes[]>>(`/reports/sales/top-items?period=${period}`, token),
-  getTransactions: (token: string | null, period: Period = 'WEEK') =>
-    apiFetch<ApiEnvelope<any[]>>(`/reports/sales/transactions?period=${period}`, token),
+  getSummary: (token: string | null, params: ReportQueryParams = { period: 'WEEK' }) =>
+    apiFetch<ApiEnvelope<any>>(`/reports/sales/summary?${buildQueryString(params)}`, token),
+  getByPeriod: (token: string | null, params: ReportQueryParams = { period: 'WEEK' }) =>
+    apiFetch<ApiEnvelope<any[]>>(`/reports/sales/by-period?${buildQueryString(params)}`, token),
+  getTopItems: (token: string | null, params: ReportQueryParams = { period: 'WEEK' }) =>
+    apiFetch<ApiEnvelope<TopSellingCategoryRes[]>>(`/reports/sales/top-items?${buildQueryString(params)}`, token),
+  getTransactions: (token: string | null, params: ReportQueryParams = { period: 'WEEK' }) =>
+    apiFetch<ApiEnvelope<any[]>>(`/reports/sales/transactions?${buildQueryString(params)}`, token),
   getReceiptLines: (token: string | null, paymentId: string) =>
     apiFetch<ApiEnvelope<any[]>>(`/reports/sales/receipt/${paymentId}`, token),
   createCashMovement: (token: string | null, data: CreateCashMovementPayload) =>

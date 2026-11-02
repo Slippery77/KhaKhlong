@@ -1,7 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useAuth } from '../../auth/context/AuthContext';
 import { inventoryApi } from '../../inventory/api/inventory.api';
+import { shiftsApi } from '../../shifts/api/shifts.api';
 import type {
+  InventoryTransaction,
   StockCountBatchResult,
   StockItem,
 } from '../../inventory/types/inventory.types';
@@ -9,7 +11,7 @@ import type {
 const getErrorMessage = (error: unknown, fallback: string) =>
   error instanceof Error ? error.message : fallback;
 
-/** เทียบเฉพาะวันปฏิทินฝั่งเครื่องผู้ใช้ — ใช้แค่เตือนว่า "วันนี้เคยนับหรือยัง" */
+/** เทียบวันปฏิทินแบบ fallback หากยังไม่มีข้อมูลกะ */
 const isToday = (iso: string) => {
   const date = new Date(iso);
   if (Number.isNaN(date.getTime())) return false;
@@ -24,12 +26,15 @@ const isToday = (iso: string) => {
 /**
  * ปรับวัตถุดิบคงเหลือตอนจบวัน (Periodic Physical Count — INV-11)
  * โหลดยอดระบบของวัตถุดิบที่ใช้งานทั้งหมด แล้วให้กรอกเฉพาะตัวที่ได้นับจริง
+ * เทียบยอดนับของวันทำการปัจจุบัน (business_date) แทนวันปฏิทิน local เพื่อรองรับร้านเปิดข้ามคืน
+ * มี fallback resilience ป้องกันเน็ตสะดุดของ shift API ไม่ให้ขัดขวางการโหลดสต็อก
  */
 export function useStockAdjustment() {
   const { accessToken } = useAuth();
   const [items, setItems] = useState<StockItem[]>([]);
   const [counts, setCounts] = useState<Record<string, string>>({});
   const [countedToday, setCountedToday] = useState(0);
+  const [businessDate, setBusinessDate] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -39,17 +44,46 @@ export function useStockAdjustment() {
     async (silent = false) => {
       if (!silent) setIsLoading(true);
       try {
-        const [stockResponse, transactionsResponse] = await Promise.all([
-          inventoryApi.getStock(accessToken),
-          inventoryApi.getTransactions(accessToken, {
-            type: 'adjustment',
-            limit: 200,
-          }),
+        const stockPromise = inventoryApi.getStock(accessToken);
+        const shiftPromise = shiftsApi.getCurrent(accessToken).catch(() => null);
+
+        const [stockResponse, shiftResponse] = await Promise.all([
+          stockPromise,
+          shiftPromise,
         ]);
         setItems(stockResponse.data);
-        setCountedToday(
-          transactionsResponse.data.filter((transaction) => isToday(transaction.created_at)).length,
-        );
+
+        const currentBDate = shiftResponse?.data?.businessDate ?? null;
+        setBusinessDate(currentBDate);
+
+        let txs: InventoryTransaction[] = [];
+        try {
+          const transactionsResponse = await inventoryApi.getTransactions(accessToken, {
+            type: 'adjustment',
+            limit: 200,
+            businessDate: currentBDate ?? undefined,
+          });
+          txs = transactionsResponse.data;
+        } catch {
+          // transactions fetch failure should not break whole stock view
+        }
+
+        // นับจำนวนวัตถุดิบ (unique ingredient_id) ที่ได้รับการปรับยอดในรอบวันทำการนี้
+        if (currentBDate) {
+          const countedIds = new Set(
+            txs
+              .filter((transaction) => transaction.business_date === currentBDate)
+              .map((transaction) => transaction.ingredient_id),
+          );
+          setCountedToday(countedIds.size);
+        } else {
+          const countedIds = new Set(
+            txs
+              .filter((transaction) => isToday(transaction.created_at))
+              .map((transaction) => transaction.ingredient_id),
+          );
+          setCountedToday(countedIds.size);
+        }
       } catch (requestError) {
         setError(getErrorMessage(requestError, 'ไม่สามารถโหลดข้อมูลวัตถุดิบได้'));
       } finally {
@@ -117,6 +151,7 @@ export function useStockAdjustment() {
     setCount,
     clearCounts,
     countedToday,
+    businessDate,
     filledCount,
     invalidCount,
     isLoading,

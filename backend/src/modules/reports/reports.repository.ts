@@ -127,7 +127,7 @@ export class ReportsRepository {
       c.push(`p.paid_at >= date_trunc('month', CURRENT_DATE)`);
     }
 
-    if (params.period === 'TODAY' || (params.from && params.to && params.from === params.to)) {
+    if (params.shiftId || params.period === 'TODAY' || (params.from && params.to && params.from === params.to)) {
       const sql = `
         SELECT to_char(date_trunc('hour', p.paid_at), 'HH24:00') AS label,
                COALESCE(SUM(p.total_amount), 0) AS total_sales,

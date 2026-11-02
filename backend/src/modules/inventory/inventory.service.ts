@@ -358,10 +358,12 @@ export class InventoryService {
         query.type,
         limit,
         offset,
+        query.business_date,
       ),
       this.inventoryRepository.countTransactions(
         query.ingredient_id,
         query.type,
+        query.business_date,
       ),
     ]);
 

@@ -1,5 +1,5 @@
-﻿import { lazy, Suspense } from 'react';
-import { Route, Routes } from 'react-router-dom';
+import { lazy, Suspense } from 'react';
+import { Navigate, Route, Routes, useParams } from 'react-router-dom';
 import { LoginPage } from '../features/auth/pages/login_pages';
 import StoreFinderPage from '../features/auth/pages/store_finder_page';
 import Register_page from '../features/registerOwner/pages/register_pages';
@@ -13,8 +13,23 @@ import EditModiferPage from '../features/editModifer/pages/edit_modifer_pages';
 import TablesPage from '../features/tables/pages/TablesPage';
 import EditVat from '../features/editVat/pages/editVat';
 import UsersPage from '../features/users/pages/UsersPage';
+import AuditLogsPage from '../features/auditLogs/AuditLogsPage';
 import TableSettingPage from '../features/tableSetting/pages/TableSettingPage';
 import StoreSettingPage from '../features/store/pages/StoreSettingPage';
+import PrinterSettingPage from '../features/printer/pages/PrinterSettingPage';
+import { SettingRouteGuard } from './SettingRouteGuard';
+import { AuditRouteGuard } from './AuditRouteGuard';
+import { useAuth } from '../features/auth/context/AuthContext';
+
+// นำทางหน้าเริ่มต้นตามบทบาท: เจ้าของร้านไป '/:tenantSlug/setting/store', ผู้จัดการไป '/:tenantSlug/setting/tables'
+function SettingIndexRedirect() {
+    const { tenantSlug } = useParams<{ tenantSlug: string }>();
+    const { user } = useAuth();
+    const role = user?.role?.toLowerCase();
+    const defaultSubpath = role === 'manager' ? 'tables' : 'store';
+    const target = tenantSlug ? `/${tenantSlug}/setting/${defaultSubpath}` : `/${defaultSubpath}`;
+    return <Navigate to={target} replace />;
+}
 
 // [ใหม่] วางก่อน export function AppRouter
 // หน้าทดสอบ outbox — มีเฉพาะตอน npm run dev
@@ -35,15 +50,29 @@ export function AppRouter() {
             <Route path='/:tenantSlug/tables' element={<TablesPage />} />
             <Route path='/:tenantSlug/mainpos' element={<MainPOS />} />
             <Route path='/:tenantSlug/kds' element={<KDSPage />} />
-            <Route path='/:tenantSlug/setting/menu' element={<MenuEdit />} />
-            <Route path='/:tenantSlug/setting/modifier' element={<EditModiferPage />} />
-            <Route path='/:tenantSlug/setting/users' element={<UsersPage />} />
-            <Route path='/:tenantSlug/setting/tables' element={<TableSettingPage />} />
-            <Route path='/:tenantSlug/setting/store' element={<StoreSettingPage />} />
+
+            {/* เส้นทางตั้งค่าระบบ — เฉพาะเจ้าของร้านและผู้จัดการเท่านั้น (พนักงานถูกบล็อกด้วย SettingRouteGuard) */}
+            <Route path='/:tenantSlug/setting' element={<SettingRouteGuard />}>
+                <Route index element={<SettingIndexRedirect />} />
+                <Route path='store' element={<StoreSettingPage />} />
+                <Route path='vat' element={<EditVat />} />
+                <Route path='tables' element={<TableSettingPage />} />
+                <Route path='menu' element={<MenuEdit />} />
+                <Route path='modifier' element={<EditModiferPage />} />
+                <Route path='printer' element={<PrinterSettingPage />} />
+                <Route path='users' element={<UsersPage />} />
+                <Route path='*' element={<SettingIndexRedirect />} />
+            </Route>
+
+            {/* บันทึกประวัติความปลอดภัย (Audit Logs) — แยกออกจาก Settings ชัดเจน (AUD-05) */}
+            <Route path='/:tenantSlug/audit-logs' element={<AuditRouteGuard />}>
+                <Route index element={<AuditLogsPage />} />
+            </Route>
+
             <Route path='/:tenantSlug/siftwork' element={<ShiftPage />} />
             <Route path='/:tenantSlug/stock' element={<StockPage />} />
             <Route path='/:tenantSlug/sale-report' element={<SaleReportPage />} />
-            <Route path='/:tenantSlug/setting/vat' element={<EditVat/>}/>
+
             {/* URL ที่ไม่รู้จัก: กลับไปหน้าเลือกร้าน ดีกว่าปล่อยจอขาว */}
             {OutboxDevPage && (
                 <Route
@@ -51,7 +80,7 @@ export function AppRouter() {
                     element={<Suspense fallback={null}><OutboxDevPage /></Suspense>}
                 />
             )}
-            <Route path='*' element={<StoreFinderPage />} />
+            <Route path='*' element={<Navigate to='/' replace />} />
         </Routes>
     );
 }

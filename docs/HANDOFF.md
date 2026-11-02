@@ -1,7 +1,7 @@
 # HANDOFF — PWA-POS (ค้าคล่อง / KhaKhlong)
 
 > ไฟล์นี้คือสรุปสถานะล่าสุดสำหรับ **เปิดแชทใหม่แล้วทำงานต่อ** โดยไม่ต้องเล่าบริบทใหม่
-> อัปเดต: **2026-10-31** · branch `feat-aod` · `origin/main` = `b352de6` (2026-10-28) · ดู `git log` สำหรับ hash ล่าสุด
+> อัปเดต: **2026-11-01** · branch `feat-aod` · `origin/main` = `b352de6` (2026-10-28) · ดู `git log` สำหรับ hash ล่าสุด
 > ใช้แทน `docs/backend-todo.md` และ `docs/daily-update-2026-10-21.md` (สองไฟล์นั้นล้าสมัยแล้ว)
 
 ## วิธีใช้ในแชทใหม่
@@ -69,26 +69,25 @@ $env:PGPASSWORD='<รหัสผ่าน pos_app จาก .env>'
 - **Menu** — หมวด/เมนู/ modifiers ครบ endpoint · ผูกเมนูกับกลุ่มตัวเลือกได้ (`linkModifier.tsx`) · **รองรับรูปภาพเมนู (`menu_items.image_url`) ทั้งอัปโหลดไฟล์บีบอัด/URL พร้อมแสดงบนการ์ด POS และตารางตั้งค่าเมนู** (ดู 3.15)
 - **Floors / Tables** — พื้นที่ โต๊ะ ผังร้าน
 - **Orders** — create, list (open), get by id, add items (+kitchen ticket), move table, close-unpaid, sync · **void / comp รายการพร้อม PIN ผู้อนุมัติ** (ดู 3.8) · **ยกเลิกทั้งบิล + ปิดบิลลูกค้าหนี (walkout) พร้อม PIN และคืนโต๊ะได้จริง** (ดู 3.13 / `docs/cancel-order-guide.md`)
-- **Inventory** — stock view, movements (รับเข้า/ปรับ/ของเสีย), **count batch** (รอบล่าสุด)
+- **Inventory** — stock view, movements (รับเข้า/ปรับ/ของเสีย), **count batch** (รอบล่าสุด) · **Inventory polish: คอลัมน์ business_date ใน inventory_transactions (PATCH_11), ปรับ note และทศนิยมใน record_stock_count(), และ UI/UX Pro Max ช่องค้นหา + ตัวกรองด่วนในการ์ดนับวัตถุดิบ (StockAdjustmentCard)** (ดู 3.22)
 - **Shifts** — open, current, close, verify (PIN ผู้จัดการ/เจ้าของ), reopen, cashbook, list · **`GET /shifts` ใช้ `report:view_all` หรือ `report:view_own_shift` แล้ว** (employee เห็นกะตัวเอง) · **PIN lock เก็บใน DB** (คงทนข้าม restart) · **กะค้างรับรองเกิน `shift_escalation_hours` (default 4 ชม.) ถูก escalate หา owner อัตโนมัติ**
 - **KDS** — คิวครัว + mark ready
-- **System Config** — GET/PATCH (หน้า UI ใช้เฉพาะ VAT)
-- **Tenants / Store** — GET/PATCH + หน้า `setting/store`
+- **System Config** — GET/PATCH (VAT, ตั้งค่าเครื่องพิมพ์ และการตั้งค่าการทำงานร้าน/กะ/สต็อก ครบถ้วนบน UI)
+- **Tenants / Store** — GET/PATCH + หน้า `setting/store` พร้อมการ์ดตั้งค่าการทำงานร้านและกะ
 - **Users** — **`GET /users/me` (`@AnyAuthenticated` คืนโปรไฟล์ + `permissions: string[]` + ข้อมูลร้าน `store`)** · list, create, update, deactivate, reactivate · ตั้ง PIN ได้ทั้งสร้างและแก้ไข (`UpdateUserDTO.pin` ตรวจ `/^\d{6}$/` + bcrypt) · `UserTable` แสดง badge `has_pin` (ไม่ส่ง `pin_hash` ออก API)
 - **Roles / Permissions** — seed ครบ, employee 9 สิทธิ์
 - **Payment** — `attempts` → `pay` → `cancel`; ออกเลขใบเสร็จ, ดู/พิมพ์ใบเสร็จ; UI `PaymentModal` 3 ขั้น ใช้ยอดจาก server เท่านั้น
 - **Receipt (FE)** — `features/receipt/` พรีวิว 80mm + พิมพ์จริง, ป้าย "สำเนา" ตาม `isCopy`, เคารพ `max_reprints` (409)
-- **Reports** — `sales/summary`, `sales/by-period`, `sales/top-items`, `sales/transactions`, `sales/receipt/:id`
+- **Reports** — `sales/summary`, `sales/by-period`, `sales/top-items`, `sales/transactions`, `sales/receipt/:id` · **หน้ารายงานรอบด้านบน UI: ตัวกรองช่วงวันที่ (From - To), โหมดดูตามกะ (Shift Selector Dropdown), ส่งออกตารางธุรกรรมเป็น CSV (UTF-8 BOM ภาษาไทยไม่เพี้ยน)** (ดู 3.18)
+- **Audit Logs (2026-11-01)** — `GET /api/audit-logs` สิทธิ์ `audit_log:view` (Owner, Manager ตาม AUD-05) + Pagination + Filter ตาม action_type, user_id, วันที่ (timezone Asia/Bangkok) + หน้า UI แยกใน Header MenuDropdown พร้อม Detail Modal คัดลอก JSON และ AuditRouteGuard สกัดพนักงาน (ดู 3.19)
 - **Void / Comp (2026-10-30)** — batch endpoint + PIN ผู้อนุมัติ + audit ผ่าน trigger + FE modal + E2E 31 ข้อผ่าน
 - **PWA shell** — `vite-plugin-pwa` + manifest + precache ทุกไฟล์ build + `navigateFallback '/index.html'` (deny `/api`) + แจ้งอัปเดตด้วย `UpdatePrompt` (`registerType: 'prompt'`, ไม่ reload เองกลางการสั่งอาหาร) + ไอคอน 64/192/512/maskable
 
 ### ยังไม่เริ่ม / ยังไม่ครบ
 
-- **Audit Logs** — ไม่มี endpoint/UI (DB trigger เขียน audit บางเหตุการณ์ แต่ยังไม่มีหน้าดู)
 - **Offline data layer** — PWA shell พร้อมแล้ว แต่ยังไม่มี Dexie/IndexedDB แคชเมนู/โต๊ะ/กะ และยังไม่มี outbox คิวออเดอร์ (service worker ไม่แคช `/api` โดยตั้งใจ)
-- **Reports เพิ่มเติม** — หน้ารายงานรายกะ, ตัวกรองช่วงวันที่บน UI, export
-- **Shift escalation อัตโนมัติ** — มี service แล้วแต่ยังไม่ทำงานจริง (ดู 5/P1-1)
-- *(หน้า Dashboard / Homepage `/:tenantSlug/homepage` ตัดออกจากขอบเขตแล้ว)*
+- **Menu reorder** — endpoint และ UI จัดลำดับเมนู/หมวดหมู่
+- *(หน้า Dashboard / Homepage `/:tenantSlug/homepage` และ Export สรุปยอดขายแบบ PDF ตัดออกจากขอบเขตแล้ว — รายงานใช้ส่งออกเป็น CSV เท่านั้น)*
 
 ---
 
@@ -263,7 +262,116 @@ commit เดียว 4 เรื่อง:
   - **`TableCard.tsx`**: โหมด `selectionMode` แสดง Checkbox มุมการ์ดโต๊ะที่มีลูกค้า (`occupied`), ไฮไลท์การ์ดที่ถูกเลือกด้วยกรอบและเงาสีกาแฟ `#8C6D58`, โต๊ะว่างจะถูกหรี่แสงลงและกดไม่ได้
   - **`PaymentModal.tsx`**: รองรับ prop `orderIds: string[]` และชื่อโต๊ะรวม เช่น "โต๊ะ 01 + 02", คำนวณยอดและชำระรวมได้โดยตรงบนหน้าผังโต๊ะ
   - **`usePayment.ts`**: เพิ่มฟังก์ชัน `getOrdersSummary(orderIds: string[])`
-- **ทดสอบ**: E2E `backend/test/e2e/e2e-merge-tables-payment.mjs` (22/22 ผ่าน)
+- **ทดสอบ**: E2E `backend/test/e2e/e2e-merge-tables-payment.mjs, e2e-audit-logs.mjs` (22/22 ผ่าน)
+
+### 3.18 รายงานยอดขาย: ตัวกรองช่วงวันที่ (Date Range), โหมดดูตามกะ (Shift Selector), และส่งออก CSV (2026-11-01)
+
+- **Backend**:
+  - `ReportsRepository.getSalesByPeriod`: รองรับ `params.shiftId` โดยให้จัดกลุ่มเวลาเป็นรายชั่วโมง (`to_char(date_trunc('hour', p.paid_at), 'HH24:00')`) สอดคล้องกับพฤติกรรมยอดขายตลอดกะ
+- **Frontend**:
+  - `reports.api.ts`: รองรับพารามิเตอร์ `ReportQueryParams` (`period`, `from`, `to`, `shiftId`)
+  - `shifts.api.ts`: เพิ่ม method `shiftsApi.list()` รองรับ pagination และการส่งออกข้อมูลกะ
+  - `SalesContext.tsx`: จัดการ state `viewMode` (`PERIOD` vs `SHIFT`), `startDate`, `endDate`, `selectedShiftId`, `availableShifts` (ดึงจาก `res.data.items` อย่างปลอดภัยป้องกัน runtime error) พร้อม sync query parameter ไปยัง backend ครบทุก endpoint
+  - `SalesHeader.tsx`: ปรับปรุงตามหลัก `ui-ux-pro-max`:
+    - สวิตช์เลือกโหมด `ช่วงเวลา` หรือ `ตามกะ`
+    - Date Range Picker แบบ Popover เลือกวันที่เริ่มต้น - สิ้นสุด พร้อมปุ่มล้าง/รีเซ็ต
+    - Dropdown เลือกลิสต์กะ แสดง วันที่, ช่วงเวลาเปิด-ปิด, และชื่อพนักงาน
+  - `SalesTransactionTable.tsx`: เพิ่มปุ่ม "ส่งออก CSV" มุมบนขวาของตาราง
+  - `exportCsv.ts`: แปลงข้อมูลตารางประวัติธุรกรรมเป็นไฟล์ CSV พร้อมใส่ **UTF-8 BOM (`\uFEFF`)** เปิดใน Microsoft Excel ภาษาไทยไม่เป็นตัวต่างดาว
+- **Doubt-Driven Fix**: แก้บั๊กหน้าจอขาว (White screen) จากการที่ response ของ `GET /shifts` คืน `{ items: [...] }` แต่ frontend คาดหวัง array โดยตรง และปรับปรุง type safety ของตัวเลขก่อน export CSV
+
+---
+
+### 3.19 บันทึกประวัติความปลอดภัย (Audit Logs) — Endpoint, UI ใน Header MenuDropdown, และ Route Guard (2026-11-01)
+
+- **Backend**:
+  - สร้างโมดูลใหม่ `backend/src/modules/audit-logs/`:
+    - `AuditQueryDto`: รองรับ `page`, `limit` (max 100), `action_type`, `user_id`, `from`, `to`
+    - `AuditLogsRepository.findAuditLogs`: กรอง `tenant_id = app_tenant_id()` เสมอ, แปลงเขตเวลา `(a.created_at AT TIME ZONE 'Asia/Bangkok')::date` ป้องกันปัญหา timezone หลุดช่วงเวลา, และ JOIN `users` เพื่อเอา `username` กับ `display_name`
+    - `AuditLogsService` + `AuditLogsController`: กำกับด้วย `@RequirePermissions('audit_log:view')` ตามข้อกำหนด **AUD-05** อนุญาตเฉพาะ Owner และ Manager
+- **Frontend** (ออกแบบตาม `ui-ux-pro-max`):
+  - `Header.tsx`: เพิ่มเมนู **"ประวัติความปลอดภัย"** พร้อมไอคอน `ShieldCheck` ใน MenuDropdown แสดงเฉพาะบทบาท Owner และ Manager (พนักงานไม่เห็นเมนูนี้)
+  - `AuditRouteGuard.tsx`: คุ้มครองเส้นทาง `/:tenantSlug/audit-logs` หากพนักงานพยายามเข้า URL ตรงๆ จะถูกสกัดด้วย `AccessDeniedPage` อย่างสุภาพและปลอดภัย
+  - `AuditLogsPage.tsx`: ตารางข้อมูล Responsive (`overflow-x-auto`), ป้ายสถานะ Action Types สีสันตามหมวดหมู่, ตัวกรอง (Action Type, ผู้ใช้, วันที่เริ่มต้น-สิ้นสุด), ระบบป้องกัน Race condition จากการส่ง Request ถี่, และ `AuditDetailModal` แสดง JSON Metadata พร้อมปุ่ม "คัดลอก JSON"
+  - `AppRouter.tsx`: แก้ไขบั๊ก Infinite redirect loop ใน `SettingIndexRedirect` ให้ใช้ Absolute path
+- **ทดสอบ**:
+  - E2E `backend/test/e2e/e2e-audit-logs.mjs` (14/14 ผ่าน) ตรวจสอบ Token, 403 Forbidden สำหรับ Employee, Pagination และการกรองข้อมูล
+  - Typecheck (`tsc --noEmit`, `tsc -b`) และ Vite build ผ่าน 100%
+
+---
+
+### 3.20 ระบบตั้งค่าเครื่องพิมพ์และใบเสร็จ (Printer & Receipt Settings) + รองรับกระดาษ 80mm/58mm และ Auto-Print — 2026-11-01
+
+- **สถาปัตยกรรมแบบผสม (Hybrid Storage)**:
+  - **Store Policy (DB ผ่าน `system_config` & `config_definitions`)**:
+    - `receipt_footer`: ข้อความส่วนท้ายใบเสร็จ (รองรับหลายบรรทัด)
+    - `receipt_show_tax_id`: เปิด/ปิด แสดงเลขประจำตัวผู้เสียภาษี
+    - `receipt_show_cashier`: เปิด/ปิด แสดงชื่อพนักงานแคชเชียร์
+    - `receipt_show_address`: เปิด/ปิด แสดงที่อยู่และเบอร์โทรร้าน
+    - `max_reprints`: โควตาพิมพ์ซ้ำสูงสุด (0 = ไม่จำกัด)
+  - **Device Hardware Settings (`localStorage` ประจำเครื่อง)**:
+    - `paper_size`: ขนาดกระดาษความร้อน (`80mm` พื้นที่พิมพ์ 72mm หรือ `58mm` พื้นที่พิมพ์ 48mm ย่อขนาดฟอนต์และระยะบรรทัดอัตโนมัติ)
+    - `auto_print`: สวิตช์เปิด/ปิด สั่งพิมพ์ใบเสร็จอัตโนมัติทันทีเมื่อชำระเงินสำเร็จ
+- **Backend**:
+  - `PATCH_10_receipt_printer_config.sql` + อัปเดต `FULL_INSTALL.sql`
+  - `SystemConfigRepository.updateValue`: ปรับเป็น UPSERT (`ON CONFLICT (tenant_id, config_key) DO UPDATE`) รองรับการอัปเดต key ใหม่ได้ทันทีโดยไม่ติด NotFound
+  - `PaymentRepository.findStore`: ดึง `receipt_footer` และตัวเลือกการแสดงผลผ่าน `cfg()` ฟังก์ชันตรงจาก DB
+  - `toReceiptResponse`: ส่งฟิลด์ `footer`, `showTaxId`, `showCashier`, `showAddress` ออก API `GET /payments/:id/receipt`
+- **Frontend** (ออกแบบตามหลัก `ui-ux-pro-max` โทนคาเฟ่อบอุ่น `#FAF7F2` / `#8C6D58`):
+  - `SettingNavBar.tsx`: เพิ่มแท็บ **"เครื่องพิมพ์"** ให้ทั้ง Owner และ Manager เข้าถึงได้
+  - `PrinterSettingPage.tsx` (`/:tenantSlug/setting/printer`):
+    - ฝั่งซ้าย: ฟอร์มเลือกขนาดกระดาษแบบการ์ด Visual Radio, สวิตช์ Auto-Print, ช่องโควตาพิมพ์ซ้ำ, กล่องข้อความท้ายใบเสร็จ, สวิตช์แสดงผลข้อมูลร้าน, และปุ่มบันทึก/พิมพ์ทดสอบ
+    - ฝั่งขวา: **Live Receipt Preview** แสดงกระดาษใบเสร็จจำลองขนาด 80mm/58mm ที่ตอบสนองการเปลี่ยนแปลงการตั้งค่าแบบเรียลไทม์
+  - `ReceiptPaper.tsx` & `receipt.print.css`: รองรับทั้ง 80mm (`w-[72mm]`) และ 58mm (`w-[48mm]` + ฟอนต์กะทัดรัด) และเคารพการเปิด/ปิดแสดงข้อมูล
+  - `PaymentModal.tsx`: ผูกพฤติกรรม Auto-Print หากเปิดใช้งานจะเปิด `ReceiptModal` และสั่งพิมพ์ทันทีหลังชำระเงินสำเร็จ
+- **Doubt-Driven Development Audit & Hardening (2026-11-01)**:
+  - แก้ Auto-print Re-trigger Loop: แยก `autoPrintTriggered` state ทำงานแบบ One-shot เฉพาะหลังชำระเงินสำเร็จทันที ป้องกันการสั่งพิมพ์ซ้ำเมื่อกดดูใบเสร็จด้วยตนเอง
+  - Print CSS Scope Isolation: กำกับ `body.is-printing-receipt` ตอนสั่งพิมพ์ ป้องกัน CSS print ทั่วไปซ่อนหน้าจอเว็บทั้งแอพเวลาผู้ใช้เผลอกด Ctrl+P
+  - Multi-Tenant Web Storage Isolation: เติม namespace `khakhlong_${tenantSlug}_printer_*` ใน `localStorage` ป้องกันการตั้งค่าเครื่องพิมพ์ปนกันเมื่อล็อกอินสลับร้าน
+  - ป้องกัน 58mm Horizontal Overflow: เติม `min-w-0 flex-1 break-words` ให้ชื่อรายการอาหารและ TotalRow ย่อข้อความยาวลงบรรทัดใหม่อย่างเรียบร้อย
+  - Server Boundary Validation: เพิ่มตรวจสอบความยาว `receipt_footer` (จำกัด ≤ 500 อักขระ) และ `max_reprints` (ต้องเป็นจำนวนเต็มไม่ติดลบ) ปฏิเสธด้วย `400 Bad Request`
+  - ป้องกันข้อความท้ายบิลกลับเป็นค่า Default: ตรวจสอบ empty string (`footer !== undefined ? footer : DEFAULT`) เพื่อให้เจ้าของร้านเคลียร์ข้อความท้ายบิลว่างเปล่าได้จริง
+  - React State Sync & Race Condition: ย้ายการ sync server config ใน `PrinterSettingPage` เข้า `useEffect` พร้อม flag เช็คว่ามีการพิมพ์อยู่หรือไม่ และใช้ `flushSync` เพื่อให้ DOM ใบเสร็จจำลอง render ทันก่อนสั่ง `window.print()`
+- **ทดสอบ**:
+  - E2E `backend/test/e2e/e2e-printer-config.mjs` ผ่านครบทุกข้อ (ตรวจ GET/PATCH system-config, Boundary validation 400, เปิดบิล, เสิร์ฟ, จ่ายเงิน และ assert ใบเสร็จ)
+  - E2E `backend/test/e2e/e2e-receipt.mjs` ผ่าน 12/12 ข้อ
+  - Typecheck (`tsc --noEmit`, `tsc -b`) และ Vite build ผ่าน 100%
+
+### 3.21 การตั้งค่าการทำงานของร้านและกะ (Store Operations & Shifts Config) — 2026-11-01
+
+- **Frontend** (`ui-ux-pro-max`):
+  - สร้างโมดูล `features/store/components/StoreOperationsConfigCard.tsx` และ Type `storeOperations.types.ts`
+  - รวมเข้ากับการ์ดในหน้า `/:tenantSlug/setting/store` (`StoreSettingPage.tsx`) โดยแยกปุ่มบันทึกเฉพาะสำหรับการทำงานร้านเพื่อไม่ให้ปนกับข้อมูลทั่วไปของร้าน
+  - ค่าที่รองรับ:
+    - `business_day_start_hour`: ตัวเลือกชั่วโมงเริ่มวันขาย 00:00–23:00 น. (Default 05:00 น.) พร้อมคำอธิบายสำหรับร้านที่เปิดดึก/ข้ามคืน
+    - `shift_escalation_hours`: ระยะเวลาส่งต่อกะค้างตรวจให้เจ้าของร้าน 1–168 ชม. (Default 4 ชม.) พร้อมปุ่มเลือกด่วน (2, 4, 8, 24 ชม.)
+    - `inventory_variance_alert_percent`: เกณฑ์ส่วนต่างสต็อกแจ้งเตือน 0–1,000% (Default 20%) พร้อมปุ่มเลือกด่วน (10, 20, 30, 50%)
+  - รองรับ Input Validation ทั้งฝั่ง Client และเชื่อมต่อ `PATCH /api/system-config/:key` พร้อมระบบตรวจจับการเปลี่ยนแปลง (`hasChanges`)
+- **Doubt-Driven Development Audit & Hardening (2026-11-02)**:
+  - **ป้องกัน POS ล่มกลางคัน (Mid-day Cutoff Paralysis)**: เพิ่ม Confirmation Modal แจ้งเตือนความเสี่ยงเรื่องกะค้างเมื่อมีการเปลี่ยน `business_day_start_hour` เพื่อให้เจ้าของร้านมั่นใจว่าปิดกะรอบวันแล้วเท่านั้นก่อนเปลี่ยน
+  - **แก้ไข Controlled Input State (Backspace & Decimal Stripping)**: ปรับ State เป็น String input อนุญาตให้ลบจนว่างเปล่าได้ ไม่เด้งกลับเป็น 0 และรองรับการพิมพ์จุดทศนิยม `12.` โดยไม่ถูกตัดจุดออก
+  - **แก้ไข Browser Decimal Constraint**: เติม `noValidate` ในฟอร์ม และรองรับ input `decimal` ไม่ให้เบราว์เซอร์บล็อกการส่งค่าทศนิยม
+  - **แก้ไข State Desynchronization ผ่าน `Promise.allSettled`**: แยกบันทึกและอัปเดต `initialConfig` ทีละฟิลด์ที่สำเร็จจริง หากมีตัวใดล้มเหลวจะแจ้งเตือนรายตัวและสั่ง re-sync จากเซิร์ฟเวอร์ทันที
+  - **ป้องกัน Auth Lifecycle Freeze & Silent Default Overwrite**: แก้บั๊ก loading ค้างเมื่อกู้คืน session และเพิ่มปุ่ม "โหลดใหม่ (Retry)" ป้องกันการบันทึกค่า default ทับข้อมูลจริงใน DB เมื่อเน็ตหลุด
+  - **UI/UX & Accessibility Polish**: เพิ่มสถานะ disabled และ focus rings ให้ปุ่มเลือกด่วนครบถ้วน, แสดง badge เจ้าของร้านบนทุกขนาดหน้าจอ และมี Auto-dismiss timer 4 วินาทีสำหรับป้ายบันทึกสำเร็จ
+- **ทดสอบ**:
+  - Typecheck (`tsc --noEmit`, `tsc -b`) และ Vite build ผ่าน 100%
+  - E2E `backend/test/e2e/e2e-printer-config.mjs` ยืนยันการทำงานของ System Config ครบถ้วน
+
+### 3.22 Inventory Polish (Business date + Note + Stock card UX) — 2026-11-02
+
+- **DB**: `PATCH_11_inventory_business_date.sql` เพิ่ม `business_date` ใน `inventory_transactions`
+- **Backend**: บันทึก note และทศนิยมอย่างถูกต้องใน `record_stock_count()`
+- **Frontend**: `StockAdjustmentCard.tsx` เพิ่มช่องค้นหาวัตถุดิบและตัวกรองสถานะด่วน
+
+### 3.23 Build Lifecycle & NodeNext Entrypoint Hardening (Doubt-Driven Development) — 2026-11-02
+
+- **วิเคราะห์ต้นตอ `MODULE_NOT_FOUND` ของ `backend/dist/main`**: เกิดจากการที่ `dist/` อยู่ใน `.gitignore` เมื่อยังไม่ได้ build หรือรัน `start:prod` บนสภาพแวดล้อมใหม่จะไม่มี `dist/main.js`
+- **Adversarial Review (Single-Model + Gemini Pro)**: ตรวจสอบและสกัดข้อผิดพลาดวิกฤต เช่น การห้ามผูก `prestart:prod` ที่จะทำให้ Production Container ล่มจากการ prune `devDependencies`, และการหลีกเลี่ยง `&&` ใน PowerShell 5.1
+- **แก้ไขและเพิ่ม Root Workspaces Scripts**:
+  - Root `package.json`: เพิ่ม `"build": "npm run build --workspaces --if-present"`, `"build:backend"`, `"build:frontend"`, `"start:backend"`
+  - `backend/package.json`: ปรับ `"start:prod": "node dist/main.js"` ระบุนามสกุล `.js` ชัดเจนตามมาตรฐาน NodeNext
+  - ตรวจสอบ `tsc --noEmit`, `tsc -b`, `npm run build` ผ่าน 100% ทั้งหมด
 
 ---
 
@@ -288,11 +396,10 @@ commit เดียว 4 เรื่อง:
 
 - **PWA shell**: manifest + service worker precache + update prompt + icons ทำแล้ว (`a992417`)
   - **ยังเหลือ**: IndexedDB (Dexie) แคช `GET /menu/full` / โต๊ะ / กะปัจจุบัน + outbox คิวออเดอร์ออฟไลน์
-- **Reports ต่อยอด**: หน้ารายงานรายกะ/ประวัติกะ, ตัวกรอง `from`/`to`/`shiftId` บน UI (API รองรับแล้ว แต่ FE ส่งแค่ `period`), export
-- **System Config UI ที่เหลือ** (หน้า VAT กับ Store ทำแล้ว)
+- **Reports**: สรุปยอดขาย, กรองช่วงวันที่, หน้ารายงานรายกะ และส่งออก CSV เสร็จสมบูรณ์แล้ว (`3.18`) — *(ตัดการสรุปยอดขายแบบ PDF ออก ใช้แค่ CSV)*
+- **System Config UI**: หน้า VAT, Store และ **หน้าตั้งค่าเครื่องพิมพ์และใบเสร็จ (Printer & Receipt Settings)** เสร็จสมบูรณ์แล้ว (ดู 3.20)
 - **Menu reorder endpoint**
-- **Audit Log endpoint/UI**
-- **Inventory polish**: ช่องค้นหาในการ์ดนับวัตถุดิบ, ใช้ business date แทน local date, note ใน `record_stock_count()` มีช่องว่างนำหน้า + ทศนิยม 4 ตำแหน่ง
+- **Inventory polish**: เสร็จสมบูรณ์แล้ว (ดู 3.22)
 
 ### ปิดแล้ว (เคยอยู่ใน P1 — อย่าเปิดซ้ำ)
 
@@ -306,12 +413,13 @@ commit เดียว 4 เรื่อง:
 - `POST /orders/sync` ขาด DTO → เพื่อนร่วมทีมทำให้เสร็จแล้ว (2026-10-31)
 - ไม่มี `GET /users/me` → 2026-10-31 (`@AnyAuthenticated` + `permissions: string[]` + `store` + sync เข้า `AuthContext`, ดู 3.16)
 - `/:tenantSlug/homepage` และ `POST /auth/pin-login` → ตัดออกจากขอบเขตแล้ว
+- สรุปยอดขายแบบ PDF → ตัดออกจากขอบเขตแล้ว (ทำส่งออก CSV เพียงพอแล้วตามข้อตกลง)
 
 ---
 
 ## 6. คุณภาพ / เทสต์ / เอกสาร
 
-| รายการ | สถานะล่าสุด (2026-10-31, branch `feat-aod`) |
+| รายการ | สถานะล่าสุด (2026-11-01, branch `feat-aod`) |
 |---|---|
 | Backend `npx tsc --noEmit` | **ผ่าน** |
 | Frontend `npx tsc -b` | **ผ่าน** |
@@ -320,7 +428,7 @@ commit เดียว 4 เรื่อง:
 | Backend `npx eslint "src/**/*.ts"` | ยังแดงหลายพัน problems (ส่วนใหญ่ prettier) — **อย่า auto-fix ปนกับ feature commit** |
 | Frontend `npx eslint src` | ~40 problems เดิม (`react-hooks/set-state-in-effect`, `no-explicit-any` ใน `libs/appClient.ts`) — ไฟล์ที่แตะในงาน void/comp สะอาด |
 | Backend e2e spec | `backend/test/app.e2e-spec.ts` ยังเป็น boilerplate (`"Hello World!"`) → ใช้ไม่ได้ |
-| E2E ใน repo | `backend/test/e2e/`: `e2e-reports.mjs`, `e2e-receipt.mjs`, `e2e-public-tenant.mjs`, `e2e-token-version.mjs`, `e2e-void-comp.mjs`, `e2e-cancel-order.mjs`, `e2e-login-lockout.mjs`, `e2e-users-me.mjs`, `e2e-merge-tables-payment.mjs` |
+| E2E ใน repo | `backend/test/e2e/`: `e2e-reports.mjs`, `e2e-receipt.mjs`, `e2e-public-tenant.mjs`, `e2e-token-version.mjs`, `e2e-void-comp.mjs`, `e2e-cancel-order.mjs`, `e2e-login-lockout.mjs`, `e2e-users-me.mjs`, `e2e-merge-tables-payment.mjs`, `e2e-audit-logs.mjs`, `e2e-printer-config.mjs`, `e2e-inventory-polish.mjs` |
 | E2E ที่ยังไม่อยู่ใน repo | สคริปต์ใน `%TEMP%\opencode\` ของเครื่องที่เขียน: `e2e-shift.mjs`, `e2e-stock-count-batch.mjs`, `e2e-floors.mjs`, `e2e-kds-badge.mjs` |
 
 **ข้อควรระวังเวลาเทสต์**
@@ -403,7 +511,7 @@ commit เดียว 4 เรื่อง:
 ## 9. ลำดับที่แนะนำถัดไป
 
 1. **เปิด PR `feat-aod` → `main`** — งาน P0 และ P1 ทั้งหมด (`void/comp`, `PIN lock`, `escalation`, `cancel/walkout`, `login lockout`, `menu image`, `GET /users/me`) เสร็จครบแล้ว
-2. **P2**: offline data layer (Dexie + outbox) → Reports รายกะ/ตัวกรองวันที่ → Audit log → Menu reorder
+2. **P2 ที่เหลือ**: offline data layer (Dexie + outbox) → Menu reorder (Reports/CSV, Audit logs 3.19, Printer & Receipt Settings 3.20 และ Inventory polish 3.22 เสร็จเรียบร้อยแล้ว)
 4. ย้าย E2E 4 ตัวจาก `%TEMP%\opencode\` เข้า repo และเพิ่ม E2E ของ PIN ผ่าน UI (ตั้ง PIN → void/comp → verify กะ) + E2E escalation (ต้องต่อ DB เพื่อย้อน `closed_at`)
 
 > ก่อนเริ่มงานทุกครั้ง: ดู `git status`, รัน `npx tsc --noEmit` (backend) และ `npx tsc -b` (frontend) ให้ผ่านก่อน commit

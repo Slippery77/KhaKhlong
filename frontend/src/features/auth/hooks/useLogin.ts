@@ -6,7 +6,10 @@ import { ApiError, apiFetch } from '../../../libs/appClient';
 import { getRefreshToken, saveSession } from '../authStorage';
 import { saveLastTenantSlug } from '../tenantStorage';
 import { clearTenantSnapshots } from '../../offline/snapshotCache';   // [ใหม่]
+import { hasUnsentForUser } from '../../offline/outbox';
 
+/** ผลของ logout — 'blocked' = ยังมีออเดอร์ค้างส่งในเครื่อง ไม่ได้ออกจากระบบ */
+export type LogoutResult = 'ok'|'blocked';
 
 export function useLogin() {
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -81,6 +84,11 @@ export function useLogin() {
     };
 
     const logout = async () => {
+        // [ใหม่] ตัดสินใจ C: มีออเดอร์ค้างส่งของคนนี้ → ห้ามออก
+        // ออกไปแล้ว token หาย ออเดอร์จะส่งไม่ได้จนกว่าคนเดิมกลับมา login (ถ้าไม่กลับมา = ครัวไม่ได้รับ)
+        if (user?.tenantSlug && user.sub && (await hasUnsentForUser(user.tenantSlug, user.sub))) {
+            return 'blocked';
+        }
         setIsSubmitting(true);
         try {
             await apiFetch('/auth/logout', accessToken, 'POST', {
@@ -98,6 +106,7 @@ export function useLogin() {
             clearAuth();
             navigate('/');
         }
+        return 'ok';
     };
 
     return {

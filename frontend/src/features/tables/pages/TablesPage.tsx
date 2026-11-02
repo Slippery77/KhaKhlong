@@ -375,7 +375,6 @@ export default function TablesPage() {
                             </div>
                         </div>
                     )}
-
                     {/* ติดต่อ server ไม่ได้ — กำลังแสดงผังโต๊ะล่าสุดที่บันทึกไว้ในเครื่อง */}
                     {!isLoading && !error && staleSince !== null && (
                         <div className="mb-4 font-kanit">
