@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { AlertTriangle, Loader2, Package, PackageX, Plus, Search, SearchX } from 'lucide-react';
+import { AlertTriangle, Package, PackageX, Plus, Search, SearchX } from 'lucide-react';
 import Header from '../../../components/Header';
 import IngredientForm from '../components/IngredientForm';
 import InventoryHistory from '../components/InventoryHistory';
@@ -10,6 +10,33 @@ import { useInventoryTransactions } from '../hooks/useInventoryTransactions';
 import type { NewIngredientInput } from '../types/inventory.types';
 
 type StockFilter = 'active' | 'low' | 'inactive';
+
+function StockTableSkeleton() {
+  return (
+    <div className="w-full overflow-x-auto flex-1 animate-pulse" aria-busy="true">
+      <div className="divide-y divide-[#E8DFD5]/70">
+        {[1, 2, 3, 4, 5, 6].map((i) => (
+          <div
+            key={i}
+            className="grid grid-cols-[minmax(160px,2fr)_90px_90px_90px_90px_90px_170px] items-center gap-3 px-4 py-4 text-sm"
+          >
+            <div className="h-4 w-32 rounded bg-stone-200/70" />
+            <div className="h-4 w-12 rounded bg-stone-200/60" />
+            <div className="h-4 w-10 rounded bg-stone-200/50" />
+            <div className="h-4 w-10 rounded bg-stone-200/50" />
+            <div className="h-4 w-8 rounded bg-stone-200/50" />
+            <div className="h-4 w-8 rounded bg-stone-200/50" />
+            <div className="flex items-center justify-end gap-2.5">
+              <div className="h-7 w-20 rounded-xl bg-stone-200/60" />
+              <div className="h-7 w-7 rounded-lg bg-stone-200/40" />
+              <div className="h-7 w-7 rounded-lg bg-stone-200/40" />
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 export default function StockPage() {
   const [searchTerm, setSearchTerm] = useState('');
@@ -153,11 +180,8 @@ export default function StockPage() {
           />
         )}
 
-        {inventory.isLoading ? (
-          <div className="flex items-center justify-center gap-2 py-12 text-sm text-stone-500">
-            <Loader2 className="w-4 h-4 animate-spin" />
-            กำลังโหลดสต็อก...
-          </div>
+        {inventory.isLoading && inventory.items.length === 0 ? (
+          <StockTableSkeleton />
         ) : visibleItems.length === 0 ? (
           <div className="flex flex-col items-center gap-3 py-12 text-center">
             <SearchX className="w-9 h-9 text-stone-300" />

@@ -7,9 +7,10 @@ interface Props {
   onSelect: (group: ModifierGroup) => void;
   onCreate: () => void;
   onToggleActive: (group: ModifierGroup) => void;
+  isLoading?: boolean;
 }
 
-export default function ModifierSidebar({ groups, selectedId, onSelect, onCreate, onToggleActive }: Props) {
+export default function ModifierSidebar({ groups, selectedId, onSelect, onCreate, onToggleActive, isLoading = false }: Props) {
   return (
     <aside className="flex h-full w-72 shrink-0 flex-col border-r border-[#E8DFD5] bg-[#FBF9F6]">
       <div className="border-b border-[#E8DFD5] px-4 py-4">
@@ -28,7 +29,11 @@ export default function ModifierSidebar({ groups, selectedId, onSelect, onCreate
         </div>
       </div>
       <ul className="flex flex-1 flex-col gap-1 overflow-y-auto p-2">
-        {groups.length === 0 ? (
+        {isLoading && groups.length === 0 ? (
+          [1, 2, 3, 4].map((i) => (
+            <li key={i} className="h-10 rounded-xl bg-stone-200/50 animate-pulse" />
+          ))
+        ) : groups.length === 0 ? (
           <li className="px-2 py-6 text-center text-xs text-stone-500">ยังไม่มีกลุ่มตัวเลือก</li>
         ) : (
           groups.map((group) => {

@@ -6,6 +6,37 @@ import { useKDSQueue } from "../hooks/useKDSQueue"
 import type { KDSStatus } from "../types/kds.types"
 import { ChefHat, Bell, CheckCircle2, CookingPot, HelpCircle, X, RefreshCw, RotateCcw, AlertCircle } from "lucide-react"
 
+function KDSTicketsSkeleton() {
+    return (
+        <div className="flex flex-col gap-8 pb-12 font-kanit animate-pulse" aria-busy="true" role="status" aria-label="กำลังโหลดคิวครัว">
+            <section className="flex flex-col gap-3.5">
+                <div className="flex items-center gap-2">
+                    <div className="h-6 w-20 rounded-full bg-stone-200/70" />
+                    <div className="h-4 w-16 rounded bg-stone-200/50" />
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                    {[1, 2, 3, 4].map((i) => (
+                        <div key={i} className="rounded-2xl border border-[#E2D6C5] bg-white p-4 h-80 flex flex-col justify-between shadow-xs">
+                            <div className="space-y-3">
+                                <div className="flex items-center justify-between pb-3 border-b border-stone-100">
+                                    <div className="h-5 w-20 rounded bg-stone-200/70" />
+                                    <div className="h-4 w-12 rounded bg-stone-200/50" />
+                                </div>
+                                <div className="space-y-2 pt-2">
+                                    <div className="h-4 w-full rounded bg-stone-200/60" />
+                                    <div className="h-4 w-3/4 rounded bg-stone-200/50" />
+                                    <div className="h-4 w-2/3 rounded bg-stone-200/40" />
+                                </div>
+                            </div>
+                            <div className="h-10 w-full rounded-xl bg-stone-200/50" />
+                        </div>
+                    ))}
+                </div>
+            </section>
+        </div>
+    );
+}
+
 export default function KDSPage() {
     const { clearAllOrders } = useKDS()
 
@@ -126,10 +157,7 @@ export default function KDSPage() {
             {/* เนื้อหาหลักของหน้า KDS */}
             <main className="flex-1 overflow-y-auto p-6 md:p-8 relative">
                 {isLoading && totalOrdersCount === 0 ? (
-                    <div className="h-full flex flex-col items-center justify-center text-center select-none py-12">
-                        <div className="w-10 h-10 border-2 border-stone-300 border-t-[#A68874] rounded-full animate-spin mb-4" />
-                        <p className="text-sm text-stone-400 font-kanit">กำลังโหลดคิวครัว...</p>
-                    </div>
+                    <KDSTicketsSkeleton />
                 ) : error && totalOrdersCount === 0 ? (
                     <div className="h-full flex flex-col items-center justify-center text-center select-none py-12 gap-3">
                         <p className="text-sm text-red-500 font-kanit">{error}</p>

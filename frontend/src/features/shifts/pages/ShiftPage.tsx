@@ -1,4 +1,4 @@
-import { Loader2, RefreshCw, Wallet } from 'lucide-react';
+import { RefreshCw, Wallet } from 'lucide-react';
 import Header from '../../../components/Header';
 import { useAuth } from '../../auth/context/AuthContext';
 import BlockedOrdersNotice from '../components/BlockedOrdersNotice';
@@ -12,6 +12,25 @@ import { useShift } from '../hooks/useShift';
 import { SHIFT_STATUS_LABEL, formatBusinessDate } from '../utils/shiftFormat';
 import { useOutbox } from '../../offline/hooks/useOutbox';
 import { openOutboxPanel } from '../../offline/outboxPanel';
+
+function ShiftSkeleton() {
+  return (
+    <div className="rounded-2xl border border-[#E8DFD5] bg-white p-6 shadow-xs animate-pulse space-y-5" aria-busy="true">
+      <div className="flex items-center justify-between border-b border-[#F0EAE2] pb-4">
+        <div className="space-y-2">
+          <div className="h-5 w-32 rounded bg-stone-200/70" />
+          <div className="h-3.5 w-48 rounded bg-stone-200/40" />
+        </div>
+        <div className="h-7 w-20 rounded-full bg-stone-200/50" />
+      </div>
+      <div className="space-y-4">
+        <div className="h-4 w-28 rounded bg-stone-200/60" />
+        <div className="h-10 w-full rounded-xl bg-stone-200/40" />
+        <div className="h-10 w-36 rounded-xl bg-stone-200/60" />
+      </div>
+    </div>
+  );
+}
 
 export default function ShiftPage() {
   const { user } = useAuth();
@@ -86,11 +105,8 @@ export default function ShiftPage() {
             </div>
           )}
 
-          {isLoading ? (
-            <div className="flex items-center justify-center gap-2 rounded-2xl border border-[#E8DFD5] bg-white py-16 text-sm text-[#7A6A5C]">
-              <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />
-              กำลังโหลดข้อมูลกะ…
-            </div>
+          {isLoading && !shift ? (
+            <ShiftSkeleton />
           ) : (
             <div className="space-y-4">
               <BlockedOrdersNotice orders={blockedOrders} />

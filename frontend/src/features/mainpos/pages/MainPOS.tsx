@@ -44,6 +44,24 @@ const getCompableItemIds = (item: CartMenu) =>
     })
 
 
+function MenuCardSkeleton() {
+    return (
+        <div
+            className="flex h-[204px] flex-col overflow-hidden rounded-2xl border border-[#E2D6C5] bg-white animate-pulse shadow-xs"
+            aria-busy="true"
+        >
+            <div className="h-[132px] w-full bg-[#EFE8DC]/70" />
+            <div className="flex flex-1 flex-col justify-between p-3">
+                <div className="h-4 w-3/4 rounded bg-stone-200/70" />
+                <div className="flex items-center justify-between">
+                    <div className="h-4 w-14 rounded bg-stone-200/60" />
+                    <div className="h-4 w-8 rounded bg-stone-200/40" />
+                </div>
+            </div>
+        </div>
+    );
+}
+
 export default function MainPOS() {
     const [sendError , setSendError] = useState<string|null>(null);
     // const { sendOrderToKitchen } = useKDS()
@@ -497,6 +515,7 @@ export default function MainPOS() {
                         categories={categories}
                         seletedCategory={activeCategoryId}
                         onSelectCategory={handleSelectCategory}
+                        isLoading={isLoading}
                     />
                 </aside>
 
@@ -554,15 +573,17 @@ export default function MainPOS() {
                     )}
 
                     <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4 overflow-y-auto p-6 flex-1 content-start">
-                        {isLoading ? (
-                            <p className="col-span-4 py-20 text-center text-sm text-stone-400 font-kanit">กำลังโหลดเมนู...</p>
-                        ) : error ? (
+                        {isLoading && menu.length === 0 ? (
+                            Array.from({ length: 8 }).map((_, i) => (
+                                <MenuCardSkeleton key={i} />
+                            ))
+                        ) : error && menu.length === 0 ? (
                             <div className="col-span-4 flex flex-col items-center gap-3 py-20 text-center font-kanit">
                                 <p className="text-sm text-red-600">{error}</p>
                                 <button
                                     type="button"
                                     onClick={reload}
-                                    className="rounded-xl border border-[#d9c6b0] px-4 py-2 text-sm text-[#2D241E] transition hover:bg-[#FAF7F2] active:scale-95"
+                                    className="rounded-xl border border-[#d9c6b0] px-4 py-2 text-sm text-[#2D241E] transition hover:bg-[#FAF7F2] active:scale-95 cursor-pointer"
                                 >
                                     ลองใหม่
                                 </button>

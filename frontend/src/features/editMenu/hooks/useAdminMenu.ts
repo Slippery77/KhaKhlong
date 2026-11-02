@@ -1,3 +1,4 @@
+import { invalidateMenuCache } from "../../mainpos/hooks/useFullMenu";
 import { useCallback, useEffect, useState } from "react";
 import { apiFetch } from "../../../libs/appClient";
 import { useAuth } from "../../auth/context/AuthContext";
@@ -66,6 +67,7 @@ export function useAdminMenu(){
             await apiFetch('/menu/category/reorder', accessToken, 'PATCH', {
                 categoryIds: newCategories.map((c) => c.category_id),
             });
+            invalidateMenuCache();
             return true;
         } catch (err) {
             setCategories(rollbackCategories);
@@ -93,6 +95,7 @@ export function useCreateCategory(){
         setIsSubmitting(true);
         try{
             const res = await apiFetch<{data: {category_id:string}}>('/menu/category',accessToken,'POST',{name});
+            invalidateMenuCache();
             return res.data;
         }catch(err){
             setError(err instanceof Error ? err.message : 'บันทึกไม่สำเร็จ');
@@ -235,6 +238,7 @@ export function useCreateMenu(){
                 'POST',
                 { category_id, name, description, price, image_url: image_url ?? null },
             );
+            invalidateMenuCache();
             return res.data.menu_item_id;
         }catch(err){
             setError(err instanceof Error ? err.message:'บันทึกไม่สำเร็จ');

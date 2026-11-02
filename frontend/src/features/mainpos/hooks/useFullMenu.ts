@@ -4,8 +4,7 @@ import type { Menu, ModifierGroup, ModifierOption } from "../types/pos.types"
 import type { Category } from "../types/item.types"
 import { useAuth } from "../../auth/context/AuthContext"
 import { apiFetch } from "../../../libs/appClient"
-import { fetchWithSnapshot, isUnreachableError } from "../../offline/snapshotCache"   
-
+import { fetchWithSnapshot, isUnreachableError } from "../../offline/snapshotCache"
 
 // แปลง ApiModifierGroup → ModifierGroup ที่ component ใช้
 function mapModifierGroup(apiGroup: ApiModifierGroup): ModifierGroup {
@@ -22,11 +21,6 @@ function mapModifierGroup(apiGroup: ApiModifierGroup): ModifierGroup {
     }
 }
 
-// [ใหม่] ย้ายโค้ดแปลงข้อมูลออกมาจาก load() เป็นฟังก์ชันแยก
-// เนื้อในเหมือนเดิมทุกบรรทัด — แค่ "ย้ายที่" (refactor แบบ extract function)
-// เหตุผล: ต้องใช้ทั้งกับข้อมูลสดและข้อมูลจาก snapshot (แนวคิด 1.2)
-// อยู่นอก hook → ไม่ถูกสร้างใหม่ทุก render และทดสอบแยกได้
-// แปลงข้อมูล json จาก server ให้เป็นข้อมูลที่หน้าจอใช้ แล้วเอาไปจับกับ type แล้ว card จะเอาข้อมูลไปใช้
 export function buildMenu(data: FullMenuData): Menu[] {
     const modGroupMap = new Map<string, ModifierGroup>()
     for (const apiGroup of data.modifier_groups ?? []) {
@@ -52,61 +46,79 @@ export function buildMenu(data: FullMenuData): Menu[] {
             })
         }
     }
-    return allMenus      // [ใหม่] เดิมเรียก setMenu(allMenus) ตรงนี้ ตอนนี้คืนค่าแทน
+    return allMenus
+}
+
+interface MenuMemoryCache {
+    tenantSlug: string
+    categories: Category[]
+    menu: Menu[]
+    staleSince: number | null
+}
+
+let menuMemoryCache: MenuMemoryCache | null = null
+
+/** ล้าง in-memory cache ของเมนู (เรียกเมื่อมีการแก้ไขเมนูในหน้าตั้งค่า หรือเปลี่ยนผู้ใช้/ร้าน) */
+export function invalidateMenuCache(tenantSlug?: string) {
+    if (!tenantSlug || menuMemoryCache?.tenantSlug === tenantSlug) {
+        menuMemoryCache = null
+    }
 }
 
 export function useFullMenu() {
-    const { accessToken , user} = useAuth()
-    const [categories, setCategories] = useState<Category[]>([])
-    const [menu, setMenu] = useState<Menu[]>([])
+    const { accessToken, user } = useAuth()
+    const tenantSlug = user?.tenantSlug
+
+    const hasValidCache = Boolean(
+        menuMemoryCache &&
+        tenantSlug &&
+        menuMemoryCache.tenantSlug === tenantSlug &&
+        menuMemoryCache.categories.length > 0,
+    )
+
+    const [categories, setCategories] = useState<Category[]>(() =>
+        hasValidCache ? menuMemoryCache!.categories : [],
+    )
+    const [menu, setMenu] = useState<Menu[]>(() =>
+        hasValidCache ? menuMemoryCache!.menu : [],
+    )
     const [error, setError] = useState<string | null>(null)
-    const [isLoading, setIsLoading] = useState<boolean>(true)
-    const [staleSince, setStaleSince] = useState<number | null>(null)
-    // [ใหม่] null = สด · ตัวเลข = มาจาก snapshot (ความหมายเดียวกับ useTables)
-    // หน้า POS ยังไม่ได้ใช้ค่านี้ — คืนไว้ให้ใช้ตอนต่อ outbox เข้า MainPOS
+    const [isLoading, setIsLoading] = useState<boolean>(() => !hasValidCache)
+    const [staleSince, setStaleSince] = useState<number | null>(() =>
+        hasValidCache ? menuMemoryCache!.staleSince : null,
+    )
 
     const load = useCallback(
         async (silent = false) => {
-            if (!accessToken && !user?.tenantSlug ) return;
-            if (!silent) setIsLoading(true)
+            if (!accessToken || !tenantSlug) return
+            // ถ้ายังไม่มี cache ใน memory ให้เปิด loading เพื่อแสดง skeleton
+            // ถ้ามี cache อยู่แล้ว ให้ดึงข้อมูลสดมา sync เบื้องหลังแบบเงียบ ๆ (ไม่ทำลาย UI)
+            const shouldShowLoading = !silent && !menuMemoryCache
+            if (shouldShowLoading) setIsLoading(true)
             setError(null)
             try {
-            const result = await fetchWithSnapshot(user?.tenantSlug,'menu',async () => {
-                const res = await apiFetch<{ data: FullMenuData }>("/menu/full", accessToken)
-                return res.data;
-                // คืน FullMenuData ดิบ → ถูกเก็บลง snapshot แบบนี้ (แนวคิด 1.2)
-            }) 
-                // // สร้าง Map สำหรับ lookup modifier group ด้วย id
-                // const modGroupMap = new Map<string, ModifierGroup>()
-                // for (const apiGroup of data.modifier_groups ?? []) {
-                //     modGroupMap.set(apiGroup.modifier_group_id, mapModifierGroup(apiGroup))
-                // }
+                const result = await fetchWithSnapshot(tenantSlug, 'menu', async () => {
+                    const res = await apiFetch<{ data: FullMenuData }>("/menu/full", accessToken)
+                    return res.data
+                })
 
-                // // แปลงเมนูทุกตัวให้มี modifiers[] พร้อมใช้
-                // const allMenus: Menu[] = []
-                // for (const cat of data.categories) {
-                //     for (const item of cat.items) {
-                //         const modifiers = (item.modifier_group_ids ?? [])
-                //             .map((id) => modGroupMap.get(id))
-                //             .filter((g): g is ModifierGroup => g !== undefined)
+                const builtCategories = result.data.categories
+                const builtMenu = buildMenu(result.data)
+                const nextStale = result.isStale ? result.savedAt : null
 
-                //         allMenus.push({
-                //             id: item.menu_item_id,
-                //             name: item.name,
-                //             price: item.price,
-                //             categoryId: item.category_id,
-                //             isAvailable: item.is_available,
-                //             modifiers: modifiers.length > 0 ? modifiers : undefined,
-                //         })
-                //     }
-                // }
+                // บันทึกลง in-memory cache สำหรับการเปิดหน้า POS ครั้งต่อไป
+                menuMemoryCache = {
+                    tenantSlug,
+                    categories: builtCategories,
+                    menu: builtMenu,
+                    staleSince: nextStale,
+                }
 
-                setCategories(result.data.categories)
-                setMenu(buildMenu(result.data))
-                setStaleSince(result.isStale ? result.savedAt : null)
+                setCategories(builtCategories)
+                setMenu(builtMenu)
+                setStaleSince(nextStale)
             } catch (err) {
-                if(isUnreachableError(err))
-                    // [ใหม่] ติดต่อไม่ได้ + ร้านนี้ไม่เคยโหลดเมนูสำเร็จบนเครื่องนี้
+                if (isUnreachableError(err))
                     setError("ติดต่อเซิร์ฟเวอร์ไม่ได้ และยังไม่มีเมนูที่บันทึกไว้ในเครื่องนี้")
                 else 
                     setError(err instanceof Error ? err.message : "โหลดเมนูไม่สำเร็จ")
@@ -114,15 +126,22 @@ export function useFullMenu() {
                 setIsLoading(false)
             }
         },
-        [accessToken, user],
+        [accessToken, tenantSlug],
     )
 
     useEffect(() => {
+        // มี cache อยู่แล้ว → โหลดเบื้องหลังแบบ silent ทันที ไม่ต้องรอ loading spinner
+        const isSilent = Boolean(
+            menuMemoryCache &&
+            tenantSlug &&
+            menuMemoryCache.tenantSlug === tenantSlug &&
+            menuMemoryCache.categories.length > 0,
+        )
         const timer = window.setTimeout(() => {
-            void load()
+            void load(isSilent)
         }, 0)
         return () => window.clearTimeout(timer)
-    }, [load])
+    }, [load, tenantSlug])
 
-    return { categories, menu, isLoading, error,staleSince, reload: () => load(true) }
+    return { categories, menu, isLoading, error, staleSince, reload: () => load(false) }
 }

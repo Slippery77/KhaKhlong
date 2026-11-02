@@ -1,33 +1,42 @@
 import CategoryCard from "./CategoryCard"
 import type { Category } from "../types/item.types";
 
-// TODO (หมวดจริงจาก API)
-//   - ลบ useState mockup ข้างล่าง แล้วรับ categories เป็น prop จาก MainPOS
-//     (MainPOS เป็นคนเรียก useFullMenu ที่เดียว ไม่ต้องเรียก API ซ้ำในนี้)
-//   - API ไม่มี icon → ทำตัวเลือก icon เอง เช่น
-//       const ICONS: Record<string, React.ReactNode> = { 'เครื่องดื่ม': <CupSoda />, 'ของหวาน': <IceCreamCone /> ... }
-//       icon = ICONS[c.name] ?? <UtensilsCrossed />   ← หมวดที่ไม่รู้จักใช้ icon กลาง
-//   - เทียบ isActive ด้วย category_id แทน title และ onSelectCategory(c.category_id)
-//   - interface Category ข้างล่างจะชนชื่อกับ type ของ API → เปลี่ยนชื่อเป็น SidebarCategory หรือใช้ของ pos.types
-
-
-
 interface Props {
-    categories:Category[];
-    seletedCategory: string,
+    categories: Category[];
+    seletedCategory: string;
     onSelectCategory: (categoryTitle: string) => void;
+    isLoading?: boolean;
 }
-export default function MenuSidebar({categories,seletedCategory,onSelectCategory}:Props) {
+
+export default function MenuSidebar({
+    categories,
+    seletedCategory,
+    onSelectCategory,
+    isLoading = false,
+}: Props) {
+    if (isLoading && categories.length === 0) {
+        return (
+            <div className="flex flex-col items-center gap-3 w-full font-kanit" aria-busy="true">
+                {[1, 2, 3, 4, 5].map((i) => (
+                    <div
+                        key={i}
+                        className="w-28 h-20 rounded-2xl bg-[#EDE3D6]/70 animate-pulse"
+                    />
+                ))}
+            </div>
+        );
+    }
 
     return (
         <div className="flex flex-col items-center gap-3 w-full font-kanit">
-            {categories.map(c => (
-                <CategoryCard 
-                key={c.category_id} 
-                name={c.name} 
-                isActive={seletedCategory === c.category_id} 
-                onClick={() => onSelectCategory(c.category_id)} />
+            {categories.map((c) => (
+                <CategoryCard
+                    key={c.category_id}
+                    name={c.name}
+                    isActive={seletedCategory === c.category_id}
+                    onClick={() => onSelectCategory(c.category_id)}
+                />
             ))}
         </div>
-    )
+    );
 }

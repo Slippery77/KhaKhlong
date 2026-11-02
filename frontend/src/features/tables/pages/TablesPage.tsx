@@ -46,6 +46,42 @@ interface MergeSummaryState {
     error: string | null
 }
 
+function TableCardSkeleton() {
+    return (
+        <div
+            className="relative h-[140px] rounded-2xl border border-[#E8DFD5] bg-white/70 p-4 flex flex-col justify-between shadow-xs animate-pulse font-kanit"
+            aria-busy="true"
+        >
+            <div>
+                <div className="flex items-center justify-between mb-2">
+                    <div className="h-3 w-12 rounded bg-stone-200/70" />
+                    <div className="h-2.5 w-2.5 rounded-full bg-stone-200" />
+                </div>
+                <div className="h-8 w-16 rounded-lg bg-stone-200/80" />
+            </div>
+            <div className="flex items-center justify-between pt-2 border-t border-stone-100">
+                <div className="h-3.5 w-14 rounded bg-stone-200/50" />
+                <div className="h-3.5 w-10 rounded bg-stone-200/50" />
+            </div>
+        </div>
+    );
+}
+
+function TableGridSkeleton() {
+    return (
+        <div className="space-y-8 font-kanit" aria-busy="true" role="status" aria-label="กำลังโหลดข้อมูลโต๊ะ">
+            <div>
+                <div className="h-4 w-32 rounded bg-stone-200/70 animate-pulse mb-3" />
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3 items-stretch">
+                    {Array.from({ length: 12 }).map((_, i) => (
+                        <TableCardSkeleton key={i} />
+                    ))}
+                </div>
+            </div>
+        </div>
+    );
+}
+
 export default function TablesPage() {
     const { tables, isLoading, error, staleSince, reload } = useTables()
     const navigate = useNavigate()
@@ -454,17 +490,15 @@ export default function TablesPage() {
                         </div>
                     )}
 
-                    {isLoading ? (
-                        <div className="flex items-center justify-center py-20">
-                            <p className="text-sm text-stone-400 font-kanit">กำลังโหลดข้อมูลโต๊ะ...</p>
-                        </div>
-                    ) : error ? (
+                    {isInitialLoading ? (
+                        <TableGridSkeleton />
+                    ) : error && !hasData ? (
                         <div className="flex flex-col items-center gap-3 py-20 font-kanit">
                             <p className="text-sm text-red-600">{error}</p>
                             <button
                                 type="button"
                                 onClick={reload}
-                                className="rounded-xl border border-[#d9c6b0] px-4 py-2 text-sm text-[#2D241E] transition hover:bg-[#FAF7F2] active:scale-95"
+                                className="rounded-xl border border-[#d9c6b0] px-4 py-2 text-sm text-[#2D241E] transition hover:bg-[#FAF7F2] active:scale-95 cursor-pointer"
                             >
                                 ลองใหม่
                             </button>
