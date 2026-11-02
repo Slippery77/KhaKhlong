@@ -14,8 +14,9 @@ import CancelBillModal, {
     type BillActionPayload,
 } from '../../mainpos/components/CancelBillModal'
 import PaymentModal from '../../mainpos/components/PaymentModal'
+import MoveTableModal from '../components/MoveTableModal'
 import { usePayment } from '../../mainpos/hooks/usePayment'
-import { cancelOrder, closeUnpaid } from '../../mainpos/api/orders.api'
+import { cancelOrder, closeUnpaid, moveOrderTable } from '../../mainpos/api/orders.api'
 import { syncTableStatus } from '../api/tables.api'
 import { useOutbox } from '../../offline/hooks/useOutbox'
 import { openOutboxPanel } from '../../offline/outboxPanel'
@@ -64,6 +65,10 @@ export default function TablesPage() {
     const [billTarget, setBillTarget] = useState<{ table: DiningTable; mode: BillActionMode } | null>(null)
     const [billLoading, setBillLoading] = useState(false)
     const [billError, setBillError] = useState<string | null>(null)
+    // modal ย้ายโต๊ะ
+    const [movingTable, setMovingTable] = useState<DiningTable | null>(null)
+    const [moveLoading, setMoveLoading] = useState(false)
+    const [moveError, setMoveError] = useState<string | null>(null)
     const [toast, setToast] = useState<string | null>(null)
 
     // ── รวมโต๊ะคิดเงิน ─────────────────────────────────────────────
@@ -273,11 +278,43 @@ export default function TablesPage() {
         }
     }
 
+    async function handleMoveTableConfirm(targetTable: DiningTable) {
+        if (!movingTable || !movingTable.open_order_id) return
+        if (getTableOutboxCount(movingTable) > 0) {
+            setMoveError('โต๊ะต้นทางยังมีรายการค้างใน Outbox กรุณาส่งครัวหรือเคลียร์คิวก่อนย้าย')
+            return
+        }
+        if (getTableOutboxCount(targetTable) > 0) {
+            setMoveError('โต๊ะปลายทางมีรายการค้างใน Outbox กรุณารอส่งหรือเคลียร์คิวก่อนย้าย')
+            return
+        }
+        setMoveLoading(true)
+        setMoveError(null)
+        try {
+            await moveOrderTable(movingTable.open_order_id, targetTable.table_id, accessToken)
+            setToast(`ย้ายจากโต๊ะ ${movingTable.table_number} ไปยังโต๊ะ ${targetTable.table_number} เรียบร้อยแล้ว`)
+            setMovingTable(null)
+            await reload()
+        } catch (err) {
+            setMoveError(err instanceof Error ? err.message : 'ย้ายโต๊ะไม่สำเร็จ')
+        } finally {
+            setMoveLoading(false)
+        }
+    }
+
     const renderCard = (table: DiningTable) => (
         <TableCard
             key={table.table_id}
             table={table}
             onClick={handleTableClick}
+            onMoveTable={
+                table.status === 'occupied' && table.open_order_id
+                    ? (target) => {
+                          setMoveError(null)
+                          setMovingTable(target)
+                      }
+                    : undefined
+            }
             onCancelBill={table.status === 'occupied' ? (target) => openBillModal(target, 'cancel') : undefined}
             onCloseUnpaid={table.status === 'occupied' ? (target) => openBillModal(target, 'closeUnpaid') : undefined}
             onSyncStatus={handleSyncStatus}
@@ -285,6 +322,7 @@ export default function TablesPage() {
             selected={selectedTableIds.includes(table.table_id)}
             onToggleSelect={toggleSelectTable}
             outboxPendingCount={getTableOutboxCount(table)}
+            isOffline={staleSince !== null}
             onShowOutbox={openOutboxPanel}
         />
     )
@@ -581,6 +619,23 @@ export default function TablesPage() {
                         setBillError(null)
                     }}
                     onConfirm={handleBillConfirm}
+                />
+            )}
+
+            {movingTable && (
+                <MoveTableModal
+                    isOpen={Boolean(movingTable)}
+                    sourceTable={movingTable}
+                    tables={tables}
+                    isLoading={moveLoading}
+                    error={moveError}
+                    getTableOutboxCount={getTableOutboxCount}
+                    onConfirm={handleMoveTableConfirm}
+                    onClose={() => {
+                        if (moveLoading) return
+                        setMovingTable(null)
+                        setMoveError(null)
+                    }}
                 />
             )}
 

@@ -107,3 +107,25 @@ export async function closeUnpaid(
     data: { order: CancelOrderResult['order']; approvedBy: { usersId: string; displayName: string } }
   }>(`/orders/${orderId}/close-unpaid`, accessToken, 'POST', payload)
 }
+
+export interface MoveTableResult {
+  order_id: string
+  table_id: string
+  order_number: string
+  created_at: string
+  closed_at: string | null
+}
+
+/** ย้ายบิลไปยังโต๊ะใหม่ที่ยังว่างอยู่ */
+export async function moveOrderTable(
+  orderId: string,
+  newTableId: string,
+  accessToken: string | null,
+) {
+  return apiFetch<{ status: string; data: MoveTableResult }>(
+    `/orders/${orderId}/move-table`,
+    accessToken,
+    'PATCH',
+    { newTableId },
+  )
+}

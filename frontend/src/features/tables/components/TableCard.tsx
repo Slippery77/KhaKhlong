@@ -1,10 +1,12 @@
 import { useEffect, useRef, useState } from "react"
-import { Check, CloudUpload, MoreVertical, RefreshCw, Trash2, UserX, Users, UtensilsCrossed } from 'lucide-react'
+import { ArrowRightLeft, Check, CloudUpload, MoreVertical, RefreshCw, Trash2, UserX, Users, UtensilsCrossed } from 'lucide-react'
 import type { DiningTable } from '../types/table.types'
 
 interface TableCardProps {
     table: DiningTable
     onClick: (table: DiningTable) => void
+    /** ย้ายโต๊ะไปยังโต๊ะว่าง */
+    onMoveTable?: (table: DiningTable) => void
     /** ยกเลิกทั้งบิล — ต้องมี PIN ผู้อนุมัติ (เฉพาะโต๊ะที่มีบิลเปิด) */
     onCancelBill?: (table: DiningTable) => void
     /** ปิดบิลลูกค้าหนี (walkout) — ต้องมี PIN ผู้อนุมัติ */
@@ -17,6 +19,8 @@ interface TableCardProps {
     selected?: boolean
     /** จำนวนคำสั่งที่ค้างส่งใน outbox ของเครื่องนี้สำหรับโต๊ะนี้ */
     outboxPendingCount?: number
+    /** สถานะออฟไลน์ */
+    isOffline?: boolean
     /** เปิดหน้าต่างรายการค้างส่ง */
     onShowOutbox?: () => void
     onToggleSelect?: (table: DiningTable) => void
@@ -25,6 +29,7 @@ interface TableCardProps {
 export default function TableCard({
     table,
     onClick,
+    onMoveTable,
     onCancelBill,
     onCloseUnpaid,
     onSyncStatus,
@@ -32,6 +37,7 @@ export default function TableCard({
     selected = false,
     onToggleSelect,
     outboxPendingCount = 0,
+    isOffline = false,
     onShowOutbox,
 }: TableCardProps) {
     const isOccupied = table.status === 'occupied'
@@ -209,6 +215,26 @@ export default function TableCard({
                                 <UtensilsCrossed className="h-3.5 w-3.5 text-[#8C6D58]" aria-hidden="true" />
                                 {isOccupied ? 'เปิดบิล / สั่งอาหาร' : 'เปิดโต๊ะ'}
                             </button>
+
+                            {isOccupied && table.open_order_id && onMoveTable && (
+                                <button
+                                    type="button"
+                                    role="menuitem"
+                                    disabled={hasOutbox || isOffline}
+                                    onClick={() => runAction(() => onMoveTable(table))}
+                                    title={
+                                        hasOutbox
+                                            ? 'มีรายการค้างส่งในเครื่อง กรุณาส่งครัวหรือลบรายการก่อนย้ายโต๊ะ'
+                                            : isOffline
+                                                ? 'การย้ายโต๊ะต้องเชื่อมต่ออินเทอร์เน็ต'
+                                                : undefined
+                                    }
+                                    className="flex w-full cursor-pointer items-center gap-2 rounded-lg px-3 py-2 text-left text-xs text-[#2D241E] transition-colors duration-150 hover:bg-[#FAF7F2] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#8C6D58] disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-transparent"
+                                >
+                                    <ArrowRightLeft className="h-3.5 w-3.5 text-[#8C6D58]" aria-hidden="true" />
+                                    ย้ายโต๊ะ
+                                </button>
+                            )}
 
                             {isOccupied && onCancelBill && (
                                 <button

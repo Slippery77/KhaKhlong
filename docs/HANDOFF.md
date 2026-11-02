@@ -597,6 +597,8 @@ commit เดียว 4 เรื่อง:
 - **User-based Throttler (`UserThrottlerGuard`)**: ปรับ Throttler จากเดิมนับต่อ IP เครื่อง มาเป็นนับตาม `user:${tenantID}:${sub}` สำหรับ authenticated routes (300 req/min) เพื่อป้องกันปัญหา NAT IP ชนกันในร้านอาหาร (POS หลายเครื่อง + KDS + พนักงานใช้ Wi-Fi เดียวกัน) พร้อม fallback เป็น IP ใน public routes และข้อความ error ภาษาไทย
 - **Atomic Discard Order & Table Snapshot Rollback**: ปรับปรุง `discardOrder` ใน `frontend/src/features/offline/outbox.ts` ให้คืนสถานะโต๊ะใน snapshot เป็น `available` อัตโนมัติใน Dexie transaction เมื่อทิ้งบิลใหม่ที่เปิดออฟไลน์
 - **Daily Audit Logs Purge**: เพิ่มการเรียก `purge_old_audit_logs()` (ลบ audit logs เก่าเกิน 1 ปี) วันละ 1 ครั้งโดยอัตโนมัติใน `ShiftEscalationService`
+- **KDS Page Visibility Check (`usePageVisibility`)**: หยุด Polling คิวครัว 3 วินาทีทันทีเมื่อพับแท็บหรือดับหน้าจอ (0 req/min) ประหยัดแบตเตอรี่, CPU, และลด Network Polling, ดึงข้อมูลทันทีเมื่อกลับมามองเห็น (visibilitychange + focus + online) พร้อม cooldown 1s ป้องกัน double-fetch, และ Resilient UI ตามหลัก UI/UX Pro Max ไม่ทุบหน้าจอเมื่อ silent refresh error
+- **Move Table with Outbox Guard (`MoveTableModal`)**: เพิ่ม UI ย้ายโต๊ะบนผังโต๊ะ (`TableCard` dropdown) ยิง `PATCH /orders/:id/move-table` พร้อม Modal กรองชั้นและเลือกเฉพาะโต๊ะว่างที่ไม่มี Outbox ค้าง, พร้อม Guard บล็อกไม่ให้ย้ายโต๊ะหากโต๊ะต้นทางมีรายการค้างใน Outbox หรือเครื่องออฟไลน์
 
 ---
 
