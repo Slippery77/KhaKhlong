@@ -1,6 +1,8 @@
 import { Navigate, Outlet, useLocation, useParams } from 'react-router-dom';
 import { useAuth } from '../features/auth/context/AuthContext';
 import AccessDeniedPage from '../components/AccessDeniedPage';
+import Header from '../components/Header';
+import SettingNavBar from '../components/settingNavBar';
 
 export function SettingRouteGuard() {
   const { user, accessToken } = useAuth();
@@ -49,5 +51,14 @@ export function SettingRouteGuard() {
     );
   }
 
-  return <Outlet />;
+  // โครงสร้าง Persistent Layout สำหรับหน้าตั้งค่าทั้งหมด — Header และ SettingNavBar จะไม่ถูก Unmount เมื่อสลับแท็บ
+  return (
+    <div className="flex h-dvh flex-col font-kanit bg-[#FAF7F2] overflow-hidden">
+      <Header />
+      <SettingNavBar />
+      <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
+        <Outlet />
+      </div>
+    </div>
+  );
 }

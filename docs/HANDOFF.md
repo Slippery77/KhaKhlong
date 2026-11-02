@@ -392,6 +392,29 @@ commit เดียว 4 เรื่อง:
   - `backend/package.json`: ปรับ `"start:prod": "node dist/main.js"` ระบุนามสกุล `.js` ชัดเจนตามมาตรฐาน NodeNext
   - ตรวจสอบ `tsc --noEmit`, `tsc -b`, `npm run build` ผ่าน 100% ทั้งหมด
 
+### 3.24 แก้ปัญหาจอกระพริบและหน้าโหลดนานในหน้าตั้งค่า (อัตราค่าบริการ, เมนูอาหาร, โต๊ะอาหาร) ด้วย Doubt-Driven Development — 2026-11-02
+
+- **วิเคราะห์ต้นตอจอกระพริบ (Flicker & CLS)**:
+  - ใน `SettingNavBar` แต่ละหน้า (`editVat.tsx`, `menu_edit.tsx`, `TableSettingPage.tsx`, `StoreSettingPage.tsx`, `PrinterSettingPage.tsx`, `UsersPage.tsx`) เดิมเรนเดอร์ `<Header />` และ `<SettingNavBar />` ซ้ำกันเอง เมื่อสลับแท็บ React Router จะ unmount และ mount แถบนำทางใหม่ทั้งหมด
+  - ในหน้า `editVat.tsx` และ `menu_edit.tsx` มีการ early return `if (isLoading) return <p>กำลังโหลด...</p>;` ทำให้ทั้งหน้าและแถบเมนูหายกลายเป็นหน้าขาว แล้วเด้งกลับมาเมื่อโหลดเสร็จ
+  - ใน `TableSettingPage.tsx` มีการ early return แสดงข้อความว่างเปล่า `กำลังโหลดข้อมูลชั้นและโต๊ะ...` และเผลอแสดงข้อความ onboarding หลอก (*"ขั้นแรกเพิ่มชั้น..."*) ก่อนที่ข้อมูลจริงจะมาแทนที่
+  - ใน `useAdminMenu.ts` มีการใช้ `setTimeout(..., 0)` หน่วงเวลาการยิง request โดยไม่จำเป็น
+- **Doubt-Driven Adversarial Review & Reconciliation**:
+  - **Persistent Setting Shell Layout (`SettingRouteGuard.tsx`)**: ยก `<Header />` และ `<SettingNavBar />` ขึ้นเป็นโครงสร้างหลักระดับ Layout ครอบ `<Outlet />` ทำให้แถบนำทางคงอยู่ถาวร ไม่ถูก destroy/remount เมื่อกดสลับแท็บการตั้งค่า
+  - **Skeletons Parity (Initial Load vs Refresh)**:
+    - แยกสถานะ `isInitialLoading = isLoading && !hasData` ชัดเจน ทุกหน้าจะแสดง Skeleton เฉพาะตอนเปิดเข้ามาครั้งแรกเท่านั้น
+    - เมื่อผู้ใช้กดปุ่ม "รีเฟรช" (Refresh) ข้อมูลเดิมจะไม่ถูกล้างออก แต่จะหมุนไอคอน `RefreshCw` แทน ป้องกัน Content flash
+    - `EditVat`: เพิ่ม `RateCardSkeleton` และ `ExampleCardSkeleton` คงรูปทรงและขนาดของการ์ด VAT และ Service Charge เสมือนจริง พร้อมแก้ปัญหา Permission Warning Flash
+    - `MenuEdit`: เพิ่ม `MenuTableSkeleton` และอัปเดต `SidebarCategory` ให้รองรับ prop `isLoading` แสดง Skeleton Categories แทนข้อความว่างเปล่า
+    - `TableSettingPage`: เพิ่ม `FloorCardSkeleton` และคงหัวข้อหน้าพร้อมปิดการกดปุ่ม "เพิ่มชั้น" ระหว่างโหลด
+    - `TablesPage`: เพิ่ม Skeleton ปุ่มชั้นใน Sidebar และ Skeleton การ์ดผังโต๊ะ 12 ใบใน Main area
+    - `UsersPage`: เพิ่ม `UserTableSkeleton`
+  - **Race Condition & React Lifecycle**: ถอด `setTimeout` ออกและทำ async fetch ใน effect พร้อม cancellation flag สะอาด ไร้ปัญหา cascading renders
+- **ทดสอบ**:
+  - Typecheck (`tsc -b` บน frontend และ `tsc --noEmit` บน backend) ผ่าน 100%
+  - Production build (`vite build`) ผ่าน 100%
+  - ESLint บนทุกไฟล์ที่แตะต้อง สะอาด 0 errors, 0 warnings
+
 ---
 
 ## 4. งานค้าง P0

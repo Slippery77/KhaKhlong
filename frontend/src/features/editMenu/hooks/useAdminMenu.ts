@@ -12,6 +12,7 @@ export function useAdminMenu(){
     const [isLoading, setIsLoading] = useState<boolean>(true);
 
     const load = useCallback(async (silent = false) => {
+        if (!accessToken) return;
         if(!silent)
             setIsLoading(true);
         setError(null);
@@ -27,13 +28,33 @@ export function useAdminMenu(){
     },[accessToken]);
 
     useEffect(() => {
-        const timer = window.setTimeout(() => {
-            void load();
-        }, 0);
-        return () => window.clearTimeout(timer);
-    },[load]);
+        let ignore = false;
+        if (!accessToken) return;
 
-    return {categories,modifier,isLoading, error, reload:()=>load(true)};
+        (async () => {
+            try {
+                const res = await apiFetch<{data: {categories:Category[], modifier_groups:ModifierGroup[]}}>('/menu/admin', accessToken);
+                if (!ignore) {
+                    setCategories(res.data.categories);
+                    setModifier(res.data.modifier_groups);
+                }
+            } catch (err) {
+                if (!ignore) {
+                    setError(err instanceof Error ? err.message : 'โหลดเมนูไม่สำเร็จ');
+                }
+            } finally {
+                if (!ignore) {
+                    setIsLoading(false);
+                }
+            }
+        })();
+
+        return () => {
+            ignore = true;
+        };
+    }, [accessToken]);
+
+    return {categories,modifier,isLoading, error, reload:(silent = true)=>load(silent)};
 }
 
 export function useCreateCategory(){

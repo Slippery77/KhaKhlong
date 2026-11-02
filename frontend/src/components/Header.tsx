@@ -1,15 +1,16 @@
-import { 
-Menu, 
-UtensilsCrossed, 
-ChefHat, 
-LogOut, 
-X,
-Package,
-ChartLine,
-Wallet,
-Settings,
-ShieldCheck,
-Utensils} from "lucide-react"
+import {
+    Menu,
+    UtensilsCrossed,
+    ChefHat,
+    LogOut,
+    X,
+    Package,
+    ChartLine,
+    Wallet,
+    Settings,
+    ShieldCheck,
+    Utensils
+} from "lucide-react"
 import { useState, useRef, useEffect } from "react"
 import { useLocation, Link, useParams, useNavigate } from "react-router-dom"
 import { useLogin } from "../features/auth/hooks/useLogin"
@@ -73,18 +74,18 @@ export default function Header() {
             return
         }
         let cancelled = false
-        ;(async () => {
-            try {
-                const res = await apiFetch<{ status: string; data: ApiKDSItem[] }>("/kds/queue", accessToken)
-                if (cancelled) return
-                // นับเป็น "ตั๋ว" (1 การกดส่งครัว) ที่ยังไม่เสร็จ แบบเดียวกับหน้า KDS
-                const tickets = groupItemsToTickets(res.data ?? [])
-                setPendingOrdersCount(tickets.filter((t) => t.overallStatus === "รอทำ").length)
-            } catch {
-                // โหลดไม่ได้ = ไม่แสดง badge (ไม่ให้ badge ค้างจากข้อมูลเก่า)
-                if (!cancelled) setPendingOrdersCount(0)
-            }
-        })()
+            ; (async () => {
+                try {
+                    const res = await apiFetch<{ status: string; data: ApiKDSItem[] }>("/kds/queue", accessToken)
+                    if (cancelled) return
+                    // นับเป็น "ตั๋ว" (1 การกดส่งครัว) ที่ยังไม่เสร็จ แบบเดียวกับหน้า KDS
+                    const tickets = groupItemsToTickets(res.data ?? [])
+                    setPendingOrdersCount(tickets.filter((t) => t.overallStatus === "รอทำ").length)
+                } catch {
+                    // โหลดไม่ได้ = ไม่แสดง badge (ไม่ให้ badge ค้างจากข้อมูลเก่า)
+                    if (!cancelled) setPendingOrdersCount(0)
+                }
+            })()
         return () => {
             cancelled = true
         }
@@ -147,9 +148,8 @@ export default function Header() {
                     <button
                         type="button"
                         onClick={() => setIsMenuOpen(!isMenuOpen)}
-                        className={`p-1.5 text-[#2D241E] hover:bg-[#EFE8DC] active:scale-95 rounded-lg transition-all cursor-pointer ${
-                            isMenuOpen ? "bg-[#EFE8DC]" : ""
-                        }`}
+                        className={`p-1.5 text-[#2D241E] hover:bg-[#EFE8DC] active:scale-95 rounded-lg transition-all cursor-pointer ${isMenuOpen ? "bg-[#EFE8DC]" : ""
+                            }`}
                         title="เมนูหลัก"
                     >
                         {isMenuOpen ? (
@@ -169,9 +169,8 @@ export default function Header() {
                             <Link
                                 to={`/${tenantSlug}/tables`}
                                 onClick={() => setIsMenuOpen(false)}
-                                className={`flex items-center gap-3 px-4 py-2.5 text-sm transition-all hover:bg-[#FAF7F2] ${
-                                    isTables ? "font-semibold text-[#8C6D58] bg-[#FAF7F2]/80" : "text-[#2D241E]"
-                                }`}
+                                className={`flex items-center gap-3 px-4 py-2.5 text-sm transition-all hover:bg-[#FAF7F2] ${isTables ? "font-semibold text-[#8C6D58] bg-[#FAF7F2]/80" : "text-[#2D241E]"
+                                    }`}
                             >
                                 <Utensils className="w-4 h-4 text-[#8C6D58]" />
                                 <span>โต๊ะ</span>
@@ -180,9 +179,8 @@ export default function Header() {
                             <Link
                                 to={`/${tenantSlug}/kds`}
                                 onClick={() => setIsMenuOpen(false)}
-                                className={`flex items-center justify-between px-4 py-2.5 text-sm transition-all hover:bg-[#FAF7F2] ${
-                                    isKDS ? "font-semibold text-[#8C6D58] bg-[#FAF7F2]/80" : "text-[#2D241E]"
-                                }`}
+                                className={`flex items-center justify-between px-4 py-2.5 text-sm transition-all hover:bg-[#FAF7F2] ${isKDS ? "font-semibold text-[#8C6D58] bg-[#FAF7F2]/80" : "text-[#2D241E]"
+                                    }`}
                             >
                                 <div className="flex items-center gap-3">
                                     <ChefHat className="w-4 h-4 text-[#8C6D58]" />
@@ -198,9 +196,8 @@ export default function Header() {
                             <Link
                                 to={`/${tenantSlug}/stock`}
                                 onClick={() => setIsMenuOpen(false)}
-                                className={`flex items-center gap-3 px-4 py-2.5 text-sm transition-all hover:bg-[#FAF7F2] ${
-                                    isStock ? "font-semibold text-[#8C6D58] bg-[#FAF7F2]/80" : "text-[#2D241E]"
-                                }`}
+                                className={`flex items-center gap-3 px-4 py-2.5 text-sm transition-all hover:bg-[#FAF7F2] ${isStock ? "font-semibold text-[#8C6D58] bg-[#FAF7F2]/80" : "text-[#2D241E]"
+                                    }`}
                             >
                                 <Package className="w-4 h-4 text-[#8C6D58]" />
                                 <span>สต็อก</span>
@@ -209,9 +206,8 @@ export default function Header() {
                             <Link
                                 to={`/${tenantSlug}/sale-report`}
                                 onClick={() => setIsMenuOpen(false)}
-                                className={`flex items-center gap-3 px-4 py-2.5 text-sm transition-all hover:bg-[#FAF7F2] ${
-                                    isSalereport ? "font-semibold text-[#8C6D58] bg-[#FAF7F2]/80" : "text-[#2D241E]"
-                                }`}
+                                className={`flex items-center gap-3 px-4 py-2.5 text-sm transition-all hover:bg-[#FAF7F2] ${isSalereport ? "font-semibold text-[#8C6D58] bg-[#FAF7F2]/80" : "text-[#2D241E]"
+                                    }`}
                             >
                                 <ChartLine className="w-4 h-4 text-[#8C6D58]" />
                                 <span>ยอดขาย</span>
@@ -220,9 +216,8 @@ export default function Header() {
                             <Link
                                 to={`/${tenantSlug}/siftwork`}
                                 onClick={() => setIsMenuOpen(false)}
-                                className={`flex items-center gap-3 px-4 py-2.5 text-sm transition-all hover:bg-[#FAF7F2] ${
-                                    isSiftwork ? "font-semibold text-[#8C6D58] bg-[#FAF7F2]/80" : "text-[#2D241E]"
-                                }`}
+                                className={`flex items-center gap-3 px-4 py-2.5 text-sm transition-all hover:bg-[#FAF7F2] ${isSiftwork ? "font-semibold text-[#8C6D58] bg-[#FAF7F2]/80" : "text-[#2D241E]"
+                                    }`}
                             >
                                 <Wallet className="w-4 h-4 text-[#8C6D58]" />
                                 <span>ปิดกะ/นับเงิน</span>
@@ -233,9 +228,8 @@ export default function Header() {
                                 <Link
                                     to={`/${tenantSlug}/audit-logs`}
                                     onClick={() => setIsMenuOpen(false)}
-                                    className={`flex items-center gap-3 px-4 py-2.5 text-sm transition-all hover:bg-[#FAF7F2] ${
-                                        isAuditLogs ? "font-semibold text-[#8C6D58] bg-[#FAF7F2]/80" : "text-[#2D241E]"
-                                    }`}
+                                    className={`flex items-center gap-3 px-4 py-2.5 text-sm transition-all hover:bg-[#FAF7F2] ${isAuditLogs ? "font-semibold text-[#8C6D58] bg-[#FAF7F2]/80" : "text-[#2D241E]"
+                                        }`}
                                 >
                                     <ShieldCheck className="w-4 h-4 text-[#8C6D58]" />
                                     <span>ประวัติความปลอดภัย</span>
@@ -247,9 +241,8 @@ export default function Header() {
                                 <Link
                                     to={`/${tenantSlug}/setting/${settingDefaultSubpath}`}
                                     onClick={() => setIsMenuOpen(false)}
-                                    className={`flex items-center gap-3 px-4 py-2.5 text-sm transition-all hover:bg-[#FAF7F2] ${
-                                        isSetting ? "font-semibold text-[#8C6D58] bg-[#FAF7F2]/80" : "text-[#2D241E]"
-                                    }`}
+                                    className={`flex items-center gap-3 px-4 py-2.5 text-sm transition-all hover:bg-[#FAF7F2] ${isSetting ? "font-semibold text-[#8C6D58] bg-[#FAF7F2]/80" : "text-[#2D241E]"
+                                        }`}
                                 >
                                     <Settings className="w-4 h-4 text-[#8C6D58]" />
                                     <span>ตั้งค่า</span>
@@ -285,7 +278,7 @@ export default function Header() {
                                     if (result === 'ok') navigate(`/${tenantSlug}/login`)
                                     else openOutboxPanel()
                                 }}
-                                
+
                                 className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-rose-600 hover:bg-rose-50 transition-all cursor-pointer text-left disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent"
                             >
                                 <LogOut className="w-4 h-4" />

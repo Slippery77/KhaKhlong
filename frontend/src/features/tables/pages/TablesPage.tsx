@@ -63,6 +63,8 @@ export default function TablesPage() {
     const [mergeSummary, setMergeSummary] = useState<MergeSummaryState | null>(null)
 
     const occupiedCount = tables.filter((t) => t.status === 'occupied').length
+    const hasData = tables.length > 0
+    const isInitialLoading = isLoading && !hasData
     const floors = groupByFloor(tables)
     // ชั้นที่จะแสดง = ชั้นที่เลือกไว้ หรือทุกชั้นถ้าไม่ได้เลือก
     const visibleFloors = selectedFloor === null
@@ -287,7 +289,14 @@ export default function TablesPage() {
                         </p>
                     </button>
 
-                    {Array.from(floors.keys()).map((floor) => {
+                    {isInitialLoading ? (
+                        <div className="flex flex-col gap-2">
+                            {[1, 2, 3].map((i) => (
+                                <div key={i} className="w-16 h-12 rounded-xl bg-[#EDE3D6]/70 animate-pulse" />
+                            ))}
+                        </div>
+                    ) : (
+                        Array.from(floors.keys()).map((floor) => {
                         const floorTables = floors.get(floor)!
                         const occupied = floorTables.filter((t) => t.status === 'occupied').length
                         const isActive = selectedFloor === floor
@@ -310,7 +319,7 @@ export default function TablesPage() {
                                 </p>
                             </button>
                         )
-                    })}
+                    }))}
 
                     {/* สรุปโต๊ะที่มีลูกค้าทั้งหมด */}
                     <div className="mt-auto w-16 rounded-xl bg-[#EDE3D6] py-2 px-1 text-center">
@@ -337,7 +346,7 @@ export default function TablesPage() {
                             <button
                                 type="button"
                                 onClick={toggleMergeMode}
-                                disabled={!isMergeMode && occupiedCount < 2}
+                                disabled={(!isMergeMode && occupiedCount < 2) || isInitialLoading}
                                 aria-pressed={isMergeMode}
                                 title={occupiedCount < 2 ? 'ต้องมีโต๊ะที่มีลูกค้าอย่างน้อย 2 โต๊ะ' : undefined}
                                 className={`flex items-center gap-1.5 px-3 py-2 rounded-xl border text-sm font-medium font-kanit transition-all duration-200 cursor-pointer active:scale-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#8C6D58] focus-visible:ring-offset-2 focus-visible:ring-offset-[#FAF7F2] disabled:cursor-not-allowed disabled:opacity-40 disabled:active:scale-100 ${
@@ -354,7 +363,7 @@ export default function TablesPage() {
                                 onClick={reload}
                                 className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-stone-200 text-sm text-stone-500 hover:bg-stone-100 active:scale-95 transition-all font-kanit cursor-pointer"
                             >
-                                <RefreshCw className="w-3.5 h-3.5" />
+                                <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin' : ''}`} />
                                 <span>รีเฟรช</span>
                             </button>
                         </div>

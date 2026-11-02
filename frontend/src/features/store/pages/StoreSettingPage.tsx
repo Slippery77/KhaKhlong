@@ -1,7 +1,5 @@
-﻿import { useCallback, useEffect, useState, useMemo } from 'react';
+﻿import { useEffect, useState, useMemo } from 'react';
 import { ArrowLeft, CheckCircle2, Info, QrCode, Save, Smartphone, Store } from 'lucide-react';
-import Header from '../../../components/Header';
-import SettingNavBar from '../../../components/settingNavBar';
 import { useAuth } from '../../auth/context/AuthContext';
 import { apiFetch } from '../../../libs/appClient';
 import { getDistricts, getProvinces, getSubdistricts, getZipCode } from '../../../data/thailandAddress';
@@ -99,36 +97,38 @@ export default function StoreSettingPage() {
     () => (isPromptPayValid ? generatePayload(ppDigits, {}) : null),
     [isPromptPayValid, ppDigits],
   );
-  const loadStore = useCallback(async () => {
-    setIsLoading(true);
-    setError(null);
-    try {
-      const res = await apiFetch<StoreResponse>('/store', accessToken);
-      const data = res.data;
-      setForm({
-        restaurant_name: data.restaurant_name ?? '',
-        phone: data.phone ?? '',
-        house_number: data.house_number ?? '',
-        moo: data.moo ?? '',
-        soi: data.soi ?? '',
-        road: data.road ?? '',
-        subdistrict: data.subdistrict ?? '',
-        district: data.district ?? '',
-        province: data.province ?? '',
-        postal_code: data.postal_code ?? '',
-        tax_id:data.tax_id ?? '',
-        promptpay_id:data.promptpay_id ?? '',
-      });
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'โหลดข้อมูลร้านไม่สำเร็จ');
-    } finally {
-      setIsLoading(false);
-    }
-  }, [accessToken]);
-
   useEffect(() => {
-    loadStore();
-  }, [loadStore]);
+    let ignore = false;
+    (async () => {
+      try {
+        const res = await apiFetch<StoreResponse>('/store', accessToken);
+        if (!ignore) {
+          const data = res.data;
+          setForm({
+            restaurant_name: data.restaurant_name ?? '',
+            phone: data.phone ?? '',
+            house_number: data.house_number ?? '',
+            moo: data.moo ?? '',
+            soi: data.soi ?? '',
+            road: data.road ?? '',
+            subdistrict: data.subdistrict ?? '',
+            district: data.district ?? '',
+            province: data.province ?? '',
+            postal_code: data.postal_code ?? '',
+            tax_id: data.tax_id ?? '',
+            promptpay_id: data.promptpay_id ?? '',
+          });
+        }
+      } catch (err) {
+        if (!ignore) setError(err instanceof Error ? err.message : 'โหลดข้อมูลร้านไม่สำเร็จ');
+      } finally {
+        if (!ignore) setIsLoading(false);
+      }
+    })();
+    return () => {
+      ignore = true;
+    };
+  }, [accessToken]);
 
   const handleChange = (field: keyof FormState) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     setForm((prev) => ({ ...prev, [field]: e.target.value }));
@@ -200,11 +200,7 @@ export default function StoreSettingPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#FAF7F2] font-kanit">
-      <Header />
-      <SettingNavBar />
-
-      <main className="max-w-5xl mx-auto px-6 py-6 space-y-8">
+    <main className="flex-1 overflow-y-auto px-6 py-6 space-y-8 max-w-5xl mx-auto w-full font-kanit">
         <div className="mb-6">
           <div className="flex items-center gap-2 text-sm text-stone-500 mb-2">
             <ArrowLeft className="w-4 h-4" />
@@ -564,6 +560,5 @@ export default function StoreSettingPage() {
         {/* การตั้งค่าการทำงานร้านและกะ (System Config) */}
         <StoreOperationsConfigCard />
       </main>
-    </div>
   );
 }

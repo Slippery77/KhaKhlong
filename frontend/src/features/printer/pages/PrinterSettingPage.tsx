@@ -11,14 +11,12 @@ import {
   Store,
   Sparkles,
 } from 'lucide-react';
-import SettingNavBar from '../../../components/settingNavBar';
 import { useAuth } from '../../auth/context/AuthContext';
 import { usePrinterSettings } from '../hooks/usePrinterSettings';
 import { createMockReceipt } from '../utils/mockReceipt';
 import ReceiptPaper from '../../receipt/components/ReceiptPaper';
 import type { PaperSize } from '../../receipt/types/receipt.types';
 import '../../receipt/components/receipt.print.css';
-import Header from '../../../components/Header';
 
 const DEFAULT_FOOTER_NOTE = 'ขอบคุณที่ใช้บริการ\nโปรดตรวจสอบรายการก่อนออกจากร้าน';
 
@@ -109,11 +107,7 @@ export default function PrinterSettingPage() {
   const isFooterOverLimit = footerLength > 500;
 
   return (
-    <div className="min-h-screen bg-[#FAF7F2] font-kanit text-[#2D241E]">
-      <Header />
-      <SettingNavBar />
-
-      <main className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+    <main className="flex-1 overflow-y-auto mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8 w-full font-kanit text-[#2D241E]">
         {/* Page Header */}
         <div className="mb-8 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <div>
@@ -485,10 +479,8 @@ export default function PrinterSettingPage() {
             </div>
           </aside>
         </div>
+          {/* Hidden test print portal */}
+        {testPrintArea}
       </main>
-
-      {/* Hidden test print portal */}
-      {testPrintArea}
-    </div>
   );
 }

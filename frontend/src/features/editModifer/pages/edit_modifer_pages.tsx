@@ -1,6 +1,4 @@
 import { useState } from 'react';
-import Header from '../../../components/Header';
-import SettingNavBar from '../../../components/settingNavBar';
 import ModifierGroupEditor from '../components/ModifierGroupEditor';
 import ModifierSidebar from '../components/ModifierSidebar';
 import { useModifierAdmin } from '../hook/useModifierAdmin';
@@ -34,10 +32,7 @@ export default function EditModiferPage() {
   };
 
   return (
-    <div className="flex h-dvh flex-col font-kanit">
-      <Header />
-      <SettingNavBar />
-      <div className="flex min-h-0 flex-1">
+    <div className="flex min-h-0 flex-1 font-kanit">
         <ModifierSidebar
           groups={groups}
           selectedId={selectedId}
@@ -64,6 +59,5 @@ export default function EditModiferPage() {
           </main>
         )}
       </div>
-    </div>
   );
 }
