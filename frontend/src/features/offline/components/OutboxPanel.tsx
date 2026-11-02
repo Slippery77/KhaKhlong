@@ -1,13 +1,15 @@
 import { useEffect, useState } from 'react';
 import { useLiveQuery } from 'dexie-react-hooks';
-import { AlertTriangle, Clock, Loader2, RotateCcw, Send, Trash2, X } from 'lucide-react';
+import { AlertTriangle, ArrowRightLeft, Clock, Loader2, RotateCcw, Send, Trash2, X } from 'lucide-react';
 import { useAuth } from '../../auth/context/AuthContext';
 import type { DiningTable } from '../../tables/types/table.types';
 import type { FullMenuData } from '../../mainpos/types/item.types';
 import { db, type OutboxEntry } from '../db';
 import { flushOutbox } from '../flush';
 import { useOutbox } from '../hooks/useOutbox';
-import { discardOrder, retryOrder } from '../outbox';
+import { discardOrder, migrateOrderToCurrentShift, retryOrder } from '../outbox';
+import { readSnapshot } from '../snapshotCache';
+import type { Shift } from '../../shifts/types/shift.types';
 import { closeOutboxPanel, useOutboxPanelOpen } from '../outboxPanel';
 
 /** 1 บิลในหน้าต่าง = รวมทุกแถวของ orderId เดียวกัน */
@@ -78,6 +80,12 @@ export default function OutboxPanel() {
       tenantSlug ? ((await db.snapshots.get([tenantSlug, 'menu']))?.data as FullMenuData | undefined) : undefined,
     [tenantSlug],
   );
+  const currentShift = useLiveQuery(
+    async () =>
+      tenantSlug ? (await readSnapshot<Shift | null>(tenantSlug, 'currentShift'))?.data : undefined,
+    [tenantSlug],
+  );
+
 
   const [busyOrderId, setBusyOrderId] = useState<string | null>(null);
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
@@ -134,6 +142,14 @@ export default function OutboxPanel() {
     setConfirmDeleteId(null);
     setBusyOrderId(null);
   };
+  const migrate = async (orderId: string) => {
+    if (!currentShift?.shiftId) return;
+    setBusyOrderId(orderId);
+    await migrateOrderToCurrentShift(orderId, currentShift.shiftId);
+    await flushOutbox();
+    setBusyOrderId(null);
+  };
+
 
   const sendAll = async () => {
     setIsFlushing(true);
@@ -184,6 +200,13 @@ export default function OutboxPanel() {
           {groups.map((group) => {
             const isBusy = busyOrderId === group.orderId;
             const isFailed = group.status === 'failed';
+            const isShiftMismatch =
+              isFailed &&
+              Boolean(
+                group.lastError?.includes('SHIFT_MISMATCH') ||
+                group.lastError?.includes('กะเดิมถูกปิดแล้ว') ||
+                group.lastError?.includes('กะที่บันทึกออเดอร์นี้ถูกปิดไปแล้ว'),
+              );
             return (
               <article
                 key={group.orderId}
@@ -203,7 +226,7 @@ export default function OutboxPanel() {
                     }`}
                   >
                     {isFailed ? <AlertTriangle className="h-3 w-3" aria-hidden="true" /> : <Clock className="h-3 w-3" aria-hidden="true" />}
-                    {isFailed ? 'ส่งไม่สำเร็จ' : 'รอส่ง'}
+                    {isShiftMismatch ? 'กะไม่ตรงกัน' : isFailed ? 'ส่งไม่สำเร็จ' : 'รอส่ง'}
                   </span>
                 </div>
 
@@ -252,19 +275,40 @@ export default function OutboxPanel() {
                         ลบ
                       </button>
                       {isFailed && (
-                        <button
-                          type="button"
-                          onClick={() => retry(group.orderId)}
-                          disabled={isBusy}
-                          className={`${button} bg-[#8C6D58] text-white hover:bg-[#7a5c45]`}
-                        >
-                          {isBusy ? (
-                            <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
-                          ) : (
-                            <RotateCcw className="h-3.5 w-3.5" aria-hidden="true" />
-                          )}
-                          ลองส่งอีกครั้ง
-                        </button>
+                        isShiftMismatch ? (
+                          <button
+                            type="button"
+                            onClick={() => migrate(group.orderId)}
+                            disabled={isBusy || !currentShift?.shiftId}
+                            title={
+                              !currentShift?.shiftId
+                                ? 'ต้องเปิดกะปัจจุบันก่อนจึงจะย้ายออเดอร์ได้'
+                                : 'ย้ายออเดอร์นี้เข้ากะปัจจุบันและส่งเข้าครัวทันที'
+                            }
+                            className={`${button} bg-[#8C6D58] text-white hover:bg-[#7a5c45] active:scale-95`}
+                          >
+                            {isBusy ? (
+                              <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
+                            ) : (
+                              <ArrowRightLeft className="h-3.5 w-3.5" aria-hidden="true" />
+                            )}
+                            ย้ายเข้ากะปัจจุบัน
+                          </button>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => retry(group.orderId)}
+                            disabled={isBusy}
+                            className={`${button} bg-[#8C6D58] text-white hover:bg-[#7a5c45] active:scale-95`}
+                          >
+                            {isBusy ? (
+                              <Loader2 className="h-3.5 w-3.5 animate-spin" aria-hidden="true" />
+                            ) : (
+                              <RotateCcw className="h-3.5 w-3.5" aria-hidden="true" />
+                            )}
+                            ลองส่งอีกครั้ง
+                          </button>
+                        )
                       )}
                     </>
                   )}

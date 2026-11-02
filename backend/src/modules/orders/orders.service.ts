@@ -30,6 +30,23 @@ export class OrdersService {
   ) {}
 
   async createOrder(dto: CreateOrderDto, userId: string) {
+    // 1. ตรวจสอบการส่งซ้ำ (Idempotency): ถ้าบิลนี้ถูกสร้างบน server สำเร็จไปแล้ว ตอบข้อมูลเดิมทันที
+    const existing = await this.ordersRepository.findOrderById(dto.orderId);
+    if (existing) {
+      return { status: 'success', data: existing };
+    }
+
+    // 2. ตรวจสอบกะ (SHIFT_MISMATCH): ป้องกันออเดอร์ตกค้างจากกะเก่าเข้ากะใหม่โดยไม่รู้ตัว
+    if (dto.shiftId) {
+      const currentShift = await this.ordersRepository.findCurrentOpenShift();
+      if (!currentShift || currentShift.shift_id !== dto.shiftId) {
+        throw new ConflictException({
+          code: 'SHIFT_MISMATCH',
+          message: 'กะที่บันทึกออเดอร์นี้ถูกปิดไปแล้ว ไม่สามารถส่งเข้ากะปัจจุบันได้',
+        });
+      }
+    }
+
     let result: any;
     try {
       result = await this.ordersRepository.createOrder(dto, userId);

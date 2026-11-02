@@ -21,6 +21,14 @@ export class CreateOrderDto {
   tableId!: string;
 
   @ApiPropertyOptional({
+    description: 'รหัสกะตอนบันทึกออเดอร์ในเครื่อง (ใช้ตรวจสอบความสอดคล้องของกะ SHIFT_MISMATCH)',
+    example: 'c2d3e4f5-a6b7-8901-cdef-234567890123',
+  })
+  @IsOptional()
+  @IsUUID()
+  shiftId?: string;
+
+  @ApiPropertyOptional({
     description: 'รายการอาหารที่สั่งพร้อมการเปิดบิล (ถ้ามี)',
     type: [CreateOrderItemDto],
   })

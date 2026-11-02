@@ -20,6 +20,22 @@ export class OrdersRepository {
    * 1. ใช้ INSERT INTO orders ... ON CONFLICT (order_id) DO NOTHING RETURNING ...
    * 2. order_number รันจาก order_sequences ใน DB
    */
+  /**
+   * ค้นหากะที่เปิดอยู่ปัจจุบันของร้าน
+   */
+  async findCurrentOpenShift(): Promise<{ shift_id: string; business_date: string; status: string } | null> {
+    const sql = `
+      SELECT shift_id, business_date, status
+      FROM shifts
+      WHERE tenant_id = app_tenant_id()
+        AND status = 'open'
+        AND business_date = compute_business_date(app_tenant_id())
+      LIMIT 1;
+    `;
+    const res = await this.db.query(sql);
+    return res.rows[0] ?? null;
+  }
+
   async createOrder(dto: CreateOrderDto, createdBy: string) {
     const sql = `
       INSERT INTO orders (order_id, tenant_id, table_id, created_by)
