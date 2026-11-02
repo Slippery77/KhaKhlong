@@ -161,9 +161,9 @@ export default function OutboxPanel() {
     'flex cursor-pointer items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium transition-colors duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#8C6D58] disabled:cursor-not-allowed disabled:opacity-50';
 
   return (
-    // พื้นหลังมืด — กดนอกกล่องเพื่อปิด
+    // พื้นหลังมืด — กดนอกกล่องเพื่อปิด (อยู่ตรงกลางจอทั้ง Mobile และ Desktop)
     <div
-      className="fixed inset-0 z-[1100] flex items-end justify-center bg-black/30 p-4 font-kanit sm:items-center"
+      className="fixed inset-0 z-[1100] flex items-center justify-center bg-black/40 backdrop-blur-2xs p-3.5 sm:p-4 font-kanit animate-in fade-in duration-150"
       onClick={closeOutboxPanel}
     >
       <section
@@ -171,11 +171,11 @@ export default function OutboxPanel() {
         aria-modal="true"
         aria-labelledby="outbox-panel-title"
         onClick={(event) => event.stopPropagation()} // กดในกล่องไม่ปิด
-        className="flex max-h-[80vh] w-full max-w-lg flex-col rounded-2xl bg-white text-[#2D241E] shadow-xl"
+        className="flex max-h-[85vh] sm:max-h-[80vh] w-full max-w-lg flex-col rounded-2xl bg-white text-[#2D241E] shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-150"
       >
-        <header className="flex items-start justify-between gap-3 border-b border-[#E8DFD5] p-4">
+        <header className="flex items-start justify-between gap-3 border-b border-[#E8DFD5] p-3.5 sm:p-4 bg-[#FAF7F2] shrink-0">
           <div>
-            <h2 id="outbox-panel-title" className="text-base font-bold">
+            <h2 id="outbox-panel-title" className="text-sm sm:text-base font-bold text-[#2D241E]">
               ออเดอร์ที่ยังไม่ถึงครัว
             </h2>
             <p className="mt-0.5 text-xs text-[#7A6A5C]">
@@ -186,13 +186,13 @@ export default function OutboxPanel() {
             type="button"
             onClick={closeOutboxPanel}
             aria-label="ปิด"
-            className="cursor-pointer rounded-lg p-1 text-[#2D241E]/60 hover:bg-[#FAF7F2] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#8C6D58]"
+            className="cursor-pointer rounded-lg p-1 text-[#2D241E]/60 hover:bg-stone-200/50 hover:text-[#2D241E] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#8C6D58]"
           >
             <X className="h-4 w-4" aria-hidden="true" />
           </button>
         </header>
 
-        <div className="flex-1 space-y-3 overflow-y-auto p-4">
+        <div className="flex-1 space-y-3 overflow-y-auto p-3.5 sm:p-4">
           {groups.length === 0 && (
             <p className="py-8 text-center text-sm text-[#7A6A5C]">ส่งครบแล้ว ไม่มีรายการค้าง</p>
           )}
