@@ -1,7 +1,7 @@
 # HANDOFF — PWA-POS (ค้าคล่อง / KhaKhlong)
 
 > ไฟล์นี้คือสรุปสถานะล่าสุดสำหรับ **เปิดแชทใหม่แล้วทำงานต่อ** โดยไม่ต้องเล่าบริบทใหม่
-> อัปเดต: **2026-11-01** · branch `feat-aod` · `origin/main` = `b352de6` (2026-10-28) · ดู `git log` สำหรับ hash ล่าสุด
+> อัปเดต: **2026-11-02** · branch `feat-aod` · `origin/main` = `66e38c0` (2026-11-02) · ดู `git log` สำหรับ hash ล่าสุด
 > ใช้แทน `docs/backend-todo.md` และ `docs/daily-update-2026-10-21.md` (สองไฟล์นั้นล้าสมัยแล้ว)
 
 ## วิธีใช้ในแชทใหม่
@@ -20,8 +20,8 @@
 
 | รายการ | ค่า |
 |---|---|
-| Branch ที่ทำงาน | `feat-aod` — งาน void/comp, PIN lock ของ shifts และ escalation commit แล้ว (2026-10-30); ดู `git log` สำหรับ hash ล่าสุด |
-| Integration branch | `main` (`origin/main` = `b352de6`, 2026-10-28) |
+| Branch ที่ทำงาน | `feat-aod` — งาน void/comp, PIN lock, cancel/walkout, combined payment, settings, offline data layer (Dexie+outbox) ผสานแล้ว; ดู `git log` สำหรับ hash ล่าสุด |
+| Integration branch | `main` (`origin/main` = `66e38c0`, 2026-11-02) |
 | Remote | `https://github.com/Slippery77/KhaKhlong.git` (branch เก่า `feat-aod`, `feat-benz`) |
 | Frontend | React + TypeScript + Vite + Tailwind v4 · dev port **5173** · proxy `/api` → `http://localhost:3000` |
 | Backend | NestJS 11 · port **3000** · prefix `/api` · Swagger เปิด |
@@ -82,11 +82,13 @@ $env:PGPASSWORD='<รหัสผ่าน pos_app จาก .env>'
 - **Audit Logs (2026-11-01)** — `GET /api/audit-logs` สิทธิ์ `audit_log:view` (Owner, Manager ตาม AUD-05) + Pagination + Filter ตาม action_type, user_id, วันที่ (timezone Asia/Bangkok) + หน้า UI แยกใน Header MenuDropdown พร้อม Detail Modal คัดลอก JSON และ AuditRouteGuard สกัดพนักงาน (ดู 3.19)
 - **Void / Comp (2026-10-30)** — batch endpoint + PIN ผู้อนุมัติ + audit ผ่าน trigger + FE modal + E2E 31 ข้อผ่าน
 - **PWA shell** — `vite-plugin-pwa` + manifest + precache ทุกไฟล์ build + `navigateFallback '/index.html'` (deny `/api`) + แจ้งอัปเดตด้วย `UpdatePrompt` (`registerType: 'prompt'`, ไม่ reload เองกลางการสั่งอาหาร) + ไอคอน 64/192/512/maskable
+- **Offline data layer (Dexie & Outbox)** — IndexedDB (Dexie v2) แคช snapshots (ผังโต๊ะ, กะปัจจุบัน, เมนูเต็ม `GET /menu/full`) แบบ Network-First fallback + outbox คิวออเดอร์ออฟไลน์ (`enqueueOrder`, `flushOutbox` พร้อม Web Locks) + `OutboxRunner` ส่งอัตโนมัติเมื่อต่อเน็ต/ทุก 30s + `OutboxPanel` จัดการคิว + UI guards บล็อก Logout/ปิดกะ/อัปเดต PWA เมื่อมีของค้างส่ง + dev page `/:tenantSlug/outbox-dev` (ดู 3.25)
+- **Category reorder (2026-11-02)** — `PATCH /menu/category/reorder` สิทธิ์ `menu:edit` + ปุ่มเลื่อน ▲/▼ บนการ์ดหมวดหมู่ในหน้าตั้งค่าเมนู (Optimistic auto-save ออกแบบตาม `ui-ux-pro-max`) + สะท้อนผลไปยังแท็บหมวดหมู่บนหน้า POS และ `GET /menu/full` ทันที + E2E 26 ข้อผ่าน (ดู 3.26)
 
 ### ยังไม่เริ่ม / ยังไม่ครบ
 
-- **Offline data layer** — PWA shell พร้อมแล้ว แต่ยังไม่มี Dexie/IndexedDB แคชเมนู/โต๊ะ/กะ และยังไม่มี outbox คิวออเดอร์ (service worker ไม่แคช `/api` โดยตั้งใจ)
-- **Menu reorder** — endpoint และ UI จัดลำดับเมนู/หมวดหมู่
+
+**ไม่มีงานค้างทั้ง P0, P1 และ P2** — ฟีเจอร์ตามขอบเขตทั้งหมดเสร็จสมบูรณ์ 100%
 - *(หน้า Dashboard / Homepage `/:tenantSlug/homepage` และ Export สรุปยอดขายแบบ PDF ตัดออกจากขอบเขตแล้ว — รายงานใช้ส่งออกเป็น CSV เท่านั้น)*
 
 ---
@@ -415,6 +417,46 @@ commit เดียว 4 เรื่อง:
   - Production build (`vite build`) ผ่าน 100%
   - ESLint บนทุกไฟล์ที่แตะต้อง สะอาด 0 errors, 0 warnings
 
+### 3.25 ระบบ Offline Data Layer (IndexedDB / Dexie + Outbox Queue) — 2026-11-02
+
+- **Commit ที่เกี่ยวข้อง**: `51f24d6`, `438892b`, `ae18dc6`, `a7685ca`, `c9d5746`, `f30550b`
+- **IndexedDB Schema (`frontend/src/features/offline/db.ts`)**:
+  - ใช้ `dexie` และ `dexie-react-hooks` (`useLiveQuery`)
+  - ตาราง `snapshots`: `[tenantSlug+kind], tenantSlug` สำหรับแคช snapshot ข้อมูลสำคัญ (`'tables' | 'currentShift' | 'menu'`) แยกตามร้าน
+  - ตาราง `outbox`: `++seq, tenantSlug, orderId, status` สำหรับคิวคำสั่งเปิดบิล (`createOrder`) และสั่งอาหารเพิ่ม (`addItems`) พร้อม `kitchenTicketId` และ `orderItemId`
+- **การแคชข้อมูลแบบ Network-First Fallback (`snapshotCache.ts`)**:
+  - ฟังก์ชัน `fetchWithSnapshot`: ยิง request หาเซิร์ฟเวอร์ก่อนเสมอ เมื่อได้ผลลัพธ์จะบันทึกลง IndexedDB เป็น snapshot และแจ้งออนไลน์ผ่าน `reportReachable()`
+  - เมื่อติดต่อเซิร์ฟเวอร์ไม่ได้ (`TypeError`, 5xx) จะ fallback ไปอ่านข้อมูลเก่าจาก snapshot ในเครื่อง พร้อมคืน `{ data, isStale: true }`
+  - นำไปใช้จริงใน: `useFullMenu.ts` (เมนู POS), `useTables.ts` (ผังโต๊ะ), `useShift.ts` (สถานะกะ) และ `MainPOS.tsx`
+- **ระบบ Outbox Queue & Atomic Offline POS (`outbox.ts`, `flush.ts`)**:
+  - `enqueueOrder`: หย่อนคำสั่งเปิดบิลและส่งอาหารลง Dexie ใน transaction เดียวกัน พร้อมทำ Optimistic Update ผังโต๊ะใน local snapshot ทันที (ตั้ง `has_open_order = true` และใส่ `open_order_id`) เพื่อให้การกดสั่งเพิ่มที่โต๊ะเดิมในโหมดออฟไลน์ผูกกับบิลเดียวกันได้ถูกต้อง
+  - `flushOutbox`: วนลูปส่งคำสั่งตาม `seq`, ใช้ Web Locks (`navigator.locks.request`) ป้องกันหลายแท็บส่งชนกัน, ข้ามบิลที่มีสถานะ `failed` เพื่อป้องกัน cascading failures, ลบรายการที่ส่งสำเร็จออกจาก Dexie ทันที, และหยุดทำงานชั่วคราวเมื่อเจอ 401 เพื่อรอให้ล็อกอินใหม่
+  - `OutboxRunner`: Component ระดับ Root ใน `App.tsx` คอยตรวจจับสถานะเน็ตกลับมาออนไลน์ (`online` event) และตั้งเวลารัน flush ทุก 30 วินาที
+- **UI/UX ป้องกันข้อมูลสูญหาย (Data Safety & User Feedback)**:
+  - `OfflineBanner`: แถบแจ้งเตือนด้านบนเมื่อออฟไลน์หรือเซิร์ฟเวอร์ขัดข้อง พร้อมปุ่มกดเปิดดูรายการค้างส่ง
+  - `OutboxPanel`: Modal แสดงรายการค้างส่งแยกตามโต๊ะ/บิล พร้อมสถานะ Pending/Failed, รายละเอียด Error, ปุ่ม "ลองส่งใหม่ (Retry)" และ "ยกเลิกคำสั่ง (Discard)"
+  - `Header`: Badge สีส้มแสดงจำนวนบิลที่รอส่งครัว พร้อมกดเปิด `OutboxPanel`
+  - **Data Guard Restrictions**: บล็อกการปิดกะใน `CloseShiftCard.tsx` (`isBlockedByOutbox`) และแสดงคำเตือนห้ามอัปเดต Service Worker ใน `UpdatePrompt.tsx` หากมีคำสั่งค้างใน outbox เพื่อป้องกันคำสั่งสั่งอาหารสูญหาย
+  - `OutboxDevPage.tsx`: หน้าทดสอบการทำงานของคิวที่ route `/:tenantSlug/outbox-dev` (เฉพาะ DEV mode)
+
+### 3.26 ระบบจัดลำดับหมวดหมู่อาหาร (Category Reorder) — 2026-11-02
+
+- **Backend**:
+  - `PATCH /api/menu/category/reorder` กำกับสิทธิ์ `@RequirePermissions('menu:edit')` (วางไว้ก่อน dynamic routes ป้องกันชนกับ `:category_id`)
+  - `ReorderCategoryDTO`: ตรวจสอบ `@IsArray()`, `@ArrayNotEmpty()`, `@ArrayMaxSize(200)` ป้องกัน Smallint overflow, `@IsUUID('4', { each: true })`
+  - `MenuRepository.reorderCategories`: อัปเดต `sort_order` ทีเดียวหลายแถวแบบ Parameterized Static Query ด้วย `FROM unnest($1::uuid[]) WITH ORDINALITY AS v(id, ord)` ช่วยให้ Postgres Cache Plan ได้
+  - Concurrency & Deadlock Defense: ฟังก์ชัน `MenuRepository.lockTenantCategories()` ล็อกแถวหมวดหมู่ทั้งหมดของร้านด้วย `ORDER BY category_id FOR UPDATE` ก่อนอัปเดต ป้องกัน Deadlock 40P01 เมื่อมีการสลับหมวดพร้อมกัน และบังคับว่าต้องส่ง ID มาครบทุกหมวดของร้าน (`categoryIds.length === tenantCategoryIds.length`) ป้องกัน Partial Reorder ที่จะทำให้เกิดเลขลำดับชนกัน
+- **Frontend** (ออกแบบตามหลัก `ui-ux-pro-max`):
+  - `sidebarCategory.tsx`: เพิ่มปุ่มลูกศรเลื่อนลำดับขึ้น (▲ `ChevronUp`) และลง (▼ `ChevronDown`) จัดวางเป็นคอลัมน์แนวตั้งซ้อนกันอย่างกะทัดรัด ไม่เบียดชื่อหมวดหมู่
+  - In-Memory Synchronous State: อัปเดตค่า `sort_order` บน Object แต่ละตัวใน State ให้ตรงกับลำดับใหม่ทันที ป้องกัน In-memory sort_order desynchronization
+  - Concurrency & Double-click Guard: ป้องกันการกดเบิ้ลด้วย `isReorderingRef` แบบ Synchronous ร่วมกับ `isReordering` state
+  - Focus Retention Accessibility: ใช้ `aria-disabled` ร่วมกับ CSS opacity แทนการใส่ hard `disabled` บนปุ่มแถวบนสุด/ล่างสุด ทำให้ผู้ใช้คีย์บอร์ดไม่หลุด Focus ไปที่ `document.body` เมื่อกดเลื่อน
+  - Stable View Pinning: ใน `menu_edit.tsx` กำกับ `handleReorderCategory` ล็อก `selectedId` ค้างไว้ที่หมวดหมู่เดิม ป้องกันไม่ให้มุมมองตารางอาหารเด้งเปลี่ยนเมื่อมีการเลื่อนหมวดหมู่อันดับ 0
+  - Memory Leak Prevention: ผูก Error Banner Timer กับ Ref และ Clear on Unmount
+- **ทดสอบ**:
+  - E2E `backend/test/e2e/e2e-category-reorder.mjs` (27/27 ข้อผ่าน 100%) ตรวจสอบ 401 Unauthorized, 403 Forbidden สำหรับ employee, Validation 400 (ซ้ำ/มั่ว UUID/ข้าม tenant/ส่งไม่ครบ partial subset), การจัดลำดับ [C, A, B] และการสะท้อนผลไปยัง `GET /menu/category` และ `GET /menu/full`
+  - Typecheck (`tsc --noEmit`, `tsc -b`) และ Workspace build ผ่าน 100%
+
 ---
 
 ## 4. งานค้าง P0
@@ -436,11 +478,11 @@ commit เดียว 4 เรื่อง:
 
 ### P2 — ฟีเจอร์ตาม scope
 
-- **PWA shell**: manifest + service worker precache + update prompt + icons ทำแล้ว (`a992417`)
-  - **ยังเหลือ**: IndexedDB (Dexie) แคช `GET /menu/full` / โต๊ะ / กะปัจจุบัน + outbox คิวออเดอร์ออฟไลน์
+- **PWA shell & Offline data layer**: manifest + SW precache + update prompt + icons (`a992417`) และ **IndexedDB (Dexie v2) แคชผังโต๊ะ/กะ/เมนู + outbox คิวออเดอร์ออฟไลน์** เสร็จสมบูรณ์แล้ว (ดู 3.25)
+
 - **Reports**: สรุปยอดขาย, กรองช่วงวันที่, หน้ารายงานรายกะ และส่งออก CSV เสร็จสมบูรณ์แล้ว (`3.18`) — *(ตัดการสรุปยอดขายแบบ PDF ออก ใช้แค่ CSV)*
 - **System Config UI**: หน้า VAT, Store และ **หน้าตั้งค่าเครื่องพิมพ์และใบเสร็จ (Printer & Receipt Settings)** เสร็จสมบูรณ์แล้ว (ดู 3.20)
-- **Menu reorder endpoint**
+- **Category reorder**: endpoint และ UI จัดลำดับหมวดหมู่อาหาร เสร็จสมบูรณ์แล้ว (ดู 3.26) — **เคลียร์งาน P2 ครบทั้งหมดแล้ว**
 - **Inventory polish**: เสร็จสมบูรณ์แล้ว (ดู 3.22)
 
 ### ปิดแล้ว (เคยอยู่ใน P1 — อย่าเปิดซ้ำ)
@@ -461,7 +503,7 @@ commit เดียว 4 เรื่อง:
 
 ## 6. คุณภาพ / เทสต์ / เอกสาร
 
-| รายการ | สถานะล่าสุด (2026-11-01, branch `feat-aod`) |
+| รายการ | สถานะล่าสุด (2026-11-02, branch `feat-aod` / `main` = `66e38c0`) |
 |---|---|
 | Backend `npx tsc --noEmit` | **ผ่าน** |
 | Frontend `npx tsc -b` | **ผ่าน** |
@@ -470,7 +512,7 @@ commit เดียว 4 เรื่อง:
 | Backend `npx eslint "src/**/*.ts"` | ยังแดงหลายพัน problems (ส่วนใหญ่ prettier) — **อย่า auto-fix ปนกับ feature commit** |
 | Frontend `npx eslint src` | ~40 problems เดิม (`react-hooks/set-state-in-effect`, `no-explicit-any` ใน `libs/appClient.ts`) — ไฟล์ที่แตะในงาน void/comp สะอาด |
 | Backend e2e spec | `backend/test/app.e2e-spec.ts` ยังเป็น boilerplate (`"Hello World!"`) → ใช้ไม่ได้ |
-| E2E ใน repo | `backend/test/e2e/`: `e2e-reports.mjs`, `e2e-receipt.mjs`, `e2e-public-tenant.mjs`, `e2e-token-version.mjs`, `e2e-void-comp.mjs`, `e2e-cancel-order.mjs`, `e2e-login-lockout.mjs`, `e2e-users-me.mjs`, `e2e-merge-tables-payment.mjs`, `e2e-audit-logs.mjs`, `e2e-printer-config.mjs`, `e2e-inventory-polish.mjs` |
+| E2E ใน repo | `backend/test/e2e/`: `e2e-reports.mjs`, `e2e-receipt.mjs`, `e2e-public-tenant.mjs`, `e2e-token-version.mjs`, `e2e-void-comp.mjs`, `e2e-cancel-order.mjs`, `e2e-login-lockout.mjs`, `e2e-users-me.mjs`, `e2e-merge-tables-payment.mjs`, `e2e-audit-logs.mjs`, `e2e-printer-config.mjs`, `e2e-printer-storage.mjs`, `e2e-inventory-polish.mjs`, `e2e-category-reorder.mjs` |
 | E2E ที่ยังไม่อยู่ใน repo | สคริปต์ใน `%TEMP%\opencode\` ของเครื่องที่เขียน: `e2e-shift.mjs`, `e2e-stock-count-batch.mjs`, `e2e-floors.mjs`, `e2e-kds-badge.mjs` |
 
 **ข้อควรระวังเวลาเทสต์**
@@ -552,8 +594,8 @@ commit เดียว 4 เรื่อง:
 
 ## 9. ลำดับที่แนะนำถัดไป
 
-1. **เปิด PR `feat-aod` → `main`** — งาน P0 และ P1 ทั้งหมด (`void/comp`, `PIN lock`, `escalation`, `cancel/walkout`, `login lockout`, `menu image`, `GET /users/me`) เสร็จครบแล้ว
-2. **P2 ที่เหลือ**: offline data layer (Dexie + outbox) → Menu reorder (Reports/CSV, Audit logs 3.19, Printer & Receipt Settings 3.20 และ Inventory polish 3.22 เสร็จเรียบร้อยแล้ว)
-4. ย้าย E2E 4 ตัวจาก `%TEMP%\opencode\` เข้า repo และเพิ่ม E2E ของ PIN ผ่าน UI (ตั้ง PIN → void/comp → verify กะ) + E2E escalation (ต้องต่อ DB เพื่อย้อน `closed_at`)
+1. **งานทั้งหมดเสร็จสมบูรณ์ 100% พร้อมส่งมอบ** — งาน P0, P1 ทั้งหมด และ P2 ทุกรายการ (Reports/CSV, System Config, Printer & Receipt Settings, Audit logs, Inventory polish, Offline Data Layer ด้วย Dexie v2 & Outbox Queue, Category Reorder) เรียบร้อยและ build ผ่าน 100%
+2. **เปิด PR รวมเข้า `main`** — เตรียมส่งมอบและ Deploy ระบบ POS ค้าคล่องขึ้น Production
+3. **การทดสอบเสริม (Optional)**: ย้าย E2E 4 ตัวจาก `%TEMP%\opencode\` เข้า repo และเพิ่ม E2E flow ทดสอบ PIN บน UI แบบ End-to-End
 
 > ก่อนเริ่มงานทุกครั้ง: ดู `git status`, รัน `npx tsc --noEmit` (backend) และ `npx tsc -b` (frontend) ให้ผ่านก่อน commit

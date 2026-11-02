@@ -1,6 +1,7 @@
 import { Injectable , ConflictException, NotFoundException, BadRequestException} from '@nestjs/common';
 import { MenuRepository } from './menu.repository';
 import { CategoryDTO } from './dto/category.dto';
+import { ReorderCategoryDTO } from './dto/reorder-category.dto';
 import { toCategoryResponse, toItemModifierResponse, toMenuItemModifierGroupResponse, toMenuItemResponse, toModifierGroupResponse} from './mapper/menu.mapper';
 import { MenuItemDTO } from './dto/menu.dto';
 import { UpdateMenuItemDTO } from './dto/update_menuItem.dto';
@@ -65,6 +66,34 @@ export class MenuService {
             data:toCategoryResponse(result)
         };
 
+    }
+
+    async reorderCategories(dto: ReorderCategoryDTO) {
+        const { categoryIds } = dto;
+        const uniqueIds = new Set(categoryIds);
+        if (uniqueIds.size !== categoryIds.length) {
+            throw new BadRequestException('รายการ categoryIds มีรหัสหมวดหมู่ซ้ำกัน');
+        }
+
+        // Lock all tenant categories in canonical order to prevent deadlocks and verify complete set
+        const tenantCategoryIds = await this.menuRepository.lockTenantCategories();
+        if (categoryIds.length !== tenantCategoryIds.length) {
+            throw new BadRequestException(
+                `ต้องระบุ categoryIds ให้ครบทุกหมวดหมู่ของร้าน (คาดหวัง ${tenantCategoryIds.length} รายการ แต่ได้รับ ${categoryIds.length} รายการ)`,
+            );
+        }
+
+        const updatedCount = await this.menuRepository.reorderCategories(categoryIds);
+        if (updatedCount !== categoryIds.length) {
+            throw new BadRequestException('หมวดหมู่บางรายการไม่ถูกต้องหรือไม่พบในระบบ');
+        }
+
+        return {
+            status: 'success',
+            data: {
+                updated: updatedCount,
+            },
+        };
     }
 
     async listCategories(){

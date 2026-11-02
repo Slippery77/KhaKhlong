@@ -54,7 +54,34 @@ export function useAdminMenu(){
         };
     }, [accessToken]);
 
-    return {categories,modifier,isLoading, error, reload:(silent = true)=>load(silent)};
+    const reorderCategories = useCallback(async (newCategories: Category[]): Promise<boolean> => {
+        if (!accessToken) return false;
+        let rollbackCategories: Category[] = [];
+        setCategories((current) => {
+            rollbackCategories = current;
+            return newCategories;
+        });
+
+        try {
+            await apiFetch('/menu/category/reorder', accessToken, 'PATCH', {
+                categoryIds: newCategories.map((c) => c.category_id),
+            });
+            return true;
+        } catch (err) {
+            setCategories(rollbackCategories);
+            setError(err instanceof Error ? err.message : 'จัดลำดับหมวดหมู่ไม่สำเร็จ');
+            return false;
+        }
+    }, [accessToken]);
+
+    return {
+        categories,
+        modifier,
+        isLoading,
+        error,
+        reload: (silent = true) => load(silent),
+        reorderCategories,
+    };
 }
 
 export function useCreateCategory(){

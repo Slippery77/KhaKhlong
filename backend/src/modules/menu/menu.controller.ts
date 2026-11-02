@@ -1,6 +1,7 @@
 import { Controller, Body, Param, Post, Patch, ParseUUIDPipe, Get, Put } from '@nestjs/common';
 import { MenuService } from './menu.service';
 import { CategoryDTO } from './dto/category.dto';
+import { ReorderCategoryDTO } from './dto/reorder-category.dto';
 import { AnyAuthenticated, RequirePermissions } from '../auth/guards/permissions.decorator';
 import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags, ApiParam, ApiOkResponse, ApiNotFoundResponse, ApiConflictResponse, ApiCreatedResponse, ApiBadRequestResponse,ApiForbiddenResponse,ApiUnauthorizedResponse } from '@nestjs/swagger';
 import { MenuItemDTO } from './dto/menu.dto';
@@ -31,6 +32,19 @@ export class MenuController {
     @Post('category')
     async createCategory(@Body() dto: CategoryDTO, ){
         return this.menuService.createCategory(dto);
+    }
+
+    @ApiOperation({
+        summary: 'จัดลำดับหมวดหมู่เมนู',
+        description: 'จัดลำดับหมวดหมู่เมนูใหม่ตามอาร์เรย์ของ categoryIds โดยต้องมีสิทธิ์ menu:edit',
+    })
+    @ApiResponse({ status: 200, description: 'จัดลำดับหมวดหมู่เรียบร้อยแล้ว' })
+    @ApiResponse({ status: 400, description: 'ข้อมูลไม่ถูกต้อง หรือมีหมวดหมู่ที่ไม่พบในระบบ' })
+    @ApiResponse({ status: 403, description: 'ไม่มีสิทธิ์ในการแก้ไขหมวดหมู่เมนู' })
+    @RequirePermissions('menu:edit')
+    @Patch('category/reorder')
+    async reorderCategories(@Body() dto: ReorderCategoryDTO) {
+        return this.menuService.reorderCategories(dto);
     }
 
     @ApiOperation({

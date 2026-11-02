@@ -63,7 +63,7 @@ function MenuTableSkeleton() {
 }
 
 export function MenuEdit() {
-    const { categories, modifier, isLoading, error, reload } = useAdminMenu();
+    const { categories, modifier, isLoading, error, reload, reorderCategories } = useAdminMenu();
     const [selectedId, setSelectedId] = useState<string | null>(null);
     const [statusFilter, setStatusFilter] = useState<MenuStatusFilter>('all');
     const [search, setSearch] = useState('');
@@ -184,6 +184,13 @@ export function MenuEdit() {
         return ok;
     };
 
+    const handleReorderCategory = async (newCategories: Category[]) => {
+        if (!selectedId && selected) {
+            setSelectedId(selected.category_id);
+        }
+        return reorderCategories(newCategories);
+    };
+
     const filterTabs: { id: MenuStatusFilter; label: string; count: number }[] = [
         { id: 'all', label: 'ทั้งหมด', count: items.length },
         { id: 'available', label: 'พร้อมขาย', count: availableCount },
@@ -205,6 +212,7 @@ export function MenuEdit() {
                 editIsSubmitting={submitCategory}
                 editError={editCategoryError}
                 isLoading={isLoading}
+                onReorder={handleReorderCategory}
             />
             <main className="flex-1 overflow-y-auto bg-[#FAF7F2] p-6 lg:p-8">
                 {/* เกิดข้อผิดพลาดตอนดึงข้อมูลครั้งแรก */}

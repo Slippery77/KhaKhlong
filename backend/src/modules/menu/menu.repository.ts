@@ -52,6 +52,32 @@ export class MenuRepository{
         return result.rows[0]??null;  
     }
     
+    async lockTenantCategories(): Promise<string[]> {
+        const sql = `
+            SELECT category_id
+            FROM categories
+            WHERE tenant_id = app_tenant_id()
+            ORDER BY category_id
+            FOR UPDATE;
+        `;
+        const result = await this.db.query(sql);
+        return result.rows.map((r: { category_id: string }) => r.category_id);
+    }
+
+    async reorderCategories(categoryIds: string[]): Promise<number> {
+        if (!categoryIds || categoryIds.length === 0) return 0;
+
+        const sql = `
+            UPDATE categories AS c
+            SET sort_order = v.ord::smallint, updated_at = now()
+            FROM unnest($1::uuid[]) WITH ORDINALITY AS v(id, ord)
+            WHERE c.category_id = v.id AND c.tenant_id = app_tenant_id();
+        `;
+
+        const result = await this.db.query(sql, [categoryIds]);
+        return result.rowCount ?? 0;
+    }
+
     async listCategories(){
         const sql = `
             SELECT ${CATEGORY_COLS}

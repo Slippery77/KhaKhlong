@@ -1,6 +1,6 @@
-import { Plus, EllipsisVertical, FolderOpen } from 'lucide-react';
+import { Plus, EllipsisVertical, FolderOpen, ChevronUp, ChevronDown } from 'lucide-react';
 import type { Category } from '../types/menu.types';
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import CreateCategoryPopUp from './createCategoryPopup';
 import EditCategoryPopup from './editCategoryPopup';
 
@@ -16,6 +16,7 @@ interface Props {
     editIsSubmitting: boolean;
     editError: string|null;
     isLoading?: boolean;
+    onReorder?: (newCategories: Category[]) => Promise<boolean>;
 }
 
 export default function SidebarCategory({
@@ -30,9 +31,57 @@ export default function SidebarCategory({
     editIsSubmitting,
     editError,
     isLoading = false,
+    onReorder,
 }: Props) {
     const [ showPopup, setShowPopup ] = useState(false);
     const [ showEdit, setShowEdit ] = useState(false);
+    const [ isReordering, setIsReordering ] = useState(false);
+    const [ reorderError, setReorderError ] = useState<string | null>(null);
+    const isReorderingRef = useRef(false);
+    const errorTimerRef = useRef<number | null>(null);
+
+    useEffect(() => {
+        return () => {
+            if (errorTimerRef.current) {
+                window.clearTimeout(errorTimerRef.current);
+            }
+        };
+    }, []);
+
+    const handleMove = async (index: number, direction: 'up' | 'down') => {
+        if (!onReorder || isReorderingRef.current) return;
+        const targetIndex = direction === 'up' ? index - 1 : index + 1;
+        if (targetIndex < 0 || targetIndex >= categories.length) return;
+
+        const newCategories = [...categories];
+        const [moved] = newCategories.splice(index, 1);
+        newCategories.splice(targetIndex, 0, moved);
+
+        // Update in-memory sort_order values to match new positions (Finding 2)
+        const updatedCategories = newCategories.map((cat, idx) => ({
+            ...cat,
+            sort_order: idx + 1,
+        }));
+
+        isReorderingRef.current = true;
+        setIsReordering(true);
+        setReorderError(null);
+        if (errorTimerRef.current) window.clearTimeout(errorTimerRef.current);
+
+        try {
+            const success = await onReorder(updatedCategories);
+            if (!success) {
+                setReorderError('สลับลำดับหมวดหมู่ไม่สำเร็จ');
+                errorTimerRef.current = window.setTimeout(() => setReorderError(null), 4000);
+            }
+        } catch {
+            setReorderError('เกิดข้อผิดพลาดในการจัดลำดับ');
+            errorTimerRef.current = window.setTimeout(() => setReorderError(null), 4000);
+        } finally {
+            isReorderingRef.current = false;
+            setIsReordering(false);
+        }
+    };
     const selectedCategory = categories.find(c => c.category_id === selectedId);
 
     const isInitialLoading = isLoading && categories.length === 0;
@@ -53,6 +102,12 @@ export default function SidebarCategory({
                   </div>
               </div>
               <div className="mx-3 h-px bg-[#e5d9c8]" />
+              {reorderError && (
+                  <div className="mx-3 mt-2 rounded-xl bg-rose-50 border border-rose-200 p-2 text-xs text-rose-700 flex items-center justify-between">
+                      <span>{reorderError}</span>
+                      <button type="button" onClick={() => setReorderError(null)} className="text-rose-500 hover:text-rose-700 font-bold ml-1 cursor-pointer">✕</button>
+                  </div>
+              )}
               <ul className="flex flex-1 flex-col gap-1 overflow-y-auto p-2" aria-busy={isInitialLoading}>
                   {isInitialLoading ? (
                       <div className="flex flex-col gap-2 p-1">
@@ -67,7 +122,7 @@ export default function SidebarCategory({
                                   ยังไม่มีหมวดหมู่
                               </li>
                           )}
-                          {categories.map((c) => {
+                          {categories.map((c, index) => {
                               const itemCount = c.items?.length ?? 0;
                               const isSelected = c.category_id === selectedId;
                               return (
@@ -96,6 +151,54 @@ export default function SidebarCategory({
                                                   {itemCount}
                                               </span>
                                           </button>
+
+                                          {/* ปุ่มเลื่อนลำดับ ขึ้น / ลง (ออกแบบตาม ui-ux-pro-max) */}
+                                          {onReorder && categories.length > 1 && (
+                                              <div className="flex flex-col -space-y-0.5 shrink-0 px-0.5">
+                                                  <button
+                                                      type="button"
+                                                      disabled={isReordering}
+                                                      aria-disabled={index === 0}
+                                                      onClick={(e) => {
+                                                          e.stopPropagation();
+                                                          if (index === 0) return;
+                                                          handleMove(index, 'up');
+                                                      }}
+                                                      title={index === 0 ? 'อยู่อันดับแรกแล้ว' : `เลื่อน "${c.name}" ขึ้น`}
+                                                      aria-label={`เลื่อนหมวดหมู่ ${c.name} ขึ้น`}
+                                                      className={`p-0.5 rounded transition-all active:scale-85 cursor-pointer disabled:opacity-50 disabled:cursor-wait ${
+                                                          index === 0 ? 'opacity-20 cursor-not-allowed' : ''
+                                                      } ${
+                                                          isSelected
+                                                              ? 'text-white/80 hover:bg-white/20 hover:text-white'
+                                                              : 'text-stone-400 hover:bg-[#f0e6dc] hover:text-[#2D241E]'
+                                                      }`}
+                                                  >
+                                                      <ChevronUp size={13} strokeWidth={2.5} />
+                                                  </button>
+                                                  <button
+                                                      type="button"
+                                                      disabled={isReordering}
+                                                      aria-disabled={index === categories.length - 1}
+                                                      onClick={(e) => {
+                                                          e.stopPropagation();
+                                                          if (index === categories.length - 1) return;
+                                                          handleMove(index, 'down');
+                                                      }}
+                                                      title={index === categories.length - 1 ? 'อยู่อันดับสุดท้ายแล้ว' : `เลื่อน "${c.name}" ลง`}
+                                                      aria-label={`เลื่อนหมวดหมู่ ${c.name} ลง`}
+                                                      className={`p-0.5 rounded transition-all active:scale-85 cursor-pointer disabled:opacity-50 disabled:cursor-wait ${
+                                                          index === categories.length - 1 ? 'opacity-20 cursor-not-allowed' : ''
+                                                      } ${
+                                                          isSelected
+                                                              ? 'text-white/80 hover:bg-white/20 hover:text-white'
+                                                              : 'text-stone-400 hover:bg-[#f0e6dc] hover:text-[#2D241E]'
+                                                      }`}
+                                                  >
+                                                      <ChevronDown size={13} strokeWidth={2.5} />
+                                                  </button>
+                                              </div>
+                                          )}
 
                                           {/* ปุ่ม ⋮ ชิดขวาสุด */}
                                           <button
