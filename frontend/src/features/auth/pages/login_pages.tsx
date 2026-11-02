@@ -58,12 +58,12 @@ export function LoginPage() {
 
             {/* ── แผงขวา: ฟอร์มเข้าสู่ระบบ ─────────────────────────── */}
             <main className="flex flex-1 flex-col items-center justify-center px-4 py-10">
-                {/* โลโก้จริงบนมือถือ (แผงแบรนด์ถูกซ่อน) — สีแบรนด์บนพื้นครีม */}
-                <div className="mb-6 flex items-center lg:hidden">
+                {/* โลโก้จริงบนมือถือ (แผงแบรนด์ถูกซ่อน) — สีแบรนด์บนพื้นครีม ปรับขนาดใหญ่เด่นชัด */}
+                <div className="mb-6 flex items-center justify-center lg:hidden">
                     <img
                         src={logoBrand}
                         alt="ค้าคล่อง KhaKhlong"
-                        className="h-12 w-auto"
+                        className="h-20 w-auto"
                         width={623}
                         height={256}
                     />
