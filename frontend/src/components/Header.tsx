@@ -107,21 +107,21 @@ export default function Header() {
     }, [isMenuOpen])
 
     return (
-        <header className="h-14 bg-[#FAF7F2] border-b border-stone-200 px-8 flex items-center justify-between font-kanit select-none shrink-0 relative z-30">
+        <header className="h-14 bg-[#FAF7F2] border-b border-stone-200 px-3 sm:px-6 md:px-8 flex items-center justify-between font-kanit select-none shrink-0 relative z-30">
             {/* โลโก้ และ Breadcrumb ตามรูป mockup */}
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 sm:gap-3 min-w-0">
                 <Link to={`/${tenantSlug}/tables`} className="flex items-center gap-2 group cursor-pointer">
                     <div className="w-8 h-8 rounded-lg bg-[#EFE8DC] group-hover:bg-[#E5DCCF] transition-colors flex items-center justify-center text-[#8C6D58]">
                         <UtensilsCrossed className="w-4 h-4 stroke-2" />
                     </div>
-                    <span className="font-semibold text-[#2D241E] text-base group-hover:text-stone-900 transition-colors">
+                    <span className="font-semibold text-[#2D241E] text-sm sm:text-base group-hover:text-stone-900 transition-colors truncate max-w-[110px] xs:max-w-[150px] sm:max-w-none">
                         {user?.restaurant_name || "ค้าคล่อง"}
                     </span>
                 </Link>
 
-                <span className="text-stone-300 font-light">/</span>
+                <span className="text-stone-300 font-light shrink-0">/</span>
 
-                <span className="text-sm font-medium text-[#8C6D58]">
+                <span className="text-xs sm:text-sm font-medium text-[#8C6D58] shrink-0">
                     {isKDS && ("KDS")}
                     {isPOS && ("POS")}
                     {isTables && ("โต๊ะ")}
@@ -135,7 +135,7 @@ export default function Header() {
 
             {/* ข้อมูลผู้ใช้งาน และปุ่มเปิดเมนู */}
             <div className="flex items-center gap-3" ref={menuRef}>
-                <div className="flex flex-col text-right">
+                <div className="hidden sm:flex flex-col text-right">
                     <span className="text-sm font-medium text-[#2D241E] leading-tight">
                         {employee.name}
                     </span>
@@ -163,6 +163,10 @@ export default function Header() {
                     {isMenuOpen && (
                         <div className="absolute right-0 top-full mt-2 w-56 bg-white border border-stone-200 rounded-2xl shadow-xl py-2 z-50 animate-in fade-in zoom-in-95 duration-100">
                             <div className="px-4 py-2 border-b border-stone-100">
+                                <div className="sm:hidden pb-1 mb-1 border-b border-stone-100">
+                                    <p className="text-sm font-medium text-[#2D241E] leading-tight truncate">{employee.name}</p>
+                                    <p className="text-xs text-stone-500 font-normal">{employee.role}</p>
+                                </div>
                                 <p className="text-xs text-stone-400 font-medium">เมนูระบบ</p>
                             </div>
 
@@ -182,7 +186,7 @@ export default function Header() {
                                 className={`flex items-center justify-between px-4 py-2.5 text-sm transition-all hover:bg-[#FAF7F2] ${isKDS ? "font-semibold text-[#8C6D58] bg-[#FAF7F2]/80" : "text-[#2D241E]"
                                     }`}
                             >
-                                <div className="flex items-center gap-3">
+                                <div className="flex items-center gap-2 sm:gap-3 min-w-0">
                                     <ChefHat className="w-4 h-4 text-[#8C6D58]" />
                                     <span>KDS</span>
                                 </div>

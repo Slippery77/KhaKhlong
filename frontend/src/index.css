@@ -4,3 +4,9 @@
 @theme {
   --font-kanit: 'Kanit', sans-serif;
 }
+
+/* ปิด icon ดวงตา password reveal อัตโนมัติของ Microsoft Edge/Windows เพื่อไม่ให้ลอยหรือซ้อนกับ custom eye icon */
+input::-ms-reveal,
+input::-ms-clear {
+  display: none !important;
+}
