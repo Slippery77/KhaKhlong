@@ -592,6 +592,14 @@ commit เดียว 4 เรื่อง:
 
 ---
 
+## 8.1 การปรับปรุงล่าสุด (Data Flow Hardening & Production Reliability)
+
+- **User-based Throttler (`UserThrottlerGuard`)**: ปรับ Throttler จากเดิมนับต่อ IP เครื่อง มาเป็นนับตาม `user:${tenantID}:${sub}` สำหรับ authenticated routes (300 req/min) เพื่อป้องกันปัญหา NAT IP ชนกันในร้านอาหาร (POS หลายเครื่อง + KDS + พนักงานใช้ Wi-Fi เดียวกัน) พร้อม fallback เป็น IP ใน public routes และข้อความ error ภาษาไทย
+- **Atomic Discard Order & Table Snapshot Rollback**: ปรับปรุง `discardOrder` ใน `frontend/src/features/offline/outbox.ts` ให้คืนสถานะโต๊ะใน snapshot เป็น `available` อัตโนมัติใน Dexie transaction เมื่อทิ้งบิลใหม่ที่เปิดออฟไลน์
+- **Daily Audit Logs Purge**: เพิ่มการเรียก `purge_old_audit_logs()` (ลบ audit logs เก่าเกิน 1 ปี) วันละ 1 ครั้งโดยอัตโนมัติใน `ShiftEscalationService`
+
+---
+
 ## 9. ลำดับที่แนะนำถัดไป
 
 1. **งานทั้งหมดเสร็จสมบูรณ์ 100% พร้อมส่งมอบ** — งาน P0, P1 ทั้งหมด และ P2 ทุกรายการ (Reports/CSV, System Config, Printer & Receipt Settings, Audit logs, Inventory polish, Offline Data Layer ด้วย Dexie v2 & Outbox Queue, Category Reorder) เรียบร้อยและ build ผ่าน 100%
