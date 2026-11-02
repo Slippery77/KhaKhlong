@@ -352,6 +352,7 @@ CREATE TABLE inventory_transactions (
     note             TEXT,
     created_by       UUID NOT NULL,
     created_at       TIMESTAMPTZ NOT NULL DEFAULT now(),
+    business_date    DATE NOT NULL,
     FOREIGN KEY (tenant_id, ingredient_id) REFERENCES ingredients (tenant_id, ingredient_id),
     FOREIGN KEY (tenant_id, created_by)    REFERENCES users (tenant_id, users_id),
     CONSTRAINT chk_waste_reason_only_for_waste CHECK (
@@ -363,6 +364,7 @@ CREATE INDEX idx_inv_tx_ingredient ON inventory_transactions (ingredient_id);
 CREATE INDEX idx_inv_tx_tenant ON inventory_transactions (tenant_id);
 CREATE INDEX idx_inv_tx_type ON inventory_transactions (tenant_id, type);
 CREATE INDEX idx_inv_tx_created_by ON inventory_transactions (created_by);
+CREATE INDEX idx_inv_tx_business_date ON inventory_transactions (tenant_id, business_date);
 
 -- ============================================================
 -- GROUP 6 : PAYMENT
@@ -636,6 +638,17 @@ RETURNS date LANGUAGE sql STABLE AS $$
   SELECT ((p_ts AT TIME ZONE t.timezone)
           - make_interval(hours => cfg(p_tenant, 'business_day_start_hour')::int))::date
   FROM tenants t WHERE t.tenant_id = p_tenant $$;
+
+CREATE FUNCTION trg_inventory_tx_before_insert() RETURNS trigger LANGUAGE plpgsql AS $$
+BEGIN
+  IF NEW.business_date IS NULL THEN
+    NEW.business_date := compute_business_date(NEW.tenant_id, COALESCE(NEW.created_at, now()));
+  END IF;
+  RETURN NEW;
+END $$;
+CREATE TRIGGER before_insert_inventory_transactions
+  BEFORE INSERT ON inventory_transactions
+  FOR EACH ROW EXECUTE FUNCTION trg_inventory_tx_before_insert();
 
 CREATE FUNCTION next_receipt_number(p_tenant uuid, p_bdate date) RETURNS text LANGUAGE plpgsql AS $$
 DECLARE n int;
@@ -1007,7 +1020,7 @@ CREATE TRIGGER lock_ingredient BEFORE INSERT ON inventory_transactions
 CREATE FUNCTION record_stock_count(p_tenant uuid, p_ingredient uuid, p_counted numeric,
                                    p_user uuid, p_note text DEFAULT NULL)
 RETURNS numeric LANGUAGE plpgsql AS $$
-DECLARE cur numeric; d numeric; pct numeric; limit_pct numeric;
+DECLARE cur numeric; d numeric; pct numeric; limit_pct numeric; v_note text;
 BEGIN
   PERFORM 1 FROM ingredients WHERE ingredient_id = p_ingredient AND tenant_id = p_tenant FOR UPDATE;
   IF NOT FOUND THEN RAISE EXCEPTION 'ingredient not found'; END IF;
@@ -1019,10 +1032,15 @@ BEGIN
   d := p_counted - cur;
   IF d = 0 THEN RETURN 0; END IF;
 
+  v_note := '[counted ' || trim_scale(round(p_counted, 4))::text ||
+            ', system ' || trim_scale(round(cur, 4))::text || ']';
+  IF p_note IS NOT NULL AND trim(p_note) <> '' THEN
+    v_note := trim(p_note) || ' ' || v_note;
+  END IF;
+
   INSERT INTO inventory_transactions
     (tenant_id, ingredient_id, type, quantity_change, counted_quantity, note, created_by)
-  VALUES (p_tenant, p_ingredient, 'adjustment', d, p_counted,
-          COALESCE(p_note, '') || ' [counted ' || p_counted || ', system ' || cur || ']', p_user);
+  VALUES (p_tenant, p_ingredient, 'adjustment', d, p_counted, v_note, p_user);
 
   -- ยิง audit เฉพาะที่เพี้ยนทั้งเป็น % และเป็นจำนวน (กันยอดน้อยๆ เตือนทุกวัน)
   limit_pct := cfg(p_tenant, 'inventory_variance_alert_percent')::numeric;
@@ -1351,7 +1369,15 @@ INSERT INTO config_definitions
  ('require_all_served_before_payment','bool','true',NULL,NULL,NULL,false,
   'PAY-03 บังคับเสิร์ฟครบก่อนจ่าย ร้านที่จ่ายก่อนกินให้ตั้ง false'),
  ('inventory_variance_alert_percent','decimal','20',0,1000,NULL,false,
-  'ส่วนต่างสต็อกเกินกี่ % ถึงยิง audit (และต้องเกิน 1 หน่วยด้วย)')
+  'ส่วนต่างสต็อกเกินกี่ % ถึงยิง audit (และต้องเกิน 1 หน่วยด้วย)'),
+ ('receipt_footer','text','ขอบคุณที่ใช้บริการ\nโปรดตรวจสอบรายการก่อนออกจากร้าน',NULL,NULL,NULL,false,
+  'ข้อความท้ายใบเสร็จ'),
+ ('receipt_show_tax_id','bool','true',NULL,NULL,NULL,false,
+  'แสดงเลขประจำตัวผู้เสียภาษีบนใบเสร็จ'),
+ ('receipt_show_cashier','bool','true',NULL,NULL,NULL,false,
+  'แสดงชื่อพนักงานแคชเชียร์บนใบเสร็จ'),
+ ('receipt_show_address','bool','true',NULL,NULL,NULL,false,
+  'แสดงที่อยู่และเบอร์โทรร้านบนใบเสร็จ')
 ON CONFLICT (config_key) DO NOTHING;
 
 -- ============================================================
@@ -1470,7 +1496,8 @@ GRANT EXECUTE ON FUNCTION escalate_overdue_shifts(), purge_old_audit_logs(),
                           resolve_tenant(text), resolve_user_by_email(text),
                           resolve_refresh_token(text),
                           reopen_shift(uuid, uuid, text),
-                          record_stock_count(uuid, uuid, numeric, uuid, text) TO pos_app;
+                          record_stock_count(uuid, uuid, numeric, uuid, text),
+                          trg_inventory_tx_before_insert() TO pos_app;
 
 -- ============================================================
 -- RLS: ทุกตารางที่มี tenant_id

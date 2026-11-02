@@ -40,7 +40,8 @@ export class PaymentService {
      * ยอดรวมก่อนชำระเงินของหลายบิล (รวมโต๊ะคิดเงิน)
      * ใช้สูตรเดียวกับ createPaymentAttempt (computeAmount) เพื่อให้ยอดที่โชว์ตรงกับ attempt.amount
      */
-    async getOrdersSummary(orderIds:string[]){
+    async getOrdersSummary(rawOrderIds: string[]) {
+        const orderIds = Array.from(new Set(rawOrderIds)).sort();
         const orders = await this.paymentRepository.findOrders(orderIds)
         if(orders.length !== orderIds.length){
             throw new NotFoundException('ไม่พบบิลบางใบ')
@@ -70,15 +71,16 @@ export class PaymentService {
             }
         }
 
-        const orders = await this.paymentRepository.findOrders(dto.orderIds)
-        if(orders.length !== dto.orderIds.length){
+        const orderIds = Array.from(new Set(dto.orderIds)).sort();
+        const orders = await this.paymentRepository.findOrders(orderIds)
+        if(orders.length !== orderIds.length){
             throw new NotFoundException('ไม่พบบิลนี้')
         }
         if(orders.some(o => o.closed_at !== null)){
             throw new ConflictException('มีบิลที่ปิดไปแล้ว')
         }
 
-        const findpending = await this.paymentRepository.findOpenAttempt(dto.orderIds)
+        const findpending = await this.paymentRepository.findOpenAttempt(orderIds)
         if(findpending.length>0){
             throw new ConflictException({
                  code: 'PAYMENT_ATTEMPT_PENDING',
@@ -87,7 +89,7 @@ export class PaymentService {
             })
         }
 
-        const {gross,itemCount} = await this.paymentRepository.computeAmount(dto.orderIds)
+        const {gross,itemCount} = await this.paymentRepository.computeAmount(orderIds)
         if(itemCount === 0){
             throw new ConflictException({
                 code:'ORDER_EMPTY',
@@ -97,7 +99,7 @@ export class PaymentService {
         let create;
         try {
             create = await this.paymentRepository.createPaymentAttempt(dto.paymentMethod,gross,userId)
-            await this.paymentRepository.linkOrders(create.payment_attempt_id,dto.orderIds);
+            await this.paymentRepository.linkOrders(create.payment_attempt_id,orderIds);
         } catch (error:any) {
             if(error.code==='P0001'){
                 if(error.message.includes('PAY-03')){
@@ -133,23 +135,26 @@ export class PaymentService {
         }
         if(attempt.status==='success'){
             const payment = await this.paymentRepository.findPaymentByAttempt(payment_attempt_id);
+            if (!payment) {
+                throw new ConflictException('รายการนี้อยู่ระหว่างบันทึกการชำระเงิน กรุณาลองใหม่อีกครั้ง');
+            }
             return {status:'success', data:toPaymentResponse(payment)};
         }
         
         const amount = Number(attempt.amount);
         if(attempt.payment_method === 'cash'){
-            if(dto.cashReceived === undefined){
+            if(typeof dto.cashReceived !== 'number' || isNaN(dto.cashReceived)){
                 throw new BadRequestException('กรุณาระบุจำนวนเงินที่ได้รับมา')
             }
             if(dto.cashReceived<amount){
                 throw new BadRequestException('รับเงินมาไม่พอ');
             }
-        }else if( dto.cashReceived !== undefined){
+        }else if( dto.cashReceived != null){
             throw new BadRequestException('ชำระด้วย QR ไม่ต้องระบุเงินที่รับมา')
         }
         //ยอดรวมใช้เทียบว่ายอดบิลยังเท่ากับ attempt.amount ไหม
         const gross  = await this.paymentRepository.computeGrossByAttempt(payment_attempt_id);
-        if(gross!== amount){
+        if(Math.abs(gross - amount) > 0.005){
             throw new ConflictException('ยอดบิลเปลี่ยนไป กรุณายกเลิกแล้วเริ่มชำระใหม่');
         }
        

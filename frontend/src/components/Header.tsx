@@ -8,6 +8,7 @@ Package,
 ChartLine,
 Wallet,
 Settings,
+ShieldCheck,
 Utensils} from "lucide-react"
 import { useState, useRef, useEffect } from "react"
 import { useLocation, Link, useParams, useNavigate } from "react-router-dom"
@@ -52,10 +53,19 @@ export default function Header() {
     const isPOS = location.pathname.includes("/mainpos")
     const isTables = location.pathname.includes("/tables")
     const isSetting = location.pathname.includes("/setting")
+    const isAuditLogs = location.pathname.includes("/audit-logs")
     const isSiftwork = location.pathname.includes("/siftwork")
     const isSalereport = location.pathname.includes("/sale-report")
     const isStock = location.pathname.includes("/stock")
     const navigate = useNavigate();
+
+    // สิทธิ์การตั้งค่าระบบ — เฉพาะเจ้าของร้านและผู้จัดการเท่านั้น (พนักงานไม่มีสิทธิ์)
+    const role = user?.role?.toLowerCase()
+    const isOwner = role === 'owner'
+    const isManager = role === 'manager'
+    const canAccessSettings = isOwner || isManager
+    // เจ้าของร้านเริ่มต้นที่หน้าข้อมูลร้าน / ผู้จัดการเริ่มต้นที่หน้าผังโต๊ะ
+    const settingDefaultSubpath = isOwner ? 'store' : 'tables'
 
     // ดึงคิวครัวจาก backend ทุกครั้งที่เปิดเมนู — badge จะตรงกับหน้า KDS เสมอ
     useEffect(() => {
@@ -104,7 +114,7 @@ export default function Header() {
                         <UtensilsCrossed className="w-4 h-4 stroke-2" />
                     </div>
                     <span className="font-semibold text-[#2D241E] text-base group-hover:text-stone-900 transition-colors">
-                        ครัวบ้าน
+                        {user?.restaurant_name || "ค้าคล่อง"}
                     </span>
                 </Link>
 
@@ -116,7 +126,8 @@ export default function Header() {
                     {isTables && ("โต๊ะ")}
                     {isStock && ("สต็อก")}
                     {isSalereport && ("ยอดขาย")}
-                    {isSetting && ("ตั้งค่า")}
+                    {isAuditLogs && ("ประวัติความปลอดภัย")}
+                    {isSetting && (!canAccessSettings ? "ไม่มีสิทธิ์เข้าถึง" : "ตั้งค่า")}
                     {isSiftwork && ("ปิดกะ/นับเงิน")}
                 </span>
             </div>
@@ -148,7 +159,7 @@ export default function Header() {
                         )}
                     </button>
 
-                    {/* เมนูดรอปดาวน์สำหรับสลับระหว่าง POS และ KDS */}
+                    {/* เมนูดรอปดาวน์สำหรับสลับหน้าต่างการทำงาน */}
                     {isMenuOpen && (
                         <div className="absolute right-0 top-full mt-2 w-56 bg-white border border-stone-200 rounded-2xl shadow-xl py-2 z-50 animate-in fade-in zoom-in-95 duration-100">
                             <div className="px-4 py-2 border-b border-stone-100">
@@ -217,16 +228,33 @@ export default function Header() {
                                 <span>ปิดกะ/นับเงิน</span>
                             </Link>
 
-                            <Link
-                                to={`/${tenantSlug}/setting/store`}
-                                onClick={() => setIsMenuOpen(false)}
-                                className={`flex items-center gap-3 px-4 py-2.5 text-sm transition-all hover:bg-[#FAF7F2] ${
-                                    isSetting ? "font-semibold text-[#8C6D58] bg-[#FAF7F2]/80" : "text-[#2D241E]"
-                                }`}
-                            >
-                                <Settings className="w-4 h-4 text-[#8C6D58]" />
-                                <span>ตั้งค่า</span>
-                            </Link>
+                            {/* บันทึกประวัติความปลอดภัย (AUD-05) — เฉพาะเจ้าของร้านและผู้จัดการเท่านั้น */}
+                            {canAccessSettings && (
+                                <Link
+                                    to={`/${tenantSlug}/audit-logs`}
+                                    onClick={() => setIsMenuOpen(false)}
+                                    className={`flex items-center gap-3 px-4 py-2.5 text-sm transition-all hover:bg-[#FAF7F2] ${
+                                        isAuditLogs ? "font-semibold text-[#8C6D58] bg-[#FAF7F2]/80" : "text-[#2D241E]"
+                                    }`}
+                                >
+                                    <ShieldCheck className="w-4 h-4 text-[#8C6D58]" />
+                                    <span>ประวัติความปลอดภัย</span>
+                                </Link>
+                            )}
+
+                            {/* เฉพาะผู้จัดการหรือเจ้าของร้านเท่านั้นที่จะเห็นเมนูตั้งค่า — พนักงานจะไม่เห็น */}
+                            {canAccessSettings && (
+                                <Link
+                                    to={`/${tenantSlug}/setting/${settingDefaultSubpath}`}
+                                    onClick={() => setIsMenuOpen(false)}
+                                    className={`flex items-center gap-3 px-4 py-2.5 text-sm transition-all hover:bg-[#FAF7F2] ${
+                                        isSetting ? "font-semibold text-[#8C6D58] bg-[#FAF7F2]/80" : "text-[#2D241E]"
+                                    }`}
+                                >
+                                    <Settings className="w-4 h-4 text-[#8C6D58]" />
+                                    <span>ตั้งค่า</span>
+                                </Link>
+                            )}
 
                             <div className="border-t border-stone-100 my-1" />
 

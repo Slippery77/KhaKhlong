@@ -47,7 +47,8 @@ export interface PaymentResponse{
     paidAt:Date;
 }
 
-export function toPaymentResponse(rows:any):PaymentResponse{
+export function toPaymentResponse(rows: any): PaymentResponse {
+    if (!rows) throw new Error('toPaymentResponse: payment row is null or undefined');
     return {
         paymentId:rows.payment_id,
         paymentAttemptId:rows.payment_attempt_id,
@@ -90,5 +91,9 @@ export function toReceiptResponse(payment: any, store: any, tables: any[], lines
       lineTotal: Number(l.line_total),
       isComped: l.is_comped,
     })),
+    footer: store.receipt_footer ?? null,
+    showTaxId: store.receipt_show_tax_id !== 'false',
+    showCashier: store.receipt_show_cashier !== 'false',
+    showAddress: store.receipt_show_address !== 'false',
   };
 }

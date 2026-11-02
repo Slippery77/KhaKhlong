@@ -47,6 +47,7 @@ const reg = await req('/register', null, 'POST', {
   username,
   password,
   display_name: 'เจ้าของร้านทดสอบ',
+  pin: '123456',
 });
 
 if (reg.status === 429) {

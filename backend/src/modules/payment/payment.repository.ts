@@ -62,7 +62,7 @@ export class PaymentRepository{
     async linkOrders(attemptId:string,orderIds:string[]){
         const sql =`
             INSERT INTO payment_attempt_orders(tenant_id,payment_attempt_id,order_id)
-            SELECT app_tenant_id(),$1,unnest($2::uuid[])
+            SELECT app_tenant_id(), $1, x FROM unnest($2::uuid[]) AS x ORDER BY x
         `;
         const result=  await this.db.query(sql,[attemptId,orderIds])
         return result.rows[0]??null;
@@ -180,7 +180,11 @@ export class PaymentRepository{
     async findStore() {
         const sql = `
             SELECT restaurant_name, phone, tax_id, house_number, moo, soi, road,
-                subdistrict, district, province, postal_code
+                subdistrict, district, province, postal_code,
+                cfg(app_tenant_id(), 'receipt_footer') AS receipt_footer,
+                cfg(app_tenant_id(), 'receipt_show_tax_id') AS receipt_show_tax_id,
+                cfg(app_tenant_id(), 'receipt_show_cashier') AS receipt_show_cashier,
+                cfg(app_tenant_id(), 'receipt_show_address') AS receipt_show_address
             FROM tenants WHERE tenant_id = app_tenant_id()`;
         const result = await this.db.query(sql);
         return result.rows[0];

@@ -78,11 +78,12 @@ export const inventoryApi = {
 
   getTransactions: (
     token: string | null,
-    options: { ingredientId?: string; type?: InventoryTransactionType; limit?: number; offset?: number },
+    options: { ingredientId?: string; type?: InventoryTransactionType; businessDate?: string; limit?: number; offset?: number },
   ) => {
     const params = new URLSearchParams();
     if (options.ingredientId) params.set('ingredient_id', options.ingredientId);
     if (options.type) params.set('type', options.type);
+    if (options.businessDate) params.set('business_date', options.businessDate);
     params.set('limit', String(options.limit ?? 20));
     params.set('offset', String(options.offset ?? 0));
     return apiFetch<PaginatedApiEnvelope<InventoryTransaction[]>>(
