@@ -132,7 +132,7 @@ export default function Register_page() {
                     <img
                         src={logoBrand}
                         alt="ค้าคล่อง KhaKhlong"
-                        className="h-20 w-auto"
+                        className="h-12 w-auto"
                         width={623}
                         height={256}
                     />
