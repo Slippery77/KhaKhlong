@@ -1,11 +1,12 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { UtensilsCrossed, Store, UserRound, Check, ArrowLeft } from "lucide-react";
+import { Store, UserRound, Check, ArrowLeft } from "lucide-react";
 import { Register_RestaurantForm } from "../components/register_RestaurantForm";
 import { Register_OwnerForm, type RegisterOwnerInfo } from "../components/register_OwnerInfo";
 import useRegister from "../hooks/register";
 import type { registerRequest } from "../types/register.types";
 import logoWhite from "../../../assets/logo-lockup-white.svg";
+import logoBrand from "../../../assets/logo-lockup-brand.svg";
 
 // ข้อมูลที่กรอกในทุกขั้นตอนของการสมัคร รวมถึงช่องยืนยันรหัสผ่าน
 // ใช้ Partial เพราะในแต่ละขั้นตอนอาจมีข้อมูลเพียงบางส่วนเท่านั้น
@@ -126,17 +127,15 @@ export default function Register_page() {
 
             {/* ── แผงขวา: ฟอร์มสมัครสมาชิก ─────────────────────────── */}
             <main className="flex flex-1 flex-col items-center justify-center px-4 py-10">
-                {/* โลโก้เล็ก ๆ บนมือถือ (แผงแบรนด์ถูกซ่อน) */}
-                <div className="mb-6 flex items-center gap-3 lg:hidden">
-                    <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-[#8C6D58] text-white">
-                        <UtensilsCrossed className="h-5 w-5" aria-hidden="true" />
-                    </span>
-                    <span className="text-lg font-semibold text-[#2D241E]">
-                        ค้าคล่อง
-                        <span className="ml-1.5 text-sm font-normal text-[#7A6A5C]">
-                            KhaKhlong
-                        </span>
-                    </span>
+                {/* โลโก้จริงบนมือถือ (แผงแบรนด์ถูกซ่อน) — สีแบรนด์บนพื้นครีม แบบเดียวกับหน้า Login */}
+                <div className="mb-6 flex items-center justify-center lg:hidden">
+                    <img
+                        src={logoBrand}
+                        alt="ค้าคล่อง KhaKhlong"
+                        className="h-20 w-auto"
+                        width={623}
+                        height={256}
+                    />
                 </div>
                 {/* ปุ่มกลับ — จัดแนวเดียวกับการ์ดฟอร์ม */}
                 <div className="mb-3 flex w-full max-w-lg">
