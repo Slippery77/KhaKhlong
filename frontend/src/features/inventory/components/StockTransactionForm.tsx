@@ -55,7 +55,7 @@ export default function StockTransactionForm({ items, isSubmitting, onRestock, o
     mode === 'restock' && usePurchaseUnit ? selectedItem?.purchase_unit : selectedItem?.stock_unit;
 
   return (
-    <section className="mb-5 rounded-2xl border border-[#E8DFD5] bg-white p-4">
+    <section className="mb-5 rounded-2xl border border-[#E8DFD5] bg-white p-3 sm:p-4 shadow-xs">
       {/* โหมด: รับของเข้า / ของเสีย */}
       <div className="mb-3 flex items-center gap-2" role="tablist" aria-label="ประเภทการเคลื่อนไหวสต็อก">
         <button
@@ -186,7 +186,7 @@ export default function StockTransactionForm({ items, isSubmitting, onRestock, o
           <label htmlFor="stock-tx-note" className="mb-1 block text-xs font-medium text-stone-500">
             หมายเหตุ (ไม่บังคับ)
           </label>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
             <input
               id="stock-tx-note"
               value={note}
@@ -195,7 +195,7 @@ export default function StockTransactionForm({ items, isSubmitting, onRestock, o
                 if (event.key === 'Enter' && canSubmit) void submit();
               }}
               placeholder="เช่น เลขใบเสร็จ, มัดจำ"
-              className={`${fieldClass} flex-1`}
+              className={`${fieldClass} flex-1 min-w-0`}
             />
             <button
               type="button"

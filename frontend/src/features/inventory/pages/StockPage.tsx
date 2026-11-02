@@ -13,9 +13,10 @@ type StockFilter = 'active' | 'low' | 'inactive';
 
 function StockTableSkeleton() {
   return (
-    <div className="w-full overflow-x-auto flex-1 animate-pulse" aria-busy="true">
-      <div className="divide-y divide-[#E8DFD5]/70">
-        {[1, 2, 3, 4, 5, 6].map((i) => (
+    <div className="w-full animate-pulse" aria-busy="true">
+      {/* Desktop Skeleton */}
+      <div className="hidden md:block divide-y divide-[#E8DFD5]/70">
+        {[1, 2, 3, 4, 5].map((i) => (
           <div
             key={i}
             className="grid grid-cols-[minmax(160px,2fr)_90px_90px_90px_90px_90px_170px] items-center gap-3 px-4 py-4 text-sm"
@@ -31,6 +32,20 @@ function StockTableSkeleton() {
               <div className="h-7 w-7 rounded-lg bg-stone-200/40" />
               <div className="h-7 w-7 rounded-lg bg-stone-200/40" />
             </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Mobile Skeleton */}
+      <div className="md:hidden divide-y divide-[#E8DFD5]/70 p-3 space-y-3">
+        {[1, 2, 3].map((i) => (
+          <div key={i} className="space-y-2.5 pt-2">
+            <div className="flex items-center justify-between">
+              <div className="h-5 w-24 rounded bg-stone-200/70" />
+              <div className="h-5 w-16 rounded bg-stone-200/60" />
+            </div>
+            <div className="h-4 w-3/4 rounded bg-stone-200/50" />
+            <div className="h-8 w-full rounded-xl bg-stone-200/40" />
           </div>
         ))}
       </div>
@@ -73,18 +88,18 @@ export default function StockPage() {
   return (
     <div className="min-h-screen w-full bg-[#FAF7F2] font-kanit text-[#2D241E] flex flex-col">
       <Header />
-      <main className="flex-1 w-full px-8 py-6">
+      <main className="flex-1 w-full px-3 sm:px-6 md:px-8 py-4 sm:py-6 overflow-x-hidden">
         {/* ── หัวเรื่อง + ปุ่มหลัก ─────────────────────────── */}
         <div className="mb-5 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
             <Package className="w-6 h-6 text-[#8C6D58]" />
-            <h1 className="text-lg font-bold">วัตถุดิบ / สต็อก</h1>
+            <h1 className="text-base sm:text-lg font-bold">วัตถุดิบ / สต็อก</h1>
           </div>
           <button
             type="button"
             disabled={inventory.isSubmitting}
             onClick={() => setIsAdding((value) => !value)}
-            className="flex cursor-pointer items-center gap-1.5 rounded-xl bg-[#8C6D58] px-4 py-2 text-sm text-white transition-colors duration-200 hover:bg-[#7a5c45] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#8C6D58]/40 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+            className="flex cursor-pointer items-center gap-1.5 rounded-xl bg-[#8C6D58] px-3 sm:px-4 py-2 text-xs sm:text-sm text-white transition-colors duration-200 hover:bg-[#7a5c45] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#8C6D58]/40 focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
           >
             <Plus className="w-4 h-4" />
             เพิ่มวัตถุดิบ
@@ -92,7 +107,7 @@ export default function StockPage() {
         </div>
 
         {/* ── การ์ดสถิติ = ตัวกรอง (กดเพื่อสลับมุมมอง) ───── */}
-        <div className="mb-5 grid grid-cols-3 gap-3">
+        <div className="mb-5 grid grid-cols-3 gap-2 sm:gap-3">
           {stats.map(({ key, label, count, Icon, accent }) => {
             const isSelected = filter === key;
             return (
@@ -102,14 +117,15 @@ export default function StockPage() {
                 aria-pressed={isSelected}
                 onClick={() => setFilter(isSelected && key !== 'active' ? 'active' : key)}
                 style={isSelected ? { borderColor: accent } : undefined}
-                className={`flex cursor-pointer items-center gap-3 rounded-2xl border-2 bg-white px-4 py-3 text-left transition-colors duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#8C6D58]/40 ${
+                className={`flex cursor-pointer items-center gap-2 sm:gap-3 rounded-2xl border-2 bg-white px-2.5 sm:px-4 py-2 sm:py-3 text-left transition-colors duration-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#8C6D58]/40 ${
+
                   isSelected ? '' : 'border-[#E8DFD5] hover:border-[#d9c6b0]'
                 }`}
               >
-                <Icon className="w-5 h-5 shrink-0" style={{ color: accent }} />
-                <div>
-                  <p className="text-xs text-stone-500">{label}</p>
-                  <p className="text-xl font-bold leading-tight" style={isSelected ? { color: accent } : undefined}>
+                <Icon className="w-4 h-4 sm:w-5 sm:h-5 shrink-0" style={{ color: accent }} />
+                <div className="min-w-0">
+                  <p className="text-[11px] sm:text-xs text-stone-500 truncate">{label}</p>
+                  <p className="text-lg sm:text-xl font-bold leading-tight" style={isSelected ? { color: accent } : undefined}>
                     {count}
                   </p>
                 </div>
@@ -119,8 +135,8 @@ export default function StockPage() {
         </div>
 
         {/* ── ค้นหา + จำนวนผลลัพธ์ ─────────────────────────── */}
-        <div className="mb-4 flex items-center justify-between gap-3">
-          <div className="relative w-80">
+        <div className="mb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-3">
+          <div className="relative w-full sm:w-80">
             <Search className="absolute left-3.5 top-1/2 w-4 -translate-y-1/2 text-stone-400" />
             <input
               value={searchTerm}
@@ -140,7 +156,7 @@ export default function StockPage() {
               </button>
             )}
           </div>
-          <span className="text-sm text-stone-500">
+          <span className="text-xs sm:text-sm text-stone-500">
             แสดง {visibleItems.length} รายการ
             {searchTerm && ` จากค้นหา "${searchTerm}"`}
           </span>
@@ -161,55 +177,62 @@ export default function StockPage() {
           onWaste={inventory.recordWaste}
         />
 
-        {/* ── หัวตาราง (sticky) ───────────────────────────── */}
-        <div className="sticky top-0 z-10 grid grid-cols-[minmax(160px,2fr)_90px_90px_90px_90px_90px_170px] gap-3 border-b border-[#E8DFD5] bg-[#FAF7F2] px-4 py-3 text-sm font-medium text-stone-600">
-          <span>วัตถุดิบ</span>
-          <span>คงเหลือ</span>
-          <span>หน่วย</span>
-          <span>หน่วยซื้อ</span>
-          <span>อัตรา</span>
-          <span>ขั้นต่ำ</span>
-          <span />
-        </div>
+        {/* ── ส่วนตารางวัตถุดิบ (มีแถบเลื่อนแนวนอนในตัวเอง ไม่เกยจอ) ─────────────────────────── */}
+        <div className="mb-6 rounded-2xl border border-[#E8DFD5] bg-white overflow-hidden shadow-xs">
+          <div className="w-full overflow-x-auto">
+            <div className="w-full md:min-w-[760px]">
+              {/* หัวตาราง */}
+              <div className="hidden md:grid grid-cols-[minmax(160px,2fr)_90px_90px_90px_90px_90px_170px] gap-3 border-b border-[#E8DFD5] bg-[#FAF7F2] px-4 py-3 text-sm font-medium text-stone-600">
+                <span>วัตถุดิบ</span>
+                <span>คงเหลือ</span>
+                <span>หน่วย</span>
+                <span>หน่วยซื้อ</span>
+                <span>อัตรา</span>
+                <span>ขั้นต่ำ</span>
+                <span />
+              </div>
 
-        {isAdding && (
-          <IngredientForm
-            isSubmitting={inventory.isSubmitting}
-            onCancel={() => setIsAdding(false)}
-            onSubmit={(input) => inventory.createIngredient(input as NewIngredientInput)}
-          />
-        )}
+              {isAdding && (
+                <IngredientForm
+                  isSubmitting={inventory.isSubmitting}
+                  onCancel={() => setIsAdding(false)}
+                  onSubmit={(input) => inventory.createIngredient(input as NewIngredientInput)}
+                />
+              )}
 
-        {inventory.isLoading && inventory.items.length === 0 ? (
-          <StockTableSkeleton />
-        ) : visibleItems.length === 0 ? (
-          <div className="flex flex-col items-center gap-3 py-12 text-center">
-            <SearchX className="w-9 h-9 text-stone-300" />
-            <p className="text-sm text-stone-500">
-              {inventory.items.length === 0
-                ? 'ยังไม่มีวัตถุดิบในระบบ กด "เพิ่มวัตถุดิบ" เพื่อเริ่มต้น'
-                : 'ไม่พบวัตถุดิบที่ตรงกับการค้นหาหรือตัวกรอง'}
-            </p>
-            {inventory.items.length > 0 && (
-              <button
-                type="button"
-                onClick={resetSearch}
-                className="cursor-pointer rounded-xl border border-[#8C6D58] px-4 py-1.5 text-sm text-[#8C6D58] transition-colors duration-200 hover:bg-[#8C6D58] hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-[#8C6D58]/40"
-              >
-                ล้างการค้นหาและตัวกรอง
-              </button>
-            )}
+              {inventory.isLoading && inventory.items.length === 0 ? (
+                <StockTableSkeleton />
+              ) : visibleItems.length === 0 ? (
+                <div className="flex flex-col items-center gap-3 py-12 text-center">
+                  <SearchX className="w-9 h-9 text-stone-300" />
+                  <p className="text-sm text-stone-500">
+                    {inventory.items.length === 0
+                      ? 'ยังไม่มีวัตถุดิบในระบบ กด "เพิ่มวัตถุดิบ" เพื่อเริ่มต้น'
+                      : 'ไม่พบวัตถุดิบที่ตรงกับการค้นหาหรือตัวกรอง'}
+                  </p>
+                  {inventory.items.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={resetSearch}
+                      className="cursor-pointer rounded-xl border border-[#8C6D58] px-4 py-1.5 text-sm text-[#8C6D58] transition-colors duration-200 hover:bg-[#8C6D58] hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-[#8C6D58]/40"
+                    >
+                      ล้างการค้นหาและตัวกรอง
+                    </button>
+                  )}
+                </div>
+              ) : (
+                <StockTable
+                  items={visibleItems}
+                  isSubmitting={inventory.isSubmitting}
+                  onUpdate={inventory.updateIngredient}
+                  onDelete={inventory.deleteIngredient}
+                  onReactivate={(ingredientId) => inventory.updateIngredient(ingredientId, { is_active: true })}
+                  onRecordStockCount={inventory.recordStockCount}
+                />
+              )}
+            </div>
           </div>
-        ) : (
-          <StockTable
-            items={visibleItems}
-            isSubmitting={inventory.isSubmitting}
-            onUpdate={inventory.updateIngredient}
-            onDelete={inventory.deleteIngredient}
-            onReactivate={(ingredientId) => inventory.updateIngredient(ingredientId, { is_active: true })}
-            onRecordStockCount={inventory.recordStockCount}
-          />
-        )}
+        </div>
 
         <InventoryHistory
           items={inventory.items}

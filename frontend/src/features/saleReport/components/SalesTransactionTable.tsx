@@ -35,7 +35,7 @@ export default function SalesTransactionTable() {
     return (
         <div className="bg-white rounded-2xl border border-stone-200/80 shadow-xs overflow-hidden font-kanit flex flex-col">
             {/* Table Header Action Bar */}
-            <div className="px-5 py-3.5 border-b border-stone-200/80 flex items-center justify-between bg-stone-50/40">
+            <div className="px-4 sm:px-5 py-3 sm:py-3.5 border-b border-stone-200/80 flex items-center justify-between bg-stone-50/40">
                 <div className="flex items-center gap-2">
                     <span className="text-sm font-semibold text-[#2D241E]">ประวัติรายการธุรกรรม</span>
                     <span className="text-xs px-2 py-0.5 rounded-full bg-stone-200/60 text-stone-600 font-medium">
@@ -53,7 +53,8 @@ export default function SalesTransactionTable() {
                 </button>
             </div>
 
-            <div className="overflow-x-auto">
+            {/* ── Desktop View (md ขึ้นไป): ตารางเต็ม 6 คอลัมน์ ── */}
+            <div className="hidden md:block overflow-x-auto">
                 <table className="w-full text-left border-collapse">
                     <thead>
                         <tr className="border-b border-stone-200/80 text-[13px] font-medium text-stone-600 bg-stone-50/50">
@@ -166,6 +167,114 @@ export default function SalesTransactionTable() {
                         )}
                     </tbody>
                 </table>
+            </div>
+
+            {/* ── Mobile View (< md): รูปแบบ Floating Individual Cards ไร้เส้นทึบ ── */}
+            <div className="md:hidden p-3 bg-[#FAF7F2]/60 space-y-2.5">
+                {filteredTransactions.length === 0 ? (
+                    <div className="py-12 text-center text-stone-400 text-sm bg-white rounded-2xl border border-[#E8DFD5]/70">
+                        <Receipt className="w-8 h-8 mx-auto mb-2 text-stone-300 stroke-[1.5]" />
+                        ยังไม่มีรายการในรอบเวลานี้
+                    </div>
+                ) : (
+                    filteredTransactions.map((tx) => {
+                        const isSale = tx.type === 'SALE';
+                        const isCashIn = tx.type === 'CASH_IN';
+
+                        return (
+                            <div
+                                key={tx.id}
+                                onClick={() => isSale && setSelectedBill(tx)}
+                                className={`bg-white rounded-xl border border-[#E8DFD5]/80 p-3.5 shadow-2xs transition-all duration-200 ${
+                                    isSale
+                                        ? 'cursor-pointer hover:border-[#8C6D58]/50 hover:shadow-xs active:scale-[0.99] active:bg-[#FAF7F2]/30'
+                                        : ''
+                                }`}
+                            >
+                                {/* แถวที่ 1: ป้ายประเภท + เวลา + โต๊ะ */}
+                                <div className="flex items-center justify-between gap-2 mb-2">
+                                    <div className="flex items-center gap-2">
+                                        {isSale ? (
+                                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">
+                                                การขาย
+                                            </span>
+                                        ) : isCashIn ? (
+                                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-sky-50 text-sky-700 border border-sky-200">
+                                                นำเงินเข้า
+                                            </span>
+                                        ) : (
+                                            <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-rose-50 text-rose-700 border border-rose-200">
+                                                นำเงินออก
+                                            </span>
+                                        )}
+                                        <span className="text-xs text-stone-500 font-medium">
+                                            {formatDateTime(tx.date, tx.time)}
+                                        </span>
+                                    </div>
+
+                                    {tx.table && (
+                                        <span className="text-xs text-stone-600 font-medium bg-stone-100 px-2 py-0.5 rounded-md border border-stone-200/50">
+                                            {tx.table}
+                                        </span>
+                                    )}
+                                </div>
+
+                                {/* แถวที่ 2: รายละเอียด (เลขบิล) + ลิงก์ดูบิล */}
+                                <div className="flex items-center justify-between gap-2 mb-2.5">
+                                    <span
+                                        className={`font-semibold text-sm ${
+                                            isSale ? 'text-[#8C6D58]' : 'text-[#2D241E]'
+                                        }`}
+                                    >
+                                        {tx.description}
+                                    </span>
+                                    {isSale && (
+                                        <span className="text-xs text-[#8C6D58] font-medium flex items-center gap-0.5 shrink-0">
+                                            ดูบิล <span aria-hidden="true">&rarr;</span>
+                                        </span>
+                                    )}
+                                </div>
+
+                                {/* แถวที่ 3: กล่องพื้นผิวข้อมูลการเงิน (Surface Inset Box แทนเส้นแบ่งขีดทึบ) */}
+                                <div className="bg-[#FAF7F2] rounded-xl p-2.5 grid grid-cols-3 gap-2 text-xs border border-[#E8DFD5]/40">
+                                    {/* เงินสด */}
+                                    <div className="flex flex-col">
+                                        <span className="text-[11px] text-stone-400 font-normal">เงินสด</span>
+                                        <span className="font-semibold">
+                                            {tx.cashAmount > 0 ? (
+                                                <span className="text-emerald-700">+฿{tx.cashAmount.toLocaleString()}</span>
+                                            ) : tx.cashAmount < 0 ? (
+                                                <span className="text-rose-600">-฿{Math.abs(tx.cashAmount).toLocaleString()}</span>
+                                            ) : (
+                                                <span className="text-stone-400 font-normal">-</span>
+                                            )}
+                                        </span>
+                                    </div>
+
+                                    {/* เงินโอน */}
+                                    <div className="flex flex-col">
+                                        <span className="text-[11px] text-stone-400 font-normal">เงินโอน</span>
+                                        <span className="font-semibold">
+                                            {tx.transferAmount > 0 ? (
+                                                <span className="text-emerald-700">+฿{tx.transferAmount.toLocaleString()}</span>
+                                            ) : (
+                                                <span className="text-stone-400 font-normal">-</span>
+                                            )}
+                                        </span>
+                                    </div>
+
+                                    {/* ผู้ทำรายการ */}
+                                    <div className="flex flex-col text-right">
+                                        <span className="text-[11px] text-stone-400 font-normal">ผู้ทำรายการ</span>
+                                        <span className="text-stone-700 font-medium truncate" title={tx.performedBy || 'พนักงาน'}>
+                                            {tx.performedBy || 'พนักงาน'}
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+                        );
+                    })
+                )}
             </div>
 
             {/* Bill Detail Popup */}

@@ -369,7 +369,7 @@ export default function TablesPage() {
 
             <div className="flex flex-1 overflow-hidden">
                 {/* Sidebar ชั้น */}
-                <aside className="w-30 shrink-0 bg-[#F3EDE4] border-r border-stone-200 flex flex-col items-center py-4 gap-2 overflow-y-auto">
+                <aside className="hidden lg:flex w-28 xl:w-32 shrink-0 bg-[#F3EDE4] border-r border-stone-200 flex-col items-center py-4 gap-2 overflow-y-auto">
                     {/* ปุ่ม "ทั้งหมด" — กลับมาแสดงโต๊ะทุกชั้น */}
                     <button
                         type="button"
@@ -428,45 +428,95 @@ export default function TablesPage() {
                 </aside>
 
                 {/* Main Content — เว้นที่ล่างให้แถบรวมโต๊ะไม่บังการ์ด */}
-                <main className={`flex-1 overflow-y-auto p-6 ${isMergeMode ? 'pb-36' : ''}`}>
-                    {/* Header โต๊ะ */}
-                    <div className="flex items-center justify-between gap-3 mb-6">
-                        <div>
-                            <h1 className="text-lg font-bold text-[#2D241E] font-kanit">ผังโต๊ะ</h1>
-                            {!isLoading && !error && (
-                                <p className="text-sm text-stone-400 font-kanit mt-0.5">
-                                    {selectedFloor === null
-                                        ? `${tables.length} โต๊ะ · มีลูกค้า ${occupiedCount} โต๊ะ`
-                                        : `ชั้น ${selectedFloor} · ${visibleTables.length} โต๊ะ · มีลูกค้า ${visibleOccupied} โต๊ะ`}
-                                </p>
-                            )}
-                        </div>
-                        <div className="flex items-center gap-2">
-                            <button
-                                type="button"
-                                onClick={toggleMergeMode}
-                                disabled={(!isMergeMode && occupiedCount < 2) || isInitialLoading}
-                                aria-pressed={isMergeMode}
-                                title={occupiedCount < 2 ? 'ต้องมีโต๊ะที่มีลูกค้าอย่างน้อย 2 โต๊ะ' : undefined}
-                                className={`flex items-center gap-1.5 px-3 py-2 rounded-xl border text-sm font-medium font-kanit transition-all duration-200 cursor-pointer active:scale-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#8C6D58] focus-visible:ring-offset-2 focus-visible:ring-offset-[#FAF7F2] disabled:cursor-not-allowed disabled:opacity-40 disabled:active:scale-100 ${
-                                    isMergeMode
-                                        ? 'border-[#8C6D58] bg-[#8C6D58] text-white hover:bg-[#7a5c45]'
-                                        : 'border-[#d9c6b0] bg-white text-[#8C6D58] hover:bg-[#F6EBDD]'
-                                }`}
-                            >
-                                {isMergeMode ? <X className="w-3.5 h-3.5" aria-hidden="true" /> : <Link2 className="w-3.5 h-3.5" aria-hidden="true" />}
-                                <span>{isMergeMode ? 'ยกเลิกรวมโต๊ะ' : 'รวมโต๊ะคิดเงิน'}</span>
-                            </button>
-                            <button
-                                type="button"
-                                onClick={reload}
-                                className="flex items-center gap-1.5 px-3 py-2 rounded-xl border border-stone-200 text-sm text-stone-500 hover:bg-stone-100 active:scale-95 transition-all font-kanit cursor-pointer"
-                            >
-                                <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin' : ''}`} />
-                                <span>รีเฟรช</span>
-                            </button>
+                <div className="flex-1 flex flex-col h-full min-w-0 overflow-hidden">
+                    {/* Mobile Floor Tabs (แสดงเฉพาะ < lg แนวนอน) */}
+                    <div className="lg:hidden flex items-center gap-2 overflow-x-auto px-3 sm:px-4 py-2 border-b border-stone-200 bg-[#FAF7F2] shrink-0 no-scrollbar">
+                        <button
+                            type="button"
+                            onClick={() => setSelectedFloor(null)}
+                            className={`px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all shrink-0 cursor-pointer ${
+                                selectedFloor === null
+                                    ? 'bg-[#8C6D58] text-white shadow-xs'
+                                    : 'bg-white text-[#5C3D1E] border border-[#d9c6b0] hover:bg-[#FAF7F2]'
+                            }`}
+                        >
+                            ทั้งหมด ({tables.length})
+                        </button>
+
+                        {isInitialLoading ? (
+                            <div className="flex items-center gap-2">
+                                {[1, 2].map((i) => (
+                                    <div key={i} className="w-18 h-7 rounded-xl bg-[#EDE3D6]/70 animate-pulse shrink-0" />
+                                ))}
+                            </div>
+                        ) : (
+                            Array.from(floors.keys()).map((floor) => {
+                                const floorTables = floors.get(floor)!
+                                const occupied = floorTables.filter((t) => t.status === 'occupied').length
+                                const isActive = selectedFloor === floor
+                                return (
+                                    <button
+                                        key={floor}
+                                        type="button"
+                                        onClick={() => setSelectedFloor(floor)}
+                                        className={`px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all shrink-0 cursor-pointer ${
+                                            isActive
+                                                ? 'bg-[#8C6D58] text-white shadow-xs'
+                                                : 'bg-white text-[#5C3D1E] border border-[#d9c6b0] hover:bg-[#FAF7F2]'
+                                        }`}
+                                    >
+                                        ชั้น {floor} ({occupied}/{floorTables.length})
+                                    </button>
+                                )
+                            })
+                        )}
+
+                        {/* สรุปโต๊ะที่มีลูกค้า (mobile badge) */}
+                        <div className="ml-auto flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-[#EDE3D6] text-[#5C3D1E] text-xs font-semibold whitespace-nowrap shrink-0">
+                            <span className="w-2 h-2 rounded-full bg-[#C27803]" />
+                            <span>มีลูกค้า {occupiedCount}</span>
                         </div>
                     </div>
+
+                    <main className={`flex-1 overflow-y-auto p-3 sm:p-4 md:p-6 ${isMergeMode ? 'pb-36' : ''}`}>
+                        {/* Header โต๊ะ */}
+                        <div className="flex flex-row items-center justify-between gap-2 mb-4 sm:mb-6">
+                            <div className="min-w-0">
+                                <h1 className="text-base sm:text-lg font-bold text-[#2D241E] font-kanit">ผังโต๊ะ</h1>
+                                {!isLoading && !error && (
+                                    <p className="text-xs sm:text-sm text-stone-400 font-kanit mt-0.5 truncate">
+                                        {selectedFloor === null
+                                            ? `${tables.length} โต๊ะ · มีลูกค้า ${occupiedCount} โต๊ะ`
+                                            : `ชั้น ${selectedFloor} · ${visibleTables.length} โต๊ะ · มีลูกค้า ${visibleOccupied} โต๊ะ`}
+                                    </p>
+                                )}
+                            </div>
+                            <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+                                <button
+                                    type="button"
+                                    onClick={toggleMergeMode}
+                                    disabled={(!isMergeMode && occupiedCount < 2) || isInitialLoading}
+                                    aria-pressed={isMergeMode}
+                                    title={occupiedCount < 2 ? 'ต้องมีโต๊ะที่มีลูกค้าอย่างน้อย 2 โต๊ะ' : undefined}
+                                    className={`flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-xl border text-xs sm:text-sm font-medium font-kanit transition-all duration-200 cursor-pointer active:scale-95 focus:outline-none focus-visible:ring-2 focus-visible:ring-[#8C6D58] focus-visible:ring-offset-2 focus-visible:ring-offset-[#FAF7F2] disabled:cursor-not-allowed disabled:opacity-40 disabled:active:scale-100 ${
+                                        isMergeMode
+                                            ? 'border-[#8C6D58] bg-[#8C6D58] text-white hover:bg-[#7a5c45]'
+                                            : 'border-[#d9c6b0] bg-white text-[#8C6D58] hover:bg-[#F6EBDD]'
+                                    }`}
+                                >
+                                    {isMergeMode ? <X className="w-3.5 h-3.5" aria-hidden="true" /> : <Link2 className="w-3.5 h-3.5" aria-hidden="true" />}
+                                    <span>{isMergeMode ? 'ยกเลิกรวมโต๊ะ' : 'รวมโต๊ะคิดเงิน'}</span>
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={reload}
+                                    className="flex items-center gap-1 sm:gap-1.5 px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-xl border border-stone-200 text-xs sm:text-sm text-stone-500 hover:bg-stone-100 active:scale-95 transition-all font-kanit cursor-pointer"
+                                >
+                                    <RefreshCw className={`w-3.5 h-3.5 ${isLoading ? 'animate-spin' : ''}`} />
+                                    <span className="hidden xs:inline">รีเฟรช</span>
+                                </button>
+                            </div>
+                        </div>
 
                     {/* คำแนะนำโหมดรวมโต๊ะ */}
                     {isMergeMode && (
@@ -548,6 +598,7 @@ export default function TablesPage() {
                         </div>
                     )}
                 </main>
+                </div>
             </div>
 
             {/* แถบลอยด้านล่าง: สรุปโต๊ะที่เลือก + ยอดรวมจาก server + ปุ่มชำระเงินรวม */}
@@ -556,7 +607,7 @@ export default function TablesPage() {
                     <div
                         role="region"
                         aria-label="สรุปการรวมโต๊ะคิดเงิน"
-                        className="pointer-events-auto flex w-full max-w-3xl flex-wrap items-center gap-4 rounded-2xl border border-[#d9c6b0] bg-white px-5 py-4 shadow-[0_12px_32px_rgba(45,36,30,0.18)]"
+                        className="pointer-events-auto flex w-full max-w-3xl flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 sm:gap-4 rounded-2xl border border-[#d9c6b0] bg-white p-3.5 sm:p-4 shadow-[0_12px_32px_rgba(45,36,30,0.18)]"
                     >
                         <div className="min-w-0 flex-1">
                             <p className="text-xs font-medium text-stone-500">

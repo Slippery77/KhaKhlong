@@ -59,103 +59,165 @@ export default function KDSPage() {
             {/* Header ด้านบนสุด */}
             <Header />
 
-            {/* แถบหัวเรื่อง Kitchen Display และแท็บสถานะสรุปด้านขวา */}
-            <div className="h-14 border-b border-stone-200/80 px-8 flex items-center justify-between bg-[#F4EFE6]/80 shrink-0">
-                <div className="flex items-center gap-3">
-                    <ChefHat className="w-5 h-5 text-[#8C6D58] stroke-[2]" />
-                    <h1 className="text-base font-semibold text-[#2D241E]">Kitchen Display</h1>
-                    {/* Live status badge: ออกแบบตาม UI/UX Pro Max เพื่อความชัดเจนในการทำงานของห้องครัว */}
-                    <div
-                        className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[11px] font-medium transition-colors bg-[#EFE8DC]/80 text-[#7A6048] border border-[#E2D5C4]"
-                        title={
-                            !isVisible
-                                ? "หยุดดึงข้อมูลชั่วคราวเพื่อประหยัดพลังงานเนื่องจากพับหน้าต่าง"
-                                : isRefreshing
-                                    ? "กำลังอัปเดตข้อมูลล่าสุด..."
-                                    : "เชื่อมต่อคิวครัวแบบเรียลไทม์"
-                        }
-                    >
-                        <span
-                            className={`w-1.5 h-1.5 rounded-full ${
+            {/* แถบหัวเรื่อง Kitchen Display และแท็บสถานะสรุป */}
+            <div className="border-b border-stone-200/80 bg-[#F4EFE6]/80 shrink-0">
+                {/* แถวที่ 1: หัวข้อ Kitchen Display + Live Badge */}
+                <div className="h-12 sm:h-14 px-3 sm:px-6 md:px-8 flex items-center justify-between">
+                    <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+                        <ChefHat className="w-5 h-5 text-[#8C6D58] stroke-[2] shrink-0" />
+                        <h1 className="text-sm sm:text-base font-semibold text-[#2D241E] truncate">Kitchen Display</h1>
+                        {/* Live status badge */}
+                        <div
+                            className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] sm:text-[11px] font-medium transition-colors bg-[#EFE8DC]/80 text-[#7A6048] border border-[#E2D5C4] shrink-0"
+                            title={
                                 !isVisible
-                                    ? "bg-stone-400"
+                                    ? "หยุดดึงข้อมูลชั่วคราวเพื่อประหยัดพลังงานเนื่องจากพับหน้าต่าง"
                                     : isRefreshing
-                                        ? "bg-amber-500 animate-pulse"
-                                        : "bg-emerald-500"
-                            }`}
-                        />
-                        <span>{!isVisible ? "พักหน้าจอ" : isRefreshing ? "กำลังอัปเดต..." : "สด"}</span>
+                                        ? "กำลังอัปเดตข้อมูลล่าสุด..."
+                                        : "เชื่อมต่อคิวครัวแบบเรียลไทม์"
+                            }
+                        >
+                            <span
+                                className={`w-1.5 h-1.5 rounded-full ${
+                                    !isVisible
+                                        ? "bg-stone-400"
+                                        : isRefreshing
+                                            ? "bg-amber-500 animate-pulse"
+                                            : "bg-emerald-500"
+                                }`}
+                            />
+                            <span>{!isVisible ? "พักหน้าจอ" : isRefreshing ? "กำลังอัปเดต..." : "สด"}</span>
+                        </div>
+                    </div>
+
+                    {/* Desktop Status Badges (สำหรับจอแท็บเล็ต/เดสก์ท็อป) */}
+                    <div className="hidden sm:flex items-center gap-2 select-none">
+                        {totalOrdersCount === 0 ? (
+                            <span className="text-sm text-stone-500 font-normal">ไม่มีออเดอร์รอ</span>
+                        ) : (
+                            <>
+                                {filterStatus && (
+                                    <button
+                                        type="button"
+                                        onClick={() => setFilterStatus(null)}
+                                        className="text-xs px-2.5 py-1 rounded-full bg-stone-200 text-stone-700 hover:bg-stone-300 transition-all cursor-pointer font-medium"
+                                    >
+                                        แสดงทั้งหมด ({totalOrdersCount})
+                                    </button>
+                                )}
+
+                                <button
+                                    type="button"
+                                    onClick={() => setFilterStatus(filterStatus === "รอทำ" ? null : "รอทำ")}
+                                    className={`text-xs px-3 py-1 rounded-full font-semibold transition-all cursor-pointer ${
+                                        filterStatus === "รอทำ" ? "ring-2 ring-offset-1 ring-[#C27803]" : ""
+                                    } bg-[#C27803] text-white hover:brightness-105 active:scale-95`}
+                                    title="คลิกเพื่อกรองเฉพาะออเดอร์ที่รอทำ"
+                                >
+                                    รอทำ {pendingOrders.length}
+                                </button>
+
+                                <button
+                                    type="button"
+                                    onClick={() => setFilterStatus(filterStatus === "กำลังทำ" ? null : "กำลังทำ")}
+                                    className={`text-xs px-3 py-1 rounded-full font-semibold transition-all cursor-pointer ${
+                                        filterStatus === "กำลังทำ" ? "ring-2 ring-offset-1 ring-[#3B75A6]" : ""
+                                    } bg-[#3B75A6] text-white hover:brightness-105 active:scale-95`}
+                                    title="คลิกเพื่อกรองเฉพาะออเดอร์ที่กำลังทำ"
+                                >
+                                    กำลังทำ {cookingOrders.length}
+                                </button>
+
+                                <button
+                                    type="button"
+                                    onClick={() => setFilterStatus(filterStatus === "พร้อมเสิร์ฟ" ? null : "พร้อมเสิร์ฟ")}
+                                    className={`text-xs px-3 py-1 rounded-full font-semibold transition-all cursor-pointer ${
+                                        filterStatus === "พร้อมเสิร์ฟ" ? "ring-2 ring-offset-1 ring-[#2E7D4E]" : ""
+                                    } bg-[#2E7D4E] text-white hover:brightness-105 active:scale-95`}
+                                    title="คลิกเพื่อกรองเฉพาะออเดอร์ที่พร้อมเสิร์ฟ"
+                                >
+                                    พร้อมเสิร์ฟ {readyOrders.length}
+                                </button>
+                            </>
+                        )}
+                    </div>
+
+                    {/* Mobile: แสดงทั้งหมด หรือสรุปออเดอร์ */}
+                    <div className="sm:hidden flex items-center gap-2">
+                        {filterStatus ? (
+                            <button
+                                type="button"
+                                onClick={() => setFilterStatus(null)}
+                                className="text-[11px] px-2 py-1 rounded-lg bg-stone-200 text-stone-700 hover:bg-stone-300 transition-all cursor-pointer font-medium flex items-center gap-1 active:scale-95"
+                            >
+                                <span>ล้างตัวกรอง</span>
+                                <X className="w-3 h-3" />
+                            </button>
+                        ) : (
+                            <span className="text-xs text-stone-500 font-medium">
+                                รวม {totalOrdersCount} ออเดอร์
+                            </span>
+                        )}
                     </div>
                 </div>
 
-                {/* เมื่อไม่มีออเดอร์ หรือมีออเดอร์จะแสดง Badge ตามรูป screenshot */}
-                <div className="flex items-center gap-2">
-                    {totalOrdersCount === 0 ? (
-                        <span className="text-sm text-stone-500 font-normal">ไม่มีออเดอร์รอ</span>
-                    ) : (
-                        <div className="flex items-center gap-2 select-none">
-                            {filterStatus && (
-                                <button
-                                    type="button"
-                                    onClick={() => setFilterStatus(null)}
-                                    className="text-xs px-2.5 py-1 rounded-full bg-stone-200 text-stone-700 hover:bg-stone-300 transition-all cursor-pointer font-medium"
-                                >
-                                    แสดงทั้งหมด ({totalOrdersCount})
-                                </button>
-                            )}
+                {/* แถวที่ 2: Mobile Status Filter Tabs (แถบแสดงสถานะ 3 ช่องเต็มความกว้างสำหรับมือถือ) */}
+                <div className="sm:hidden px-3 pb-2.5 pt-0.5 flex items-center gap-1.5 select-none">
+                    <button
+                        type="button"
+                        onClick={() => setFilterStatus(filterStatus === "รอทำ" ? null : "รอทำ")}
+                        className={`flex-1 py-1.5 px-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer active:scale-95 flex items-center justify-center gap-1.5 ${
+                            filterStatus === "รอทำ"
+                                ? "bg-[#C27803] text-white shadow-xs ring-2 ring-offset-1 ring-[#C27803]"
+                                : "bg-[#FEF6EC] text-[#935902] border border-[#F6D8A8] hover:bg-[#FEEFD9]"
+                        }`}
+                    >
+                        <span>รอทำ</span>
+                        <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-bold ${
+                            filterStatus === "รอทำ" ? "bg-white/25 text-white" : "bg-[#C27803] text-white"
+                        }`}>
+                            {pendingOrders.length}
+                        </span>
+                    </button>
 
-                            {/* Badge รอทำ */}
-                            <button
-                                type="button"
-                                onClick={() =>
-                                    setFilterStatus(filterStatus === "รอทำ" ? null : "รอทำ")
-                                }
-                                className={`text-xs px-3 py-1 rounded-full font-semibold transition-all cursor-pointer ${
-                                    filterStatus === "รอทำ" ? "ring-2 ring-offset-1 ring-[#C27803]" : ""
-                                } bg-[#C27803] text-white hover:brightness-105 active:scale-95`}
-                                title="คลิกเพื่อกรองเฉพาะออเดอร์ที่รอทำ"
-                            >
-                                รอทำ {pendingOrders.length}
-                            </button>
+                    <button
+                        type="button"
+                        onClick={() => setFilterStatus(filterStatus === "กำลังทำ" ? null : "กำลังทำ")}
+                        className={`flex-1 py-1.5 px-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer active:scale-95 flex items-center justify-center gap-1.5 ${
+                            filterStatus === "กำลังทำ"
+                                ? "bg-[#3B75A6] text-white shadow-xs ring-2 ring-offset-1 ring-[#3B75A6]"
+                                : "bg-[#F0F6FA] text-[#24537B] border border-[#BFD7EA] hover:bg-[#E4EEF6]"
+                        }`}
+                    >
+                        <span>กำลังทำ</span>
+                        <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-bold ${
+                            filterStatus === "กำลังทำ" ? "bg-white/25 text-white" : "bg-[#3B75A6] text-white"
+                        }`}>
+                            {cookingOrders.length}
+                        </span>
+                    </button>
 
-                            {/* Badge กำลังทำ */}
-                            <button
-                                type="button"
-                                onClick={() =>
-                                    setFilterStatus(filterStatus === "กำลังทำ" ? null : "กำลังทำ")
-                                }
-                                className={`text-xs px-3 py-1 rounded-full font-semibold transition-all cursor-pointer ${
-                                    filterStatus === "กำลังทำ"
-                                        ? "ring-2 ring-offset-1 ring-[#3B75A6]"
-                                        : ""
-                                } bg-[#3B75A6] text-white hover:brightness-105 active:scale-95`}
-                                title="คลิกเพื่อกรองเฉพาะออเดอร์ที่กำลังทำ"
-                            >
-                                กำลังทำ {cookingOrders.length}
-                            </button>
-
-                            {/* Badge พร้อมเสิร์ฟ */}
-                            <button
-                                type="button"
-                                onClick={() =>
-                                    setFilterStatus(filterStatus === "พร้อมเสิร์ฟ" ? null : "พร้อมเสิร์ฟ")
-                                }
-                                className={`text-xs px-3 py-1 rounded-full font-semibold transition-all cursor-pointer ${
-                                    filterStatus === "พร้อมเสิร์ฟ"
-                                        ? "ring-2 ring-offset-1 ring-[#2E7D4E]"
-                                        : ""
-                                } bg-[#2E7D4E] text-white hover:brightness-105 active:scale-95`}
-                                title="คลิกเพื่อกรองเฉพาะออเดอร์ที่พร้อมเสิร์ฟ"
-                            >
-                                พร้อมเสิร์ฟ {readyOrders.length}
-                            </button>
-                        </div>
-                    )}
+                    <button
+                        type="button"
+                        onClick={() => setFilterStatus(filterStatus === "พร้อมเสิร์ฟ" ? null : "พร้อมเสิร์ฟ")}
+                        className={`flex-1 py-1.5 px-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer active:scale-95 flex items-center justify-center gap-1.5 ${
+                            filterStatus === "พร้อมเสิร์ฟ"
+                                ? "bg-[#2E7D4E] text-white shadow-xs ring-2 ring-offset-1 ring-[#2E7D4E]"
+                                : "bg-[#EFF8F2] text-[#1D5E37] border border-[#BDE3CA] hover:bg-[#E2F3E8]"
+                        }`}
+                    >
+                        <span>พร้อมเสิร์ฟ</span>
+                        <span className={`px-1.5 py-0.2 rounded-full text-[10px] font-bold ${
+                            filterStatus === "พร้อมเสิร์ฟ" ? "bg-white/25 text-white" : "bg-[#2E7D4E] text-white"
+                        }`}>
+                            {readyOrders.length}
+                        </span>
+                    </button>
                 </div>
             </div>
 
             {/* เนื้อหาหลักของหน้า KDS */}
-            <main className="flex-1 overflow-y-auto p-6 md:p-8 relative">
+            <main className="flex-1 overflow-y-auto p-3 sm:p-6 md:p-8 relative">
                 {isLoading && totalOrdersCount === 0 ? (
                     <KDSTicketsSkeleton />
                 ) : error && totalOrdersCount === 0 ? (
@@ -300,7 +362,7 @@ export default function KDSPage() {
                 <button
                     type="button"
                     onClick={() => setShowHelpModal(true)}
-                    className="fixed bottom-6 right-6 w-9 h-9 rounded-full bg-white border border-stone-300 shadow-md text-stone-600 hover:text-[#2D241E] hover:border-stone-400 active:scale-95 transition-all flex items-center justify-center font-bold text-sm cursor-pointer z-20"
+                    className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 w-9 h-9 rounded-full bg-white border border-stone-300 shadow-md text-stone-600 hover:text-[#2D241E] hover:border-stone-400 active:scale-95 transition-all flex items-center justify-center font-bold text-sm cursor-pointer z-20"
                     title="คู่มือการใช้งานจอครัว KDS"
                 >
                     ?

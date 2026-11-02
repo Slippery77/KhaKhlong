@@ -1,4 +1,5 @@
-import { RefreshCw, Wallet } from 'lucide-react';
+import { useState } from 'react';
+import { RefreshCw, Wallet, Package } from 'lucide-react';
 import Header from '../../../components/Header';
 import { useAuth } from '../../auth/context/AuthContext';
 import BlockedOrdersNotice from '../components/BlockedOrdersNotice';
@@ -52,6 +53,7 @@ export default function ShiftPage() {
   const awaitingVerification =
     shift?.status === 'pending_verification' || shift?.status === 'escalated';
   const isClosed = shift?.status === 'closed_auto' || shift?.status === 'verified';
+  const [activeTab, setActiveTab] = useState<'shift' | 'stock'>('shift');
 
   return (
     <div className="flex min-h-screen w-full flex-col bg-[#FAF7F2] font-kanit text-[#2D241E]">
@@ -113,36 +115,81 @@ export default function ShiftPage() {
 
               {!shift && <OpenShiftCard isSubmitting={isSubmitting} onSubmit={openShift} />}
 
-              {shift?.status === 'open' && (
+              {shift && (
                 <>
-                  <StockAdjustmentCard />
-                  <CloseShiftCard
-                    shift={shift}
-                    isSubmitting={isSubmitting}
-                    onSubmit={closeShift}
-                    unsentBills={totalOrderCount}
-                    onShowUnsent={openOutboxPanel}
-                  />
-                </>
-              )}
+                  {/* ── Segmented Tab Control: ปิดกะ & นับเงินสด vs ปรับวัตถุดิบคงเหลือ ── */}
+                  <div className="flex bg-stone-200/60 p-1 rounded-2xl gap-1">
+                    <button
+                      type="button"
+                      onClick={() => setActiveTab('shift')}
+                      className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl text-sm font-medium transition-all duration-200 cursor-pointer ${
+                        activeTab === 'shift'
+                          ? 'bg-white text-[#8C6D58] shadow-xs font-semibold'
+                          : 'text-stone-600 hover:text-stone-900'
+                      }`}
+                    >
+                      <Wallet className="w-4 h-4 stroke-[2]" />
+                      <span>{isClosed ? 'ข้อมูลกะวันนี้' : awaitingVerification ? 'ตรวจสอบส่วนต่าง' : 'ปิดกะ / นับเงิน'}</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setActiveTab('stock')}
+                      className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-3 rounded-xl text-sm font-medium transition-all duration-200 cursor-pointer ${
+                        activeTab === 'stock'
+                          ? 'bg-white text-[#8C6D58] shadow-xs font-semibold'
+                          : 'text-stone-600 hover:text-stone-900'
+                      }`}
+                    >
+                      <Package className="w-4 h-4 stroke-[2]" />
+                      <span>ปรับวัตถุดิบคงเหลือ</span>
+                    </button>
+                  </div>
 
-              {shift && awaitingVerification && (
-                <>
-                  <MismatchPanel
-                    shift={shift}
-                    role={user?.role}
-                    isSubmitting={isSubmitting}
-                    pinError={pinError}
-                    onVerify={verifyWithPin}
-                  />
-                  <StockAdjustmentCard />
-                </>
-              )}
+                  {/* ── แท็บ 1: ปิดกะ / นับเงินสด ── */}
+                  {activeTab === 'shift' && (
+                    <div className="space-y-4">
+                      {shift.status === 'open' && (
+                        <>
+                          {/* Smart Bridge แจ้งเตือนปรับสต็อกก่อนปิดกะ */}
+                          <div className="flex items-center justify-between gap-3 rounded-xl border border-[#F0D9A8] bg-[#FFF7E6] px-3.5 py-2.5 text-xs text-[#8A5A00]">
+                            <span>นับวัตถุดิบคงเหลือก่อนปิดกะ เพื่อให้สต็อกตัดยอดถูกต้อง</span>
+                            <button
+                              type="button"
+                              onClick={() => setActiveTab('stock')}
+                              className="font-medium underline shrink-0 cursor-pointer hover:text-[#C27803]"
+                            >
+                              ไปปรับสต็อก &rarr;
+                            </button>
+                          </div>
 
-              {shift && isClosed && (
-                <>
-                  <ShiftClosedCard shift={shift} />
-                  <StockAdjustmentCard />
+                          <CloseShiftCard
+                            shift={shift}
+                            isSubmitting={isSubmitting}
+                            onSubmit={closeShift}
+                            unsentBills={totalOrderCount}
+                            onShowUnsent={openOutboxPanel}
+                          />
+                        </>
+                      )}
+
+                      {awaitingVerification && (
+                        <MismatchPanel
+                          shift={shift}
+                          role={user?.role}
+                          isSubmitting={isSubmitting}
+                          pinError={pinError}
+                          onVerify={verifyWithPin}
+                        />
+                      )}
+
+                      {isClosed && <ShiftClosedCard shift={shift} />}
+                    </div>
+                  )}
+
+                  {/* ── แท็บ 2: ปรับวัตถุดิบคงเหลือ ── */}
+                  {activeTab === 'stock' && (
+                    <StockAdjustmentCard onNavigateToCloseShift={() => setActiveTab('shift')} />
+                  )}
                 </>
               )}
             </div>

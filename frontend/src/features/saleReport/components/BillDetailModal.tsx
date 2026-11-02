@@ -41,6 +41,7 @@ export default function BillDetailModal({ bill, onClose }: BillDetailModalProps)
             cancelled = true;
         };
     }, [bill, accessToken]);
+
     // Close on Escape key press
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
@@ -121,22 +122,22 @@ export default function BillDetailModal({ bill, onClose }: BillDetailModalProps)
     const vat = bill.vat !== undefined ? bill.vat : Math.max(0, grandTotal - subtotal);
 
     return (
-        <div className="fixed inset-0 z-50 overflow-hidden font-kanit">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 font-kanit">
             {/* Backdrop overlay */}
             <div
                 onClick={onClose}
-                className="fixed inset-0 bg-black/25 backdrop-blur-[1px] transition-opacity animate-in fade-in duration-200 cursor-pointer"
+                className="fixed inset-0 bg-[#2D241E]/40 backdrop-blur-xs transition-opacity animate-in fade-in duration-200 cursor-pointer"
             />
 
-            {/* Slide-over panel (Right Side Drawer as in Image 1) */}
-            <div className="fixed inset-y-0 right-0 z-50 w-full max-w-[340px] sm:max-w-[380px] bg-white shadow-2xl flex flex-col border-l border-stone-200/80 animate-in slide-in-from-right duration-250 ease-out">
+            {/* Modal Dialog (ตรงกลางจอ ทั้งบนเดสก์ท็อปและมือถือ) */}
+            <div className="relative z-10 w-full max-w-[420px] max-h-[90dvh] sm:max-h-[85dvh] bg-white rounded-2xl sm:rounded-3xl shadow-2xl flex flex-col border border-stone-200/80 overflow-hidden animate-in zoom-in-95 duration-200 ease-out">
                 {/* Header Section */}
-                <div className="p-6 pb-4 flex items-start justify-between">
+                <div className="p-4 sm:p-5 pb-3.5 flex items-start justify-between border-b border-stone-200/80 bg-stone-50/50 shrink-0">
                     <div>
-                        <span className="text-xs text-stone-400 font-normal block mb-1">
+                        <span className="text-xs text-stone-500 font-normal block mb-0.5">
                             รายละเอียดบิล
                         </span>
-                        <h2 className="text-xl font-bold text-stone-800 leading-tight">
+                        <h2 className="text-lg sm:text-xl font-bold text-[#2D241E] leading-tight">
                             {bill.table || bill.description || `บิล #${bill.billNumber || 1}`}
                         </h2>
                     </div>
@@ -144,27 +145,24 @@ export default function BillDetailModal({ bill, onClose }: BillDetailModalProps)
                         type="button"
                         onClick={onClose}
                         aria-label="ปิด"
-                        className="p-1 rounded-lg text-stone-400 hover:text-stone-700 hover:bg-stone-100 transition cursor-pointer"
+                        className="p-1.5 rounded-xl text-stone-400 hover:text-stone-700 hover:bg-stone-200/60 transition cursor-pointer"
                     >
                         <X className="w-5 h-5 stroke-[2]" />
                     </button>
                 </div>
 
-                {/* Divider */}
-                <div className="border-b border-stone-200/80" />
-
                 {/* Date & Payment Metadata */}
-                <div className="px-6 pt-5 pb-3 text-[13px] text-stone-500 space-y-1">
+                <div className="px-4 sm:px-5 py-2.5 text-xs text-stone-500 bg-white border-b border-stone-100 flex items-center justify-between shrink-0">
                     <p className="font-normal text-stone-600">{formatBillDateTime(bill)}</p>
                     <p className="text-stone-400">
                         <span>{bill.paymentMethod === 'TRANSFER' ? 'เงินโอน' : 'เงินสด'}</span>
                         <span className="mx-1.5">·</span>
-                        <span>{bill.performedBy || 'วิชัย ใจดี'}</span>
+                        <span>{bill.performedBy || 'พนักงาน'}</span>
                     </p>
                 </div>
 
                 {/* Bill Items List (Scrollable) */}
-                <div className="flex-1 overflow-y-auto px-6 py-2 space-y-4">
+                <div className="flex-1 overflow-y-auto min-h-0 px-4 sm:px-5 py-3 space-y-3">
                     {(() => {
                         const itemsToRender = fetchedItems ?? bill.items ?? [];
                         if (itemsToRender.length === 0) {
@@ -200,7 +198,7 @@ export default function BillDetailModal({ bill, onClose }: BillDetailModalProps)
                                         </span>
                                     </div>
 
-                                    {/* Modifiers List (matching Image 2) */}
+                                    {/* Modifiers List */}
                                     {hasModifiers && (
                                         <div className="mt-1 space-y-0.5 text-xs text-stone-500 pl-0.5">
                                             {/* Spiciness modifier: • เผ็ดปกติ */}
@@ -211,13 +209,13 @@ export default function BillDetailModal({ bill, onClose }: BillDetailModalProps)
                                                 </div>
                                             )}
 
-                                            {/* Addon modifiers: • เพิ่มไข่ดาว +฿10 */}
+                                            {/* Addon modifiers */}
                                             {hasAddons &&
                                                 item.selectedAddons?.map((addon, aIdx) => {
                                                     const addonName =
                                                         typeof addon === 'string'
                                                             ? addon
-                                                            : addon.name;
+                                                             : addon.name;
                                                     const addonPrice =
                                                         typeof addon === 'object' && addon.price
                                                             ? addon.price
@@ -253,8 +251,8 @@ export default function BillDetailModal({ bill, onClose }: BillDetailModalProps)
                     })()}
                 </div>
 
-                {/* Financial Summary (matching Image 1) */}
-                <div className="px-6 py-4 border-t border-stone-200/80 bg-white space-y-2">
+                {/* Financial Summary & Reprint button (Fixed at bottom, never cut off) */}
+                <div className="shrink-0 px-4 sm:px-5 py-3.5 sm:py-4 border-t border-stone-200/80 bg-stone-50/40 space-y-2">
                     {/* Subtotal */}
                     <div className="flex justify-between text-xs text-stone-500">
                         <span>ยอดรวม</span>
@@ -274,12 +272,12 @@ export default function BillDetailModal({ bill, onClose }: BillDetailModalProps)
                     )}
 
                     {/* Divider line before Total */}
-                    <div className="border-t border-stone-200/80 my-2" />
+                    <div className="border-t border-stone-200/80 my-1.5" />
 
                     {/* Grand Total */}
-                    <div className="flex justify-between items-center pt-0.5">
+                    <div className="flex justify-between items-center">
                         <span className="font-bold text-sm text-stone-800">รวม</span>
-                        <span className="font-bold text-base text-[#9E6B55]">
+                        <span className="font-bold text-base sm:text-lg text-[#9E6B55]">
                             ฿{formatPrice(grandTotal)}
                         </span>
                     </div>
@@ -288,7 +286,7 @@ export default function BillDetailModal({ bill, onClose }: BillDetailModalProps)
                     {bill.received !== undefined &&
                         bill.received > 0 &&
                         bill.received !== grandTotal && (
-                            <div className="flex justify-between text-xs text-stone-500 pt-1">
+                            <div className="flex justify-between text-xs text-stone-500 pt-0.5">
                                 <span>รับเงินมา</span>
                                 <span>฿{formatPrice(bill.received)}</span>
                             </div>
@@ -304,7 +302,7 @@ export default function BillDetailModal({ bill, onClose }: BillDetailModalProps)
                     <button
                         type="button"
                         onClick={() => setReceiptFor(bill.id)}
-                        className="mt-3 flex w-full items-center justify-center gap-1.5 rounded-xl bg-[#8C6D58] py-2.5 text-sm font-medium text-white transition-colors duration-200 hover:bg-[#7a5c45] focus-visible:ring-2 focus-visible:ring-[#A68874]/50 focus-visible:outline-none cursor-pointer"
+                        className="mt-2.5 flex w-full items-center justify-center gap-2 rounded-xl bg-[#8C6D58] py-2.5 sm:py-3 text-sm font-medium text-white transition-colors duration-200 hover:bg-[#7a5c45] active:bg-[#6b4f3a] focus-visible:ring-2 focus-visible:ring-[#A68874]/50 focus-visible:outline-none cursor-pointer shadow-xs"
                     >
                         <Printer className="h-4 w-4" aria-hidden="true" />
                         พิมพ์ใบเสร็จซ้ำ

@@ -70,41 +70,52 @@ const StockAdjustmentRow = React.memo(function StockAdjustmentRow({
     parsed === null || Number.isNaN(parsed) ? null : parsed - item.current_stock;
 
   return (
-    <li className="flex flex-wrap items-center gap-x-3 gap-y-2 px-3 py-2.5 transition-colors hover:bg-[#FAF7F2]/60">
-      <div className="min-w-0 flex-1 basis-40">
+    <li className="flex items-center justify-between gap-3 px-3.5 py-2.5 transition-colors hover:bg-[#FAF7F2]/60">
+      <div className="min-w-0 flex-1">
         <p className="truncate text-sm font-medium text-[#2D241E]">{item.name}</p>
         <p className="mt-0.5 text-xs text-[#9B8E82]">
           คงเหลือในระบบ {formatQuantity(item.current_stock)} {item.stock_unit}
           {item.is_low && <span className="ml-1.5 font-medium text-[#C27803]">· ใกล้หมด</span>}
         </p>
+        {/* On mobile: show Delta directly below item info, 100% left-aligned */}
+        <div className="sm:hidden mt-1 text-left">
+          <DeltaLabel delta={delta} unit={item.stock_unit} />
+        </div>
       </div>
-      <input
-        ref={inputRef}
-        type="number"
-        inputMode="decimal"
-        min="0"
-        step="0.0001"
-        value={raw}
-        onFocus={() => onFocus(item.ingredient_id)}
-        onBlur={onBlur}
-        onKeyDown={(event) => {
-          if (event.key === 'Enter') {
-            event.preventDefault();
-            onKeyDownEnter();
-          }
-        }}
-        onChange={(event) => onSetCount(item.ingredient_id, event.target.value)}
-        placeholder="ไม่ปรับ"
-        aria-label={`ยอดนับจริงของ ${item.name} (${item.stock_unit})`}
-        className={countInputClass}
-        disabled={isSubmitting}
-      />
-      <span className="w-28 shrink-0 text-right">
-        <DeltaLabel delta={delta} unit={item.stock_unit} />
-      </span>
+      <div className="flex items-center gap-2 shrink-0">
+        <input
+          ref={inputRef}
+          type="number"
+          inputMode="decimal"
+          min="0"
+          step="0.0001"
+          value={raw}
+          onFocus={() => onFocus(item.ingredient_id)}
+          onBlur={onBlur}
+          onKeyDown={(event) => {
+            if (event.key === 'Enter') {
+              event.preventDefault();
+              onKeyDownEnter();
+            }
+          }}
+          onChange={(event) => onSetCount(item.ingredient_id, event.target.value)}
+          placeholder="ไม่ปรับ"
+          aria-label={`ยอดนับจริงของ ${item.name} (${item.stock_unit})`}
+          className={countInputClass}
+          disabled={isSubmitting}
+        />
+        {/* On desktop: show in its own right-aligned column */}
+        <span className="hidden sm:inline-block w-28 shrink-0 text-right">
+          <DeltaLabel delta={delta} unit={item.stock_unit} />
+        </span>
+      </div>
     </li>
   );
 });
+
+interface StockAdjustmentCardProps {
+  onNavigateToCloseShift?: () => void;
+}
 
 type FilterMode = 'all' | 'filled' | 'low';
 
@@ -117,7 +128,7 @@ type FilterMode = 'all' | 'filled' | 'low';
  * - ชิปตัวกรองด่วน: ทั้งหมด / กรอกแล้ว / ใกล้หมด พร้อม badge นับจำนวน
  * - รองรับรอบวันทำการ (business_date) สำหรับร้านที่เปิดข้ามคืน
  */
-export default function StockAdjustmentCard() {
+export default function StockAdjustmentCard({ onNavigateToCloseShift }: StockAdjustmentCardProps = {}) {
   const {
     items,
     counts,
@@ -247,6 +258,15 @@ export default function StockAdjustmentCard() {
             บันทึกการนับแล้ว — ปรับยอด {result.adjusted_count} รายการ
             {result.unchanged_count > 0 && ` · ตรงกัน ${result.unchanged_count} รายการ`}
           </p>
+          {onNavigateToCloseShift && (
+            <button
+              type="button"
+              onClick={onNavigateToCloseShift}
+              className="mt-3 flex items-center justify-center gap-1.5 w-full py-2.5 rounded-xl bg-[#8C6D58] text-white text-xs font-medium hover:bg-[#7a5c45] transition cursor-pointer"
+            >
+              <span>ปรับสต็อกเรียบร้อยแล้ว &rarr; ไปที่หน้าปิดกะ</span>
+            </button>
+          )}
           {result.items.some((item) => item.delta !== 0) && (
             <ul className="mt-2 space-y-1">
               {result.items
@@ -429,7 +449,7 @@ export default function StockAdjustmentCard() {
           )}
 
           {/* ── แถบสรุปผลด้านล่าง ────────────────────────────── */}
-          <div className="mt-3 flex flex-wrap items-center justify-between gap-2">
+          <div className="mt-3 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
             <p className="text-xs text-[#7A6A5C]">
               แสดง {filteredItems.length} จากทั้งหมด {items.length} รายการ · กรอกแล้ว {filledCount} รายการ (เว้นว่าง = ไม่ปรับยอด)
             </p>
@@ -456,7 +476,7 @@ export default function StockAdjustmentCard() {
             type="button"
             onClick={() => void submit()}
             disabled={filledCount === 0 || invalidCount > 0 || isSubmitting}
-            className={`${primaryButtonClass} mt-3`}
+            className={`${primaryButtonClass} mt-3.5 min-h-[44px]`}
           >
             {isSubmitting ? (
               <Loader2 className="h-4 w-4 animate-spin" aria-hidden="true" />

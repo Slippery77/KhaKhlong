@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { X, Copy, Check, Clock, Globe, Laptop, User, Tag } from 'lucide-react';
 import type { AuditLogItem } from '../types';
 import { ACTION_TYPE_CONFIG } from '../types';
@@ -10,6 +10,25 @@ interface AuditDetailModalProps {
 
 export function AuditDetailModal({ item, onClose }: AuditDetailModalProps) {
   const [copied, setCopied] = useState(false);
+
+  // Close on Escape key press
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose();
+      }
+    };
+
+    if (item) {
+      window.addEventListener('keydown', handleKeyDown);
+      document.body.style.overflow = 'hidden';
+    }
+
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      document.body.style.overflow = '';
+    };
+  }, [item, onClose]);
 
   if (!item) return null;
 
@@ -38,41 +57,42 @@ export function AuditDetailModal({ item, onClose }: AuditDetailModalProps) {
       role="dialog"
       aria-modal="true"
       aria-labelledby="audit-detail-title"
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-stone-900/50 backdrop-blur-xs transition-opacity duration-200"
+      className="fixed inset-0 z-50 flex items-center justify-center p-3.5 sm:p-4 bg-stone-900/50 backdrop-blur-xs transition-opacity duration-200 font-kanit"
       onClick={onClose}
     >
       <div
-        className="w-full max-w-2xl bg-[#FAF7F2] rounded-2xl shadow-xl border border-[#d9c6b0] overflow-hidden flex flex-col max-h-[90vh] font-kanit animate-in fade-in zoom-in-95 duration-150"
+        className="w-full max-w-2xl bg-[#FAF7F2] rounded-2xl shadow-xl border border-[#d9c6b0] overflow-hidden flex flex-col max-h-[90vh] animate-in fade-in zoom-in-95 duration-150"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-[#E8DFD5] bg-[#FAF7F2]">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-[#EFE8DC] rounded-xl text-[#8C6D58]">
+        <div className="flex items-center justify-between px-4 sm:px-6 py-3.5 sm:py-4 border-b border-[#E8DFD5] bg-[#FAF7F2] shrink-0">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="p-2 bg-[#EFE8DC] rounded-xl text-[#8C6D58] shrink-0">
               <Tag className="w-5 h-5" />
             </div>
-            <div>
-              <h3 id="audit-detail-title" className="text-lg font-semibold text-[#2D241E]">
+            <div className="min-w-0">
+              <h3 id="audit-detail-title" className="text-base sm:text-lg font-semibold text-[#2D241E] truncate">
                 รายละเอียด Audit Log
               </h3>
-              <p className="text-xs text-stone-500 font-normal">
+              <p className="text-xs text-stone-500 font-normal truncate">
                 รหัสรายการ: {item.log_id}
               </p>
             </div>
           </div>
           <button
+            type="button"
             onClick={onClose}
-            className="p-2 text-stone-400 hover:text-stone-700 hover:bg-[#EFE8DC]/60 rounded-xl transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#8C6D58]"
+            className="p-1.5 sm:p-2 text-stone-400 hover:text-stone-700 hover:bg-[#EFE8DC]/80 rounded-xl transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-[#8C6D58] shrink-0"
             aria-label="ปิดหน้าต่าง"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
 
-        {/* Content Body */}
-        <div className="p-6 overflow-y-auto space-y-5">
+        {/* Content Body (Scrollable) */}
+        <div className="p-4 sm:p-6 overflow-y-auto space-y-4 sm:space-y-5">
           {/* Action Badge & Summary */}
-          <div className="bg-white p-4 rounded-xl border border-[#E8DFD5] space-y-2">
+          <div className="bg-white p-3.5 sm:p-4 rounded-xl border border-[#E8DFD5] space-y-2">
             <div className="flex items-center justify-between flex-wrap gap-2">
               <span
                 className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-medium ${config.badgeClass}`}
@@ -87,7 +107,7 @@ export function AuditDetailModal({ item, onClose }: AuditDetailModalProps) {
           </div>
 
           {/* Key Details Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5 sm:gap-3 text-sm">
             <div className="bg-white p-3.5 rounded-xl border border-[#E8DFD5] flex items-start gap-3">
               <Clock className="w-4 h-4 text-[#8C6D58] shrink-0 mt-0.5" />
               <div>
@@ -157,7 +177,7 @@ export function AuditDetailModal({ item, onClose }: AuditDetailModalProps) {
 
             {/* Formatted Viewer */}
             {item.metadata && Object.keys(item.metadata).length > 0 ? (
-              <pre className="p-4 bg-stone-900 text-stone-100 rounded-xl text-xs font-mono overflow-x-auto max-h-56 leading-relaxed border border-stone-800">
+              <pre className="p-3.5 sm:p-4 bg-stone-900 text-stone-100 rounded-xl text-xs font-mono overflow-x-auto max-h-56 leading-relaxed border border-stone-800">
                 {JSON.stringify(item.metadata, null, 2)}
               </pre>
             ) : (
@@ -166,17 +186,6 @@ export function AuditDetailModal({ item, onClose }: AuditDetailModalProps) {
               </div>
             )}
           </div>
-        </div>
-
-        {/* Footer */}
-        <div className="px-6 py-4 border-t border-[#E8DFD5] bg-[#FAF7F2] flex justify-end">
-          <button
-            type="button"
-            onClick={onClose}
-            className="px-5 py-2 text-sm font-medium text-white bg-[#8C6D58] hover:bg-[#7a5c45] rounded-xl transition-colors cursor-pointer shadow-xs focus:outline-none focus:ring-2 focus:ring-[#8C6D58]"
-          >
-            ปิดหน้าต่าง
-          </button>
         </div>
       </div>
     </div>

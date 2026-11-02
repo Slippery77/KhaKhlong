@@ -90,10 +90,10 @@ export default function InventoryHistory(props: InventoryHistoryProps) {
   }, [transactions]);
 
   return (
-    <section className="mt-6 rounded-2xl border border-[#E8DFD5] bg-white p-4">
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+    <section className="mt-6 rounded-2xl border border-[#E8DFD5] bg-white p-3 sm:p-4 shadow-xs">
+      <div className="mb-4 flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-3">
         <h2 className="font-semibold">ประวัติการเคลื่อนไหว</h2>
-        <div className="flex flex-wrap gap-2">
+        <div className="flex flex-wrap gap-2 w-full sm:w-auto">
           <select
             value={ingredientId ?? ''}
             aria-label="กรองตามวัตถุดิบ"
@@ -148,7 +148,7 @@ export default function InventoryHistory(props: InventoryHistoryProps) {
                     return (
                       <li
                         key={transaction.transaction_id}
-                        className="flex items-center gap-3 px-1 py-2.5 text-sm transition-colors duration-200 hover:bg-[#FAF7F2]"
+                        className="flex items-center gap-2 sm:gap-3 px-1 py-2.5 text-xs sm:text-sm transition-colors duration-200 hover:bg-[#FAF7F2]"
                       >
                         <span className="w-14 shrink-0 font-semibold tabular-nums text-stone-500">
                           {formatTime(transactionDate)}

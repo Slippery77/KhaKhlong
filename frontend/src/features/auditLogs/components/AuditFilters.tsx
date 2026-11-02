@@ -35,7 +35,7 @@ export function AuditFilters({
   const hasActiveFilters = Boolean(actionType || userId || from || to);
 
   return (
-    <div className="bg-white p-4 rounded-2xl border border-[#d9c6b0] shadow-xs space-y-3 font-kanit">
+    <div className="w-full min-w-0 max-w-full bg-white p-3.5 sm:p-4 rounded-2xl border border-[#d9c6b0] shadow-xs space-y-3 font-kanit">
       <div className="flex items-center justify-between pb-2 border-b border-[#E8DFD5]">
         <div className="flex items-center gap-2 text-sm font-medium text-[#2D241E]">
           <Filter className="w-4 h-4 text-[#8C6D58]" />
@@ -53,14 +53,14 @@ export function AuditFilters({
         )}
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-sm">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-3 text-sm">
         {/* Action Type */}
-        <div className="space-y-1">
-          <label className="text-xs font-medium text-stone-600">ประเภทเหตุการณ์</label>
+        <div className="space-y-1 min-w-0">
+          <label className="text-xs font-medium text-stone-600 block">ประเภทเหตุการณ์</label>
           <select
             value={actionType}
             onChange={(e) => onActionTypeChange(e.target.value)}
-            className="w-full bg-[#FAF7F2] border border-[#d9c6b0] rounded-xl px-3 py-2 text-sm text-[#2D241E] focus:outline-none focus:ring-2 focus:ring-[#8C6D58] transition-colors"
+            className="w-full min-w-0 max-w-full bg-[#FAF7F2] border border-[#d9c6b0] rounded-xl px-3 py-2 text-sm text-[#2D241E] focus:outline-none focus:ring-2 focus:ring-[#8C6D58] transition-colors truncate"
           >
             <option value="">ทั้งหมดทุกประเภท</option>
             {Object.entries(ACTION_TYPE_CONFIG).map(([key, item]) => (
@@ -72,12 +72,12 @@ export function AuditFilters({
         </div>
 
         {/* User */}
-        <div className="space-y-1">
-          <label className="text-xs font-medium text-stone-600">ผู้ดำเนินการ</label>
+        <div className="space-y-1 min-w-0">
+          <label className="text-xs font-medium text-stone-600 block">ผู้ดำเนินการ</label>
           <select
             value={userId}
             onChange={(e) => onUserIdChange(e.target.value)}
-            className="w-full bg-[#FAF7F2] border border-[#d9c6b0] rounded-xl px-3 py-2 text-sm text-[#2D241E] focus:outline-none focus:ring-2 focus:ring-[#8C6D58] transition-colors"
+            className="w-full min-w-0 max-w-full bg-[#FAF7F2] border border-[#d9c6b0] rounded-xl px-3 py-2 text-sm text-[#2D241E] focus:outline-none focus:ring-2 focus:ring-[#8C6D58] transition-colors truncate"
           >
             <option value="">ทั้งหมดทุกคน</option>
             {users.map((u) => (
@@ -89,29 +89,25 @@ export function AuditFilters({
         </div>
 
         {/* From Date */}
-        <div className="space-y-1">
-          <label className="text-xs font-medium text-stone-600">ตั้งแต่วันที่</label>
-          <div className="relative">
-            <input
-              type="date"
-              value={from}
-              onChange={(e) => onFromChange(e.target.value)}
-              className="w-full bg-[#FAF7F2] border border-[#d9c6b0] rounded-xl px-3 py-2 text-sm text-[#2D241E] focus:outline-none focus:ring-2 focus:ring-[#8C6D58] transition-colors"
-            />
-          </div>
+        <div className="space-y-1 min-w-0">
+          <label className="text-xs font-medium text-stone-600 block">ตั้งแต่วันที่</label>
+          <input
+            type="date"
+            value={from}
+            onChange={(e) => onFromChange(e.target.value)}
+            className="w-full min-w-0 max-w-full bg-[#FAF7F2] border border-[#d9c6b0] rounded-xl px-3 py-2 text-sm text-[#2D241E] focus:outline-none focus:ring-2 focus:ring-[#8C6D58] transition-colors"
+          />
         </div>
 
         {/* To Date */}
-        <div className="space-y-1">
-          <label className="text-xs font-medium text-stone-600">ถึงวันที่</label>
-          <div className="relative">
-            <input
-              type="date"
-              value={to}
-              onChange={(e) => onToChange(e.target.value)}
-              className="w-full bg-[#FAF7F2] border border-[#d9c6b0] rounded-xl px-3 py-2 text-sm text-[#2D241E] focus:outline-none focus:ring-2 focus:ring-[#8C6D58] transition-colors"
-            />
-          </div>
+        <div className="space-y-1 min-w-0">
+          <label className="text-xs font-medium text-stone-600 block">ถึงวันที่</label>
+          <input
+            type="date"
+            value={to}
+            onChange={(e) => onToChange(e.target.value)}
+            className="w-full min-w-0 max-w-full bg-[#FAF7F2] border border-[#d9c6b0] rounded-xl px-3 py-2 text-sm text-[#2D241E] focus:outline-none focus:ring-2 focus:ring-[#8C6D58] transition-colors"
+          />
         </div>
       </div>
     </div>
