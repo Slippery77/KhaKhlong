@@ -1,0 +1,164 @@
+{
+  "summary": {
+    "totalTestsAll": 291,
+    "passedTestsAll": 289,
+    "failedTestsAll": 2,
+    "passRate": "99.31%"
+  },
+  "suites": [
+    {
+      "file": "backend/test/e2e/e2e-public-tenant.mjs",
+      "name": "Public Tenant & Store Finder",
+      "usecase": "UC-01: การค้นหาร้าน & ตรวจสอบ Tenant Slug",
+      "success": true,
+      "durationMs": 750,
+      "total": 16,
+      "passed": 16,
+      "failed": 0,
+      "outputSnippet": " 404)\n  ✓ exists = false\n  ✓ active = false\n\n=== 4. รูปแบบ slug ไม่ถูกต้อง ===\n  ✓ \"ab\" → exists = false\n  ✓ \"UPPER\" → exists = false\n  ✓ \"has space\" → exists = false\n  ✓ \"-start\" → exists = false\n  ✓ \"end-\" → exists = false\n\n=== 5. ตัวพิมพ์ใหญ่ต้องถูก normalize ===\n  ✓ ตัวพิมพ์ใหญ่ยังพบร้าน\n\n=== 6. ไม่ต้องมี token ===\n  ✓ ไม่ส่ง Authorization ก็เรียกได้ (200)\n\n🎉 ALL PUBLIC TENANT TESTS PASSED\n\n\n"
+    },
+    {
+      "file": "backend/test/e2e/e2e-login-lockout.mjs",
+      "name": "Login Lockout Protection",
+      "usecase": "UC-01: การยืนยันตัวตน & ล็อกบัญชีเมื่อรหัสผิด (Rate Limit)",
+      "success": true,
+      "durationMs": 6959,
+      "total": 15,
+      "passed": 15,
+      "failed": 0,
+      "outputSnippet": "88Z\",\"remainingSeconds\":303,\"message\":\"บัญชีถูกระงับชั่วคราวเนื่องจากใส่รหัสผ่านผิดครบ 5 ครั้ง กรุณาลองใหม่หลังเวลา 15:03 น. (อีกประมาณ 6 นาที)\"}\n\n=== 6. เจ้าของร้านตั้งรหัสผ่านใหม่ให้พนักงาน -> ต้องปลดล็อกให้ทันที ===\nPASS — เจ้าของร้านเปลี่ยนรหัสผ่านให้พนักงานสำเร็จ (200)\nPASS — หลังเจ้าของร้านรีเซ็ตรหัสผ่าน พนักงานเข้าสู่ระบบได้ทันที (200) :: status=200\n\nสรุปผล E2E Login Lockout: 15/15 passed\n\n"
+    },
+    {
+      "file": "backend/test/e2e/e2e-token-version.mjs",
+      "name": "Token Versioning & Session Revocation",
+      "usecase": "UC-01: ความปลอดภัยเซสชัน & บังคับ Logout เมื่อเปลี่ยนรหัส",
+      "success": true,
+      "durationMs": 4001,
+      "total": 18,
+      "passed": 18,
+      "failed": 0,
+      "outputSnippet": " 200\nPASS  token ที่ refresh มี token_version ตรงกับของเดิม — token_version=0\nPASS  token ที่ refresh เรียก /tables ได้ 200 — status 200\n\n=== 7. ปิดใช้งานพนักงาน → token ที่ถืออยู่ต้องใช้ไม่ได้ทันที ===\nPASS  ปิดใช้งานพนักงานสำเร็จ — status 200\nPASS  token ของพนักงานที่ถูกปิดใช้งาน = 401 — status 401\nPASS  พนักงานที่ถูกปิดใช้งาน login ไม่ได้ = 401 — status 401\n\n=== สรุป: 18 ผ่าน / 0 ไม่ผ่าน ===\n\n\n"
+    },
+    {
+      "file": "backend/test/e2e/e2e-users-me.mjs",
+      "name": "User Profile & Permissions",
+      "usecase": "UC-01: สิทธิ์ผู้ใช้งาน & โปรไฟล์ (RBAC)",
+      "success": true,
+      "durationMs": 1842,
+      "total": 21,
+      "passed": 20,
+      "failed": 1,
+      "outputSnippet": " role_name เป็น employee\nPASS  employee has_pin เป็น false (ไม่ได้ตั้ง PIN)\nPASS  employee permissions มี order:create แต่ไม่มี user:manage — permissions=[\"inventory:adjust\",\"inventory:check\",\"kds:mark_ready\",\"order:create\",\"payment:receive\",\"report:view_own_shift\",\"shift:close_and_count\",\"shift:open\"]\nPASS  employee store ตรงกับร้านเดียวกัน\n\n=== สรุปผล E2E GET /users/me: 20 passed, 0 failed ===\n\n"
+    },
+    {
+      "file": "backend/test/e2e/e2e-category-reorder.mjs",
+      "name": "Menu Category Reordering",
+      "usecase": "UC-03: การจัดหมวดหมู่ & ลำดับเมนูอาหาร",
+      "success": true,
+      "durationMs": 3814,
+      "total": 27,
+      "passed": 27,
+      "failed": 0,
+      "outputSnippet": "0\nPASS  GET /menu/full ลำดับแรกเป็น C\nPASS  GET /menu/full ลำดับสองเป็น A\nPASS  GET /menu/full ลำดับสามเป็น B\n\n=== 12. สลับลำดับอีกครั้ง: [B, C, A] ===\nPASS  Reorder [B, C, A] สำเร็จ 200\nPASS  รอบสอง ลำดับแรกต้องเป็น B\nPASS  รอบสอง ลำดับสองต้องเป็น C\nPASS  รอบสอง ลำดับสามต้องเป็น A\n\n========================================\nผลการทดสอบ: ผ่าน 27 | ล้มเหลว 0\n========================================\n\n\n"
+    },
+    {
+      "file": "backend/test/e2e/e2e-cancel-order.mjs",
+      "name": "Order Cancellation & Walkout Handling",
+      "usecase": "UC-02 & UC-06: การจัดการโต๊ะ & การยกเลิกบิล/ลูกค้าเดินออก",
+      "success": true,
+      "durationMs": 14309,
+      "total": 31,
+      "passed": 31,
+      "failed": 0,
+      "outputSnippet": " D สำเร็จ :: status=201\n\n=== 7. PIN ผิด 5 ครั้ง → ล็อก 5 นาที (ทำท้ายสุด) ===\nPASS — PIN ผิดครั้งที่ 1 → 403 :: status=403\nPASS — PIN ผิดครั้งที่ 2 → 403 :: status=403\nPASS — PIN ผิดครั้งที่ 3 → 403 :: status=403\nPASS — PIN ผิดครั้งที่ 4 → 403 :: status=403\nPASS — PIN ผิดครั้งที่ 5 → 429 :: status=429\nPASS — ถูกล็อกแล้ว PIN ถูกก็ยังถูกปฏิเสธ → 429 :: status=429\n\n=== สรุป: 31/31 ผ่าน ===\nALL PASS\n\n"
+    },
+    {
+      "file": "backend/test/e2e/e2e-void-comp.mjs",
+      "name": "Void & Comp Approval Flow",
+      "usecase": "UC-06: การขอยกเลิกรายการ (Void) & ให้ฟรี (Comp) พร้อม PIN ผู้อนุมัติ",
+      "success": true,
+      "durationMs": 11254,
+      "total": 31,
+      "passed": 31,
+      "failed": 0,
+      "outputSnippet": "กล็อกแล้ว PIN ถูกก็ยังโดนปฏิเสธ (429) :: status=429 msg=กรอก PIN ผิดหลายครั้งเกินไป กรุณารอ 5 นาทีแล้วลองใหม่\nPASS — ผู้จัดการที่ถูกล็อกถูกตัดออกจากรายชื่อผู้อนุมัติ :: status=409 msg=ไม่พบผู้จัดการ/เจ้าของร้านที่พร้อมอนุมัติ (ยังไม่ตั้ง PIN หรือถูกล็อกชั่วคราว)\n\n=== 11. route เดี่ยวแบบเก่าต้องถูกถอดออก ===\nPASS — POST /orders/items/:id/void → 404 :: status=404\n\n=== สรุป: 31/31 ผ่าน ===\nALL PASS\n\n"
+    },
+    {
+      "file": "backend/test/e2e/e2e-merge-tables-payment.mjs",
+      "name": "Merge Tables & Payment",
+      "usecase": "UC-04 & UC-05: การรวมบิลหลายโต๊ะ & ชำระเงินในครั้งเดียว",
+      "success": true,
+      "durationMs": 5539,
+      "total": 23,
+      "passed": 22,
+      "failed": 1,
+      "outputSnippet": "ceipt) ===\n  PASS: อ่านใบเสร็จได้ 200\n  PASS: ใบเสร็จมียอดรวม 300\n  PASS: ใบเสร็จมีข้อมูลโต๊ะทั้งสองโต๊ะ (T1 และ T2)\n\n=== 10. ตรวจสอบสถานะโต๊ะ A และ B ว่ากลับมาว่าง (available) ทั้งคู่ ===\n  PASS: โต๊ะ A กลับมาว่าง (available)\n  PASS: โต๊ะ B กลับมาว่าง (available)\n  PASS: โต๊ะ A open_order_id เป็น null\n  PASS: โต๊ะ B open_order_id เป็น null\n\n=== สรุปผล E2E รวมโต๊ะคิดเงิน: 22 passed, 0 failed ===\n\n"
+    },
+    {
+      "file": "backend/test/e2e/e2e-receipt.mjs",
+      "name": "Receipt Generation & Tax Modes",
+      "usecase": "UC-05: การออกใบเสร็จรับเงิน & พิมพ์ซ้ำ (Reprint)",
+      "success": true,
+      "durationMs": 6518,
+      "total": 49,
+      "passed": 49,
+      "failed": 0,
+      "outputSnippet": "์ครั้งที่ 2 → printCount = 2\n  ✓ พิมพ์ครั้งที่ 2 → isCopy = true\n  ✓ พิมพ์ครั้งที่ 3 → printCount = 3\n  ✓ พิมพ์ครั้งที่ 4 → 409\n  ✓ ข้อความแจ้งว่าพิมพ์ครบแล้ว\n\n=== 10. ใบเสร็จของ paymentId ที่ไม่มีอยู่จริง ===\n  ✓ ได้ 404\n\n=== 11. ต้องมี token ===\n  ✓ ไม่มี token → 401\n\n=== 12. จ่ายซ้ำ attempt เดิม ต้องได้ใบเสร็จเดิม ===\n  ✓ เรียกซ้ำไม่สร้างใบใหม่\n  ✓ เลขใบเสร็จเดิม\n\n🎉 ALL RECEIPT TESTS PASSED\n\n\n"
+    },
+    {
+      "file": "backend/test/e2e/e2e-reports.mjs",
+      "name": "Shift & Sales Reports",
+      "usecase": "UC-07 & UC-09: การจัดการกะ & รายงานยอดขาย/เงินสดในลิ้นชัก",
+      "success": true,
+      "durationMs": 5683,
+      "total": 1,
+      "passed": 1,
+      "failed": 0,
+      "outputSnippet": "150,\n    \"transfer\": 0,\n    \"table\": \"-\"\n  }\n]\n\n--- GET /reports/sales/receipt/312a9daa-b7f8-493d-be6e-3172d135a28a ---\nReceipt lines: [\n  {\n    \"name\": \"กะเพราหมูกรอบ_755217\",\n    \"quantity\": 1,\n    \"price\": 90,\n    \"selectedAddons\": []\n  },\n  {\n    \"name\": \"ชาไทยเย็น_755217\",\n    \"quantity\": 1,\n    \"price\": 35,\n    \"selectedAddons\": []\n  }\n]\n\n🎉 ALL REPORTS & SALES TESTS PASSED COMPLETELY! 🎉\n\n\n"
+    },
+    {
+      "file": "backend/test/e2e/e2e-inventory-polish.mjs",
+      "name": "Physical Inventory Count & Adjustments",
+      "usecase": "UC-08: การนับสต็อกวัตถุดิบจริง & ปรับยอดความคลาดเคลื่อน",
+      "success": true,
+      "durationMs": 2490,
+      "total": 10,
+      "passed": 10,
+      "failed": 0,
+      "outputSnippet": "11-03\"\n\n=== 8. ทดสอบนับสต็อกแบบมี note เพิ่มเติม ===\nPASS  Note มีข้อความนำหน้าถูกต้อง: \"นับรอบเย็น [counted 800, system 850.5]\"\n\n=== 9. ทดสอบส่ง business_date ไม่ถูกต้อง ต้องได้ 400 Bad Request ===\nPASS  ส่ง business_date ผิดฟอร์แมตได้รับ 400 Bad Request ไม่เกิด 500\n\n========================================\nสรุปผลการทดสอบ Inventory Polish: ผ่านครบทุกข้อ\n========================================\n\n\n"
+    },
+    {
+      "file": "backend/test/e2e/e2e-audit-logs.mjs",
+      "name": "Audit Logging System",
+      "usecase": "UC-11: บันทึกประวัติความปลอดภัย (Audit Logs)",
+      "success": true,
+      "durationMs": 2258,
+      "total": 15,
+      "passed": 15,
+      "failed": 0,
+      "outputSnippet": "์ 403 ===\nPASS  สร้าง employee สำเร็จ — status 201\nPASS  Employee ล็อกอินได้\nPASS  Employee ไม่มีสิทธิ์ audit_log:view ได้ 403 — status 403\n\n=== 6. ตรวจสอบ Filters และ Action ใน Audit Log ===\nPASS  Filter action_type ได้ 200\nPASS  พบ event user_created\nPASS  Filter user_id ได้ 200\n\n========================================\nสรุปผลการทดสอบ: PASS 14 / FAIL 0\n========================================\n\n\n"
+    },
+    {
+      "file": "backend/test/e2e/e2e-printer-config.mjs",
+      "name": "Printer Hardware Configuration",
+      "usecase": "UC-12: การตั้งค่าอุปกรณ์เครื่องพิมพ์ใบเสร็จ (ESC/POS)",
+      "success": true,
+      "durationMs": 4715,
+      "total": 28,
+      "passed": 28,
+      "failed": 0,
+      "outputSnippet": "และอ่านใบเสร็จ ===\n  ✓ เปิดกะสำเร็จหรือมีกะเปิดอยู่\n  ✓ สร้างโต๊ะสำหรับเปิดบิลสำเร็จ\n  ✓ สร้างเมนูสำเร็จ\n  ✓ เปิดบิลสำเร็จ\n  ✓ สั่งอาหารสำเร็จ\n  ✓ สร้าง payment attempt สำเร็จ\n  ✓ ชำระเงินสำเร็จ\n  ✓ GET receipt สำเร็จ\n  ✓ receipt.footer ตรงกับที่ตั้งค่า\n  ✓ receipt.showAddress = false ตรงกับที่ตั้งค่า\n  ✓ receipt.showTaxId = true\n  ✓ receipt.showCashier = true\n\n🎉 ALL PRINTER CONFIG TESTS PASSED\n\n"
+    },
+    {
+      "file": "backend/test/e2e/e2e-printer-storage.mjs",
+      "name": "Printer Storage Persistence",
+      "usecase": "UC-12: การบันทึกการตั้งค่าเครื่องพิมพ์ในเครื่อง",
+      "success": true,
+      "durationMs": 83,
+      "total": 6,
+      "passed": 6,
+      "failed": 0,
+      "outputSnippet": " LocalStorage Cleanup ===\n  ✓ Test 1 ผ่าน: คืนค่าเริ่มต้น 80mm ถูกต้อง\n  ✓ Test 2 ผ่าน: แยกการตั้งค่าขนาดกระดาษตาม tenant ถูกต้อง\n  ✓ Test 3 ผ่าน: CQS สมบูรณ์ getter ไม่มี mutating side effect\n  ✓ Test 4 ผ่าน: cleanupDeprecatedPrinterSettings ล้าง auto_print ทุก tenant และคงคีย์อื่นไว้\n  ✓ Test 5 ผ่าน: ทนทานต่อ Restricted Storage ไม่ throw และไม่อ่านค่าเพี้ยน\n\n🎉 ALL PRINTER STORAGE TESTS PASSED\n\n"
+    }
+  ]
+}

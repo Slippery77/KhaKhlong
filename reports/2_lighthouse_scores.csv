@@ -1,0 +1,10 @@
+﻿ลำดับ,หน้าฟีเจอร์ (Feature Page),URL,Performance,Accessibility,Best Practices,SEO,FCP,LCP,TBT,CLS,Speed Index
+1,Store Finder (หน้าแรก),https://khakhlong.vercel.app/,99,96,100,83,1.7 s,1.7 s,50 ms,0.000,1.7 s
+2,Login Page (เข้าสู่ระบบ),https://khakhlong.vercel.app/test-b/login,100,95,100,83,0.8 s,1.6 s,0 ms,0.000,0.8 s
+3,Table Layout (ผังโต๊ะอาหาร),https://khakhlong.vercel.app/test-b/tables,100,95,100,82,0.8 s,0.9 s,0 ms,0.003,0.9 s
+4,Main POS (สั่งอาหาร/หน้าร้าน),https://khakhlong.vercel.app/test-b/mainpos,85,96,100,82,0.0 s,0.9 s,610 ms,0.000,1.1 s
+5,KDS (จอคิวครัว),https://khakhlong.vercel.app/test-b/kds,97,92,100,82,0.0 s,0.9 s,180 ms,0.000,0.7 s
+6,Sales Report (รายงานยอดขาย),https://khakhlong.vercel.app/test-b/sale-report,96,93,100,82,0.0 s,0.0 s,240 ms,0.003,0.9 s
+7,Menu Edit (จัดการเมนูอาหาร),https://khakhlong.vercel.app/test-b/setting/menu,96,92,100,82,0.0 s,1.0 s,230 ms,0.000,1.0 s
+8,Shift Work (ระบบกะการทำงาน),https://khakhlong.vercel.app/test-b/siftwork,98,95,100,82,0.0 s,0.9 s,180 ms,0.027,0.7 s
+สรุป,ค่าเฉลี่ยรวมทุกหน้า,-,96.4,94.3,100,82.3,-,0.99 s,186 ms,0.004,0.98 s

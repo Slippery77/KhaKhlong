@@ -1,0 +1,643 @@
+{
+  "summary": {
+    "totalCycles": 30,
+    "totalMutations": 90,
+    "synced": 90,
+    "failed": 0,
+    "successRate": "100.00%",
+    "durationMs": 25303,
+    "avgLatencyMs": "281.1"
+  },
+  "logs": [
+    {
+      "seq": 1,
+      "step": "createOrder",
+      "name": "เปิดบิล #1",
+      "status": "synced",
+      "latency": 190
+    },
+    {
+      "seq": 2,
+      "step": "addItems",
+      "name": "สั่งอาหารเข้าครัว #1",
+      "status": "synced",
+      "latency": 186
+    },
+    {
+      "seq": 3,
+      "step": "cancelOrder",
+      "name": "เคลียร์โต๊ะ #1",
+      "status": "synced",
+      "latency": 459
+    },
+    {
+      "seq": 4,
+      "step": "createOrder",
+      "name": "เปิดบิล #2",
+      "status": "synced",
+      "latency": 188
+    },
+    {
+      "seq": 5,
+      "step": "addItems",
+      "name": "สั่งอาหารเข้าครัว #2",
+      "status": "synced",
+      "latency": 186
+    },
+    {
+      "seq": 6,
+      "step": "cancelOrder",
+      "name": "เคลียร์โต๊ะ #2",
+      "status": "synced",
+      "latency": 458
+    },
+    {
+      "seq": 7,
+      "step": "createOrder",
+      "name": "เปิดบิล #3",
+      "status": "synced",
+      "latency": 183
+    },
+    {
+      "seq": 8,
+      "step": "addItems",
+      "name": "สั่งอาหารเข้าครัว #3",
+      "status": "synced",
+      "latency": 184
+    },
+    {
+      "seq": 9,
+      "step": "cancelOrder",
+      "name": "เคลียร์โต๊ะ #3",
+      "status": "synced",
+      "latency": 453
+    },
+    {
+      "seq": 10,
+      "step": "createOrder",
+      "name": "เปิดบิล #4",
+      "status": "synced",
+      "latency": 184
+    },
+    {
+      "seq": 11,
+      "step": "addItems",
+      "name": "สั่งอาหารเข้าครัว #4",
+      "status": "synced",
+      "latency": 187
+    },
+    {
+      "seq": 12,
+      "step": "cancelOrder",
+      "name": "เคลียร์โต๊ะ #4",
+      "status": "synced",
+      "latency": 451
+    },
+    {
+      "seq": 13,
+      "step": "createOrder",
+      "name": "เปิดบิล #5",
+      "status": "synced",
+      "latency": 184
+    },
+    {
+      "seq": 14,
+      "step": "addItems",
+      "name": "สั่งอาหารเข้าครัว #5",
+      "status": "synced",
+      "latency": 183
+    },
+    {
+      "seq": 15,
+      "step": "cancelOrder",
+      "name": "เคลียร์โต๊ะ #5",
+      "status": "synced",
+      "latency": 457
+    },
+    {
+      "seq": 16,
+      "step": "createOrder",
+      "name": "เปิดบิล #6",
+      "status": "synced",
+      "latency": 184
+    },
+    {
+      "seq": 17,
+      "step": "addItems",
+      "name": "สั่งอาหารเข้าครัว #6",
+      "status": "synced",
+      "latency": 183
+    },
+    {
+      "seq": 18,
+      "step": "cancelOrder",
+      "name": "เคลียร์โต๊ะ #6",
+      "status": "synced",
+      "latency": 448
+    },
+    {
+      "seq": 19,
+      "step": "createOrder",
+      "name": "เปิดบิล #7",
+      "status": "synced",
+      "latency": 185
+    },
+    {
+      "seq": 20,
+      "step": "addItems",
+      "name": "สั่งอาหารเข้าครัว #7",
+      "status": "synced",
+      "latency": 186
+    },
+    {
+      "seq": 21,
+      "step": "cancelOrder",
+      "name": "เคลียร์โต๊ะ #7",
+      "status": "synced",
+      "latency": 453
+    },
+    {
+      "seq": 22,
+      "step": "createOrder",
+      "name": "เปิดบิล #8",
+      "status": "synced",
+      "latency": 187
+    },
+    {
+      "seq": 23,
+      "step": "addItems",
+      "name": "สั่งอาหารเข้าครัว #8",
+      "status": "synced",
+      "latency": 187
+    },
+    {
+      "seq": 24,
+      "step": "cancelOrder",
+      "name": "เคลียร์โต๊ะ #8",
+      "status": "synced",
+      "latency": 476
+    },
+    {
+      "seq": 25,
+      "step": "createOrder",
+      "name": "เปิดบิล #9",
+      "status": "synced",
+      "latency": 186
+    },
+    {
+      "seq": 26,
+      "step": "addItems",
+      "name": "สั่งอาหารเข้าครัว #9",
+      "status": "synced",
+      "latency": 191
+    },
+    {
+      "seq": 27,
+      "step": "cancelOrder",
+      "name": "เคลียร์โต๊ะ #9",
+      "status": "synced",
+      "latency": 453
+    },
+    {
+      "seq": 28,
+      "step": "createOrder",
+      "name": "เปิดบิล #10",
+      "status": "synced",
+      "latency": 184
+    },
+    {
+      "seq": 29,
+      "step": "addItems",
+      "name": "สั่งอาหารเข้าครัว #10",
+      "status": "synced",
+      "latency": 188
+    },
+    {
+      "seq": 30,
+      "step": "cancelOrder",
+      "name": "เคลียร์โต๊ะ #10",
+      "status": "synced",
+      "latency": 466
+    },
+    {
+      "seq": 31,
+      "step": "createOrder",
+      "name": "เปิดบิล #11",
+      "status": "synced",
+      "latency": 191
+    },
+    {
+      "seq": 32,
+      "step": "addItems",
+      "name": "สั่งอาหารเข้าครัว #11",
+      "status": "synced",
+      "latency": 186
+    },
+    {
+      "seq": 33,
+      "step": "cancelOrder",
+      "name": "เคลียร์โต๊ะ #11",
+      "status": "synced",
+      "latency": 480
+    },
+    {
+      "seq": 34,
+      "step": "createOrder",
+      "name": "เปิดบิล #12",
+      "status": "synced",
+      "latency": 194
+    },
+    {
+      "seq": 35,
+      "step": "addItems",
+      "name": "สั่งอาหารเข้าครัว #12",
+      "status": "synced",
+      "latency": 191
+    },
+    {
+      "seq": 36,
+      "step": "cancelOrder",
+      "name": "เคลียร์โต๊ะ #12",
+      "status": "synced",
+      "latency": 468
+    },
+    {
+      "seq": 37,
+      "step": "createOrder",
+      "name": "เปิดบิล #13",
+      "status": "synced",
+      "latency": 188
+    },
+    {
+      "seq": 38,
+      "step": "addItems",
+      "name": "สั่งอาหารเข้าครัว #13",
+      "status": "synced",
+      "latency": 187
+    },
+    {
+      "seq": 39,
+      "step": "cancelOrder",
+      "name": "เคลียร์โต๊ะ #13",
+      "status": "synced",
+      "latency": 463
+    },
+    {
+      "seq": 40,
+      "step": "createOrder",
+      "name": "เปิดบิล #14",
+      "status": "synced",
+      "latency": 187
+    },
+    {
+      "seq": 41,
+      "step": "addItems",
+      "name": "สั่งอาหารเข้าครัว #14",
+      "status": "synced",
+      "latency": 188
+    },
+    {
+      "seq": 42,
+      "step": "cancelOrder",
+      "name": "เคลียร์โต๊ะ #14",
+      "status": "synced",
+      "latency": 462
+    },
+    {
+      "seq": 43,
+      "step": "createOrder",
+      "name": "เปิดบิล #15",
+      "status": "synced",
+      "latency": 188
+    },
+    {
+      "seq": 44,
+      "step": "addItems",
+      "name": "สั่งอาหารเข้าครัว #15",
+      "status": "synced",
+      "latency": 188
+    },
+    {
+      "seq": 45,
+      "step": "cancelOrder",
+      "name": "เคลียร์โต๊ะ #15",
+      "status": "synced",
+      "latency": 468
+    },
+    {
+      "seq": 46,
+      "step": "createOrder",
+      "name": "เปิดบิล #16",
+      "status": "synced",
+      "latency": 196
+    },
+    {
+      "seq": 47,
+      "step": "addItems",
+      "name": "สั่งอาหารเข้าครัว #16",
+      "status": "synced",
+      "latency": 186
+    },
+    {
+      "seq": 48,
+      "step": "cancelOrder",
+      "name": "เคลียร์โต๊ะ #16",
+      "status": "synced",
+      "latency": 458
+    },
+    {
+      "seq": 49,
+      "step": "createOrder",
+      "name": "เปิดบิล #17",
+      "status": "synced",
+      "latency": 190
+    },
+    {
+      "seq": 50,
+      "step": "addItems",
+      "name": "สั่งอาหารเข้าครัว #17",
+      "status": "synced",
+      "latency": 186
+    },
+    {
+      "seq": 51,
+      "step": "cancelOrder",
+      "name": "เคลียร์โต๊ะ #17",
+      "status": "synced",
+      "latency": 459
+    },
+    {
+      "seq": 52,
+      "step": "createOrder",
+      "name": "เปิดบิล #18",
+      "status": "synced",
+      "latency": 187
+    },
+    {
+      "seq": 53,
+      "step": "addItems",
+      "name": "สั่งอาหารเข้าครัว #18",
+      "status": "synced",
+      "latency": 210
+    },
+    {
+      "seq": 54,
+      "step": "cancelOrder",
+      "name": "เคลียร์โต๊ะ #18",
+      "status": "synced",
+      "latency": 462
+    },
+    {
+      "seq": 55,
+      "step": "createOrder",
+      "name": "เปิดบิล #19",
+      "status": "synced",
+      "latency": 190
+    },
+    {
+      "seq": 56,
+      "step": "addItems",
+      "name": "สั่งอาหารเข้าครัว #19",
+      "status": "synced",
+      "latency": 186
+    },
+    {
+      "seq": 57,
+      "step": "cancelOrder",
+      "name": "เคลียร์โต๊ะ #19",
+      "status": "synced",
+      "latency": 460
+    },
+    {
+      "seq": 58,
+      "step": "createOrder",
+      "name": "เปิดบิล #20",
+      "status": "synced",
+      "latency": 188
+    },
+    {
+      "seq": 59,
+      "step": "addItems",
+      "name": "สั่งอาหารเข้าครัว #20",
+      "status": "synced",
+      "latency": 197
+    },
+    {
+      "seq": 60,
+      "step": "cancelOrder",
+      "name": "เคลียร์โต๊ะ #20",
+      "status": "synced",
+      "latency": 475
+    },
+    {
+      "seq": 61,
+      "step": "createOrder",
+      "name": "เปิดบิล #21",
+      "status": "synced",
+      "latency": 188
+    },
+    {
+      "seq": 62,
+      "step": "addItems",
+      "name": "สั่งอาหารเข้าครัว #21",
+      "status": "synced",
+      "latency": 189
+    },
+    {
+      "seq": 63,
+      "step": "cancelOrder",
+      "name": "เคลียร์โต๊ะ #21",
+      "status": "synced",
+      "latency": 457
+    },
+    {
+      "seq": 64,
+      "step": "createOrder",
+      "name": "เปิดบิล #22",
+      "status": "synced",
+      "latency": 188
+    },
+    {
+      "seq": 65,
+      "step": "addItems",
+      "name": "สั่งอาหารเข้าครัว #22",
+      "status": "synced",
+      "latency": 190
+    },
+    {
+      "seq": 66,
+      "step": "cancelOrder",
+      "name": "เคลียร์โต๊ะ #22",
+      "status": "synced",
+      "latency": 457
+    },
+    {
+      "seq": 67,
+      "step": "createOrder",
+      "name": "เปิดบิล #23",
+      "status": "synced",
+      "latency": 188
+    },
+    {
+      "seq": 68,
+      "step": "addItems",
+      "name": "สั่งอาหารเข้าครัว #23",
+      "status": "synced",
+      "latency": 185
+    },
+    {
+      "seq": 69,
+      "step": "cancelOrder",
+      "name": "เคลียร์โต๊ะ #23",
+      "status": "synced",
+      "latency": 458
+    },
+    {
+      "seq": 70,
+      "step": "createOrder",
+      "name": "เปิดบิล #24",
+      "status": "synced",
+      "latency": 196
+    },
+    {
+      "seq": 71,
+      "step": "addItems",
+      "name": "สั่งอาหารเข้าครัว #24",
+      "status": "synced",
+      "latency": 195
+    },
+    {
+      "seq": 72,
+      "step": "cancelOrder",
+      "name": "เคลียร์โต๊ะ #24",
+      "status": "synced",
+      "latency": 485
+    },
+    {
+      "seq": 73,
+      "step": "createOrder",
+      "name": "เปิดบิล #25",
+      "status": "synced",
+      "latency": 188
+    },
+    {
+      "seq": 74,
+      "step": "addItems",
+      "name": "สั่งอาหารเข้าครัว #25",
+      "status": "synced",
+      "latency": 188
+    },
+    {
+      "seq": 75,
+      "step": "cancelOrder",
+      "name": "เคลียร์โต๊ะ #25",
+      "status": "synced",
+      "latency": 451
+    },
+    {
+      "seq": 76,
+      "step": "createOrder",
+      "name": "เปิดบิล #26",
+      "status": "synced",
+      "latency": 188
+    },
+    {
+      "seq": 77,
+      "step": "addItems",
+      "name": "สั่งอาหารเข้าครัว #26",
+      "status": "synced",
+      "latency": 184
+    },
+    {
+      "seq": 78,
+      "step": "cancelOrder",
+      "name": "เคลียร์โต๊ะ #26",
+      "status": "synced",
+      "latency": 579
+    },
+    {
+      "seq": 79,
+      "step": "createOrder",
+      "name": "เปิดบิล #27",
+      "status": "synced",
+      "latency": 197
+    },
+    {
+      "seq": 80,
+      "step": "addItems",
+      "name": "สั่งอาหารเข้าครัว #27",
+      "status": "synced",
+      "latency": 194
+    },
+    {
+      "seq": 81,
+      "step": "cancelOrder",
+      "name": "เคลียร์โต๊ะ #27",
+      "status": "synced",
+      "latency": 460
+    },
+    {
+      "seq": 82,
+      "step": "createOrder",
+      "name": "เปิดบิล #28",
+      "status": "synced",
+      "latency": 187
+    },
+    {
+      "seq": 83,
+      "step": "addItems",
+      "name": "สั่งอาหารเข้าครัว #28",
+      "status": "synced",
+      "latency": 187
+    },
+    {
+      "seq": 84,
+      "step": "cancelOrder",
+      "name": "เคลียร์โต๊ะ #28",
+      "status": "synced",
+      "latency": 465
+    },
+    {
+      "seq": 85,
+      "step": "createOrder",
+      "name": "เปิดบิล #29",
+      "status": "synced",
+      "latency": 189
+    },
+    {
+      "seq": 86,
+      "step": "addItems",
+      "name": "สั่งอาหารเข้าครัว #29",
+      "status": "synced",
+      "latency": 187
+    },
+    {
+      "seq": 87,
+      "step": "cancelOrder",
+      "name": "เคลียร์โต๊ะ #29",
+      "status": "synced",
+      "latency": 494
+    },
+    {
+      "seq": 88,
+      "step": "createOrder",
+      "name": "เปิดบิล #30",
+      "status": "synced",
+      "latency": 193
+    },
+    {
+      "seq": 89,
+      "step": "addItems",
+      "name": "สั่งอาหารเข้าครัว #30",
+      "status": "synced",
+      "latency": 188
+    },
+    {
+      "seq": 90,
+      "step": "cancelOrder",
+      "name": "เคลียร์โต๊ะ #30",
+      "status": "synced",
+      "latency": 459
+    }
+  ]
+}

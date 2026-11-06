@@ -1,0 +1,11 @@
+﻿รหัส Use Case,ชื่อ Use Case,ขอบเขตและฟังก์ชันการทำงาน
+UC-01,Authentication & Store Discovery,"การค้นหาร้านค้าผ่าน URL/Slug (Store Finder), การลงทะเบียนร้านค้าใหม่, การเข้าสู่ระบบด้วย Username/Password/PIN, การจำลอง Single Session (Token Versioning) และการล็อกบัญชีเมื่อรหัสผิดเกินกำหนด"
+UC-02,Table Management,"การจัดการผังโต๊ะอาหาร (แสดงสถานะ ว่าง/มีลูกค้า/กำลังทาน), การเปิดโต๊ะใหม่, การย้ายโต๊ะ, และการจัดการโต๊ะแยกตามชั้น (Floors)"
+UC-03,Menu & Category Management,"การจัดหมวดหมู่เมนู, การจัดลำดับการแสดงผล (Reorder), การตั้งราคา/สถานะพร้อมจำหน่าย, และระบบตัวเลือกเสริม (Single/Multi Modifiers)"
+UC-04,Order Management,"การเลือกรายการอาหารลงตะกร้า, การระบุคำขอพิเศษ (Special Request), การสั่งอาหารพร้อม Snapshot ราคา ณ เวลาขาย, และการรวมบิลข้ามโต๊ะ (Bill Merge)"
+UC-05,Kitchen Display System (KDS),จอแสดงคิวครัวแบบเรียลไทม์ ติดตามสถานะ 5 ขั้นตอน (queued -> preparing -> ready -> served -> voided) พร้อมกลุ่ม Ticket
+UC-06,Payment & Receipt,"การคำนวณยอดเงินรวม, การคิดภาษี VAT (3 โหมด: None, Inclusive, Exclusive), การคำนวณเงินทอน, การรับชำระด้วยเงินสดและ QR Code, การออกใบเสร็จรับเงิน และการพิมพ์ซ้ำ (Reprint)"
+UC-07,"Void, Comp & Order Cancellation","การขอยกเลิกรายการอาหาร (Void) และการให้ฟรี (Comp) ที่ต้องใช้ PIN ผู้อนุมัติ (ผู้จัดการ/เจ้าของร้าน), การปิดบิลลูกค้าเดินออก (Walkout), และการยกเลิกบิลว่าง"
+UC-08,Shift & Cash Drawer,"การเปิดกะทำงาน, การบันทึกเงินสดตั้งต้น, การบันทึกเงินเข้า/ออกลิ้นชัก (Cash In/Out), การนับเงินปิดกะ และคำนวณผลต่าง (Discrepancy)"
+UC-09,Inventory Management,"การบันทึกสต็อกวัตถุดิบแบบนับจริงประจำวัน (Periodic Physical Count), การคำนวณส่วนต่าง Adjustment และบันทึกของเสีย (Waste)"
+UC-10,PWA Offline & Data Sync,"การทำงานแบบไร้อินเทอร์เน็ตผ่าน Service Worker & Cache Storage, การบันทึกคำสั่งลง Outbox (IndexedDB) และการซิงค์ข้อมูลกลับขึ้นเซิร์ฟเวอร์อัตโนมัติเมื่อออนไลน์"
