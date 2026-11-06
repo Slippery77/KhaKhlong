@@ -1,7 +1,7 @@
 import { spawn, execSync } from 'node:child_process';
-import { existsSync, mkdirSync } from 'node:fs';
+import { existsSync, mkdirSync, readdirSync, statSync } from 'node:fs';
 import { createRequire } from 'node:module';
-import { networkInterfaces } from 'node:os';
+import { homedir, networkInterfaces } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import http from 'node:http';
@@ -114,9 +114,76 @@ function waitForServer(port, timeoutMs = 30000) {
   });
 }
 
-function openBrowser(url) {
+function findInstalledPwaShortcut() {
+  const home = homedir();
+  const searchDirs = [
+    process.env.APPDATA
+      ? join(process.env.APPDATA, 'Microsoft', 'Windows', 'Start Menu', 'Programs')
+      : null,
+    join(home, 'Desktop'),
+    join(home, 'OneDrive', 'Desktop'),
+    join(home, 'OneDrive', 'เดสก์ท็อป'),
+  ].filter(Boolean);
+
+  const matches = [];
+
+  const scanDir = (dir, depth = 0) => {
+    if (depth > 2 || !existsSync(dir)) return;
+    try {
+      for (const entry of readdirSync(dir, { withFileTypes: true })) {
+        const fullPath = join(dir, entry.name);
+        if (entry.isDirectory()) {
+          scanDir(fullPath, depth + 1);
+        } else if (
+          entry.name.endsWith('.lnk') &&
+          entry.name.includes('ค้าคล่อง POS') &&
+          !entry.name.includes('Server')
+        ) {
+          try {
+            const st = statSync(fullPath);
+            matches.push({ path: fullPath, mtimeMs: st.mtimeMs });
+          } catch {
+            // ignore stat error
+          }
+        }
+      }
+    } catch {
+      // ignore read error
+    }
+  };
+
+  for (const dir of searchDirs) {
+    scanDir(dir);
+  }
+
+  if (matches.length === 0) return null;
+  matches.sort((a, b) => b.mtimeMs - a.mtimeMs);
+  return matches[0].path;
+}
+
+function openPosAppOrBrowser(url) {
+  const pwaShortcut = findInstalledPwaShortcut();
+  if (pwaShortcut) {
+    console.log(` กำลังเปิดแอปที่ติดตั้งในเครื่อง: ${pwaShortcut}`);
+    try {
+      const child = spawn('explorer.exe', [pwaShortcut], {
+        detached: true,
+        stdio: 'ignore',
+      });
+      child.unref();
+      return;
+    } catch {
+      // fallback to browser URL below
+    }
+  }
+
+  console.log(` ไม่พบแอปที่ติดตั้งในเครื่อง กำลังเปิดผ่านเบราว์เซอร์เริ่มต้น: ${url}`);
   try {
-    execSync(`cmd.exe /c start "" "${url}"`, { stdio: 'ignore' });
+    const child = spawn('explorer.exe', [url], {
+      detached: true,
+      stdio: 'ignore',
+    });
+    child.unref();
   } catch {
     // ignore if browser fails to launch automatically
   }
@@ -176,7 +243,7 @@ async function main() {
   console.log('============================================================\n');
 
   if (!noOpen) {
-    openBrowser(`http://localhost:${PORT}`);
+    openPosAppOrBrowser(`http://localhost:${PORT}`);
   }
 
   if (!noTunnel) {
