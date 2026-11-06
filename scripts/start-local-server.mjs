@@ -1,9 +1,13 @@
 import { spawn, execSync } from 'node:child_process';
 import { existsSync, mkdirSync } from 'node:fs';
+import { createRequire } from 'node:module';
 import { networkInterfaces } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import http from 'node:http';
+
+const require = createRequire(import.meta.url);
+const QRCode = require('qrcode');
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const ROOT_DIR = resolve(__dirname, '..');
@@ -17,6 +21,31 @@ const forceBuild = args.has('--build');
 const noOpen = args.has('--no-open');
 const noTunnel = args.has('--no-tunnel');
 const PORT = Number(process.env.PORT || 3000);
+
+function renderTerminalQr(url) {
+  try {
+    const qr = QRCode.create(url, { errorCorrectionLevel: 'L' });
+    const size = qr.modules.size;
+    const data = qr.modules.data;
+    const pad = 2;
+    const get = (r, c) =>
+      r >= 0 && r < size && c >= 0 && c < size ? data[r * size + c] : 0;
+    const lines = [];
+    for (let r = -pad; r < size + pad; r += 2) {
+      let line = '  ';
+      for (let c = -pad; c < size + pad; c++) {
+        const top = get(r, c);
+        const bot = r + 1 < size + pad ? get(r + 1, c) : 0;
+        line +=
+          top && bot ? ' ' : !top && !bot ? '█' : !top && bot ? '▀' : '▄';
+      }
+      lines.push(line);
+    }
+    return lines.join('\n');
+  } catch {
+    return '';
+  }
+}
 
 function getLanIps() {
   const nets = networkInterfaces();
@@ -169,10 +198,15 @@ async function main() {
       if (match && !announcedUrl) {
         announcedUrl = true;
         const publicUrl = match[0];
+        const qrText = renderTerminalQr(publicUrl);
         console.log('\n************************************************************');
         console.log(' ลิงก์ HTTPS สำหรับมือถือ / แท็บเล็ต / ใช้งานจากที่ไหนก็ได้:');
         console.log(` >>> ${publicUrl} <<<`);
-        console.log(' (รองรับติดตั้งแอป PWA + โหมด Offline + กล้องสแกนสลิป SlipOK ครบ 100%)');
+        if (qrText) {
+          console.log('\n สแกน QR Code นี้ด้วยกล้องมือถือเพื่อเปิดแอปได้ทันที:\n');
+          console.log(qrText);
+        }
+        console.log('\n (รองรับติดตั้งแอป PWA + โหมด Offline + กล้องสแกนสลิป SlipOK ครบ 100%)');
         console.log('************************************************************\n');
       }
     };
