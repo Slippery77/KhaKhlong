@@ -114,7 +114,7 @@ export default function Header() {
                     <div className="w-8 h-8 rounded-lg bg-[#EFE8DC] group-hover:bg-[#E5DCCF] transition-colors flex items-center justify-center text-[#8C6D58]">
                         <UtensilsCrossed className="w-4 h-4 stroke-2" />
                     </div>
-                    <span className="font-semibold text-[#2D241E] text-sm sm:text-base group-hover:text-stone-900 transition-colors truncate max-w-[110px] xs:max-w-[150px] sm:max-w-none">
+                    <span className="font-semibold text-[#2D241E] text-sm sm:text-base group-hover:text-stone-900 transition-colors truncate max-w-110px xs:max-w-150px sm:max-w-none">
                         {user?.restaurant_name || "ค้าคล่อง"}
                     </span>
                 </Link>

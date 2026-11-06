@@ -50,6 +50,11 @@ import { ShiftEscalationService } from './common/shift-escalation.service';
           .max(72)
           .default(16),
         CORS_ORIGIN: Joi.string().required(),
+        // ตรวจสลิปผ่าน SlipOK — ไม่ใส่ = ปิดฟีเจอร์ (ยังกดยืนยันรับเงินเองได้)
+        SLIPOK_BRANCH_ID: Joi.string().allow('').optional(),
+        SLIPOK_API_KEY: Joi.string().allow('').optional(),
+        SLIPOK_BASE_URL: Joi.string().uri().default('https://api.slipok.com'),
+        SLIPOK_TIMEOUT_MS: Joi.number().integer().min(1000).max(60000).default(15000),
       }),
     }),
     DatabaseModule,
