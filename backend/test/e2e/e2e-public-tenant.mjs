@@ -43,11 +43,12 @@ const reg = await req('/register', 'POST', {
   username,
   password,
   display_name: 'เจ้าของร้านทดสอบ',
+pin: '123456',
 });
 
 if (reg.status === 429) {
-  console.log('Register rate-limited (429), reusing rc-868329');
-  existingSlug = 'rc-868329';
+  console.log('Register rate-limited (429), reusing test-b');
+  existingSlug = 'test-b';
 } else if (reg.status !== 201) {
   console.error('Register failed:', reg.status, reg.json);
   process.exit(1);

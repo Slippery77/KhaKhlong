@@ -44,6 +44,7 @@ const reg = await req('/register', null, 'POST', {
   username,
   password,
   display_name: 'เจ้าของร้านเครื่องพิมพ์',
+pin: '123456',
   pin,
 });
 
