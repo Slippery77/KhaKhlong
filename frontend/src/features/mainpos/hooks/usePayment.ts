@@ -1,7 +1,9 @@
 import { useCallback } from "react";
 import { useAuth } from "../../auth/context/AuthContext";
 import { apiFetch } from "../../../libs/appClient";
-import type { PaymentMethod, PaymentResult, PaymentAttempt } from "../types/payment.type";
+import type {
+    PaymentMethod, PaymentResult, PaymentAttempt, SlipInput, SlipVerificationStatus, VerifiedSlip,
+} from "../types/payment.type";
 
 export interface OrderPaymentSummary {
     orderId: string
@@ -54,5 +56,16 @@ export function usePayment(){
         `/payments/attempts/${attemptId}/cancel`, accessToken, 'POST', { reason },
     ).then(r => r.data)
 
-    return {createAttempt, pay, cancel, getOrderSummary, getOrdersSummary}
+    // ตรวจสลิปกับ SlipOK ผ่าน backend — ผ่านแล้วปิดบิลทันที (ผลเหมือน pay)
+    const verifySlip = (attemptId: string, input: SlipInput) =>
+        apiFetch<{ data: { payment: PaymentResult; slip: VerifiedSlip | null } }>(
+        `/payments/attempts/${attemptId}/verify-slip`, accessToken, 'POST', input,
+    ).then(r => r.data)
+
+    const getSlipStatus = useCallback(
+        () => apiFetch<{ data: SlipVerificationStatus }>('/payments/slip-verification/status', accessToken).then(r => r.data),
+        [accessToken],
+    )
+
+    return {createAttempt, pay, cancel, getOrderSummary, getOrdersSummary, verifySlip, getSlipStatus}
 }

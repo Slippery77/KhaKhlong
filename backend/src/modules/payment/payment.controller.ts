@@ -6,6 +6,7 @@ import { CreatePaymentAttemptDTO } from './dto/attempt.dto';
 import { PayAttemptDTO } from './dto/pay-attempt.dto';
 import { CancleAttempt } from './dto/canclePayment.dto';
 import { OrdersSummaryDTO } from './dto/orders-summary.dto';
+import { VerifySlipDTO } from './dto/verify-slip.dto';
 
 @ApiBearerAuth()
 @ApiTags('Payments')
@@ -80,6 +81,41 @@ export class PaymentController {
     async acceptPayments(@Param('id',ParseUUIDPipe) paymentAttemptId:string, @Body() dto:PayAttemptDTO, @Req() req:any){
       const userId = req.user?.sub;
       return this.paymentService.payAttempt(paymentAttemptId,dto,userId)
+    }
+
+    @ApiOperation({
+      summary: 'ตรวจสลิปโอนเงิน (SlipOK) แล้วปิดบิล',
+      description:
+        'ใช้กับ attempt แบบ qr_code ที่ยัง pending ส่ง qrData (ข้อความ QR บนสลิป) หรือ imageBase64 อย่างใดอย่างหนึ่ง ' +
+        'ระบบส่งยอดจาก attempt ให้ SlipOK ตรวจ แล้วตรวจเองซ้ำ: ยอดตรง, ผู้รับเป็นพร้อมเพย์ของร้าน, สลิปไม่เคยใช้, ' +
+        'โอนหลังเริ่มชำระ ผ่านแล้วชำระทันที (ผลเหมือน /pay) และคืน payment + ข้อมูลสลิป ' +
+        'ไม่ผ่าน attempt ยัง pending ตรวจใหม่หรือกด /pay เองได้ ต้องต่ออินเทอร์เน็ต',
+    })
+    @ApiParam({ name: 'id', format: 'uuid', description: 'paymentAttemptId' })
+    @ApiResponse({ status: 201, description: 'สลิปถูกต้อง ชำระสำเร็จ คืน { payment, slip }' })
+    @ApiResponse({ status: 400, description: 'SLIP_INPUT_MISSING / SLIP_IMAGE_INVALID / NOT_QR_PAYMENT' })
+    @ApiResponse({ status: 404, description: 'ไม่พบรายการชำระเงิน' })
+    @ApiResponse({ status: 409, description: 'SLIP_DUPLICATE / SLIP_BANK_DELAY / รายการถูกยกเลิก / PROMPTPAY_NOT_SET' })
+    @ApiResponse({
+      status: 422,
+      description: 'SLIP_AMOUNT_MISMATCH / SLIP_RECEIVER_MISMATCH / SLIP_NOT_FOUND / SLIP_NO_QR / SLIP_NOT_PAYMENT_QR / SLIP_TOO_OLD',
+    })
+    @ApiResponse({ status: 503, description: 'SLIPOK_NOT_CONFIGURED / SLIPOK_UNAVAILABLE / SLIPOK_ACCOUNT_ERROR' })
+    @RequirePermissions('payment:receive')
+    @Post('attempts/:id/verify-slip')
+    async verifySlip(@Param('id', ParseUUIDPipe) paymentAttemptId: string, @Body() dto: VerifySlipDTO, @Req() req: any) {
+      return this.paymentService.verifySlip(paymentAttemptId, dto, req.user?.sub);
+    }
+
+    @ApiOperation({
+      summary: 'สถานะการตรวจสลิป',
+      description: 'enabled = ตั้งค่า SlipOK แล้ว, quota = โควต้าคงเหลือของบัญชี SlipOK (null ถ้าดึงไม่ได้ เช่น ออฟไลน์)',
+    })
+    @ApiResponse({ status: 200, description: '{ enabled, quota }' })
+    @RequirePermissions('payment:receive')
+    @Get('slip-verification/status')
+    async slipVerificationStatus() {
+      return this.paymentService.getSlipVerificationStatus();
     }
 
     @ApiOperation({

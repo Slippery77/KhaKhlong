@@ -457,6 +457,17 @@ commit เดียว 4 เรื่อง:
   - E2E `backend/test/e2e/e2e-category-reorder.mjs` (27/27 ข้อผ่าน 100%) ตรวจสอบ 401 Unauthorized, 403 Forbidden สำหรับ employee, Validation 400 (ซ้ำ/มั่ว UUID/ข้าม tenant/ส่งไม่ครบ partial subset), การจัดลำดับ [C, A, B] และการสะท้อนผลไปยัง `GET /menu/category` และ `GET /menu/full`
   - Typecheck (`tsc --noEmit`, `tsc -b`) และ Workspace build ผ่าน 100%
 
+### 3.27 ตรวจสลิปโอนเงินอัตโนมัติ (SlipOK) — 2026-11-06
+
+- **บัญชี**: ใช้บัญชี SlipOK กลางของระบบ (แพ็กเกจฟรี 100 สลิป/เดือน สำหรับ demo) ตั้งใน `backend/.env` → `SLIPOK_BRANCH_ID`, `SLIPOK_API_KEY` (ไม่ใส่ = ปิดฟีเจอร์), `SLIPOK_BASE_URL`, `SLIPOK_TIMEOUT_MS` อ้างอิงเอกสาร SlipOK API Guide v1.13
+- **Decision**: ส่ง `log: false` เสมอ — บัญชีกลางผูกบัญชีรับเงินได้ชุดเดียว ถ้า `log: true` ทุกร้านจะโดน 1014 ระบบเราจึงตรวจเอง: ยอดตรง `attempt.amount`, ผู้รับ (`receiver.proxy.value` แบบ mask) ตรง `tenants.promptpay_id`, สลิปไม่เคยใช้ (unique `trans_ref` ข้ามร้าน), โอนไม่ก่อนสร้าง attempt เกิน 10 นาที
+- สลิปที่แสดงแต่เลขบัญชีธนาคาร (ไม่มี proxy) → ผ่านแต่ `receiverMatch = 'unverifiable'` หน้าจอเตือนให้ดูชื่อผู้รับ (ระดับความปลอดภัยเท่าการกดยืนยันเอง ซึ่งยังทำได้ตามเดิม)
+- **DB**: `PATCH_12_slip_checks.sql` + `FULL_INSTALL.sql` — ตาราง `payment_slip_checks` (append-only, RLS) เก็บทุกการตรวจ ผ่าน = เขียนใน transaction การชำระ, ไม่ผ่าน = `durableQuery` (นับการใช้โควต้าได้แม้ request rollback); insert แบบ SAVEPOINT เพื่อให้ 23505 ไม่ทำ transaction พัง
+- **Backend**: `POST /payments/attempts/:id/verify-slip` (`qrData` หรือ `imageBase64`) ผ่านแล้วเรียก `payAttempt` ปิดบิลทันที, `GET /payments/slip-verification/status` (enabled + โควต้า แคช 60 วิ) ทั้งคู่ `payment:receive`; `slipok/slipok.client.ts` (fetch + timeout), `slipok/slip-rules.ts` (กฎล้วน มี unit test)
+- error code: `SLIP_AMOUNT_MISMATCH` `SLIP_RECEIVER_MISMATCH` `SLIP_DUPLICATE` `SLIP_TOO_OLD` `SLIP_NOT_FOUND` `SLIP_NO_QR` `SLIP_NOT_PAYMENT_QR` `SLIP_IMAGE_INVALID` `SLIP_BANK_DELAY` (409) `SLIPOK_UNAVAILABLE` / `SLIPOK_ACCOUNT_ERROR` / `SLIPOK_NOT_CONFIGURED` (503)
+- **Frontend**: `SlipVerifyPanel` ในหน้า QR ของ `PaymentModal` — ช่องรับเครื่องสแกน 2D (ยิง QR บนสลิป) + ปุ่มถ่าย/เลือกรูป (ย่อเหลือ ≤1600px JPEG ก่อนส่ง), ซ่อนเมื่อ `enabled = false`, ปิดเมื่อ `navigator.onLine = false` (local-first: ต่อเซิร์ฟเวอร์ร้านได้ไม่ได้แปลว่ามีเน็ต), ปุ่ม "ยืนยันรับเงิน" ยังใช้ได้เสมอ
+- **ทดสอบ**: `npx jest src/modules/payment/slipok` 10/10; E2E `backend/test/e2e/e2e-slip-verify.mjs` มี mock SlipOK ในตัว (พอร์ต 4010) — ต้องรัน backend ด้วย `SLIPOK_BASE_URL=http://localhost:4010` และรัน PATCH_12 ก่อน
+
 ---
 
 ## 4. งานค้าง P0

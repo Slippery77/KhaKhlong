@@ -1,10 +1,24 @@
-import { useEffect, useState } from 'react';
-import { X, Banknote, QrCode, CheckCircle2, Loader2, Info, Printer } from 'lucide-react';
+import { useEffect, useState, useSyncExternalStore } from 'react';
+import { X, Banknote, QrCode, CheckCircle2, Loader2, Info, Printer, ShieldCheck, AlertTriangle } from 'lucide-react';
 import { usePayment } from '../hooks/usePayment';
 import { ApiError } from '../../../libs/appClient';
 import { ReceiptModal } from '../../receipt';
-import type { PaymentAttempt, PaymentMethod, PaymentResult } from '../types/payment.type';
+import type {
+    PaymentAttempt, PaymentMethod, PaymentResult, SlipInput, SlipVerificationStatus, VerifiedSlip,
+} from '../types/payment.type';
 import { QRCodeSVG } from 'qrcode.react';
+import SlipVerifyPanel from './SlipVerifyPanel';
+
+// ตรวจสลิปต้องออกอินเทอร์เน็ต (ไม่ใช่แค่ต่อเซิร์ฟเวอร์ร้าน) จึงดู navigator.onLine
+const subscribeOnline = (cb: () => void) => {
+    window.addEventListener('online', cb);
+    window.addEventListener('offline', cb);
+    return () => {
+        window.removeEventListener('online', cb);
+        window.removeEventListener('offline', cb);
+    };
+};
+const getOnline = () => navigator.onLine;
 
 
 interface PaymentModalProps {
@@ -29,7 +43,8 @@ const baht = (n: number) =>
     `฿${n.toLocaleString('th-TH', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 
 export default function PaymentModal({ table, orderId, orderIds, onClose, onPaymentSuccess }: PaymentModalProps) {
-    const { createAttempt, pay, cancel, getOrderSummary, getOrdersSummary } = usePayment();
+    const { createAttempt, pay, cancel, getOrderSummary, getOrdersSummary, verifySlip, getSlipStatus } = usePayment();
+    const online = useSyncExternalStore(subscribeOnline, getOnline);
     // key แบบ string กัน effect วนซ้ำเมื่อ parent สร้าง array ใหม่ทุก render
     const idsKey = (orderIds && orderIds.length > 0 ? orderIds : orderId ? [orderId] : []).join(',');
     const ids = idsKey ? idsKey.split(',') : [];
@@ -50,6 +65,10 @@ export default function PaymentModal({ table, orderId, orderIds, onClose, onPaym
     const [summaryReloadKey, setSummaryReloadKey] = useState(0);
     // เปิดหน้าต่างใบเสร็จหลังจ่ายเงินสำเร็จ (ยังไม่ปิดหน้าชำระเงิน)
     const [receiptOpen, setReceiptOpen] = useState(false);
+    // ตรวจสลิป (SlipOK): สถานะฟีเจอร์ + ผลสลิปที่ใช้ปิดบิล
+    const [slipStatus, setSlipStatus] = useState<SlipVerificationStatus | null>(null);
+    const [verifiedSlip, setVerifiedSlip] = useState<VerifiedSlip | null>(null);
+    const isQrConfirm = step === 'confirm' && method === 'qr_code';
 
     // ยอดมาจาก server เท่านั้น หน้าจอไม่คำนวณยอดเอง
     const amount = attempt?.amount ?? 0;
@@ -86,6 +105,18 @@ export default function PaymentModal({ table, orderId, orderIds, onClose, onPaym
             cancelled = true;
         };
     }, [getOrderSummary, getOrdersSummary, idsKey, summaryReloadKey]);
+
+    // เข้าหน้า QR: ถามว่าเปิดตรวจสลิปไหม (ดึงไม่ได้ = ซ่อนส่วนตรวจสลิป ยังกดยืนยันเองได้)
+    useEffect(() => {
+        if (!isQrConfirm) return;
+        let cancelled = false;
+        getSlipStatus()
+            .then((s) => { if (!cancelled) setSlipStatus(s); })
+            .catch(() => { if (!cancelled) setSlipStatus(null); });
+        return () => {
+            cancelled = true;
+        };
+    }, [isQrConfirm, getSlipStatus]);
 
     // เรียกจาก event handler: แสดง loading แล้วให้ effect ด้านบนโหลดยอดใหม่
     const reloadSummary = () => {
@@ -136,6 +167,29 @@ export default function PaymentModal({ table, orderId, orderIds, onClose, onPaym
         try {
             const r = await pay(attempt.paymentAttemptId, method === 'cash' ? cashReceived : undefined);
             setResult(r);
+            setStep('done');
+        } catch (e) {
+            showError(e);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    // ตรวจสลิปผ่าน → server ปิดบิลให้แล้ว ไปหน้าสำเร็จ
+    const handleVerifySlip = async (input: SlipInput) => {
+        if (!attempt) return;
+        setLoading(true);
+        setError(null);
+        try {
+            // กันหน้าจอค้าง: backend รอ SlipOK ไม่เกิน 15 วิ ถ้าเกิน 30 วิถือว่าตรวจไม่สำเร็จ ให้พนักงานลองใหม่หรือกดยืนยันเอง
+            const r = await Promise.race([
+                verifySlip(attempt.paymentAttemptId, input),
+                new Promise<never>((_, reject) =>
+                    setTimeout(() => reject(new ApiError(408, 'ตรวจสลิปนานเกินไป ลองใหม่ หรือตรวจเงินเข้าแอปธนาคารแล้วกด “ยืนยันรับเงิน”')), 30_000),
+                ),
+            ]);
+            setResult(r.payment);
+            setVerifiedSlip(r.slip);
             setStep('done');
         } catch (e) {
             showError(e);
@@ -322,7 +376,7 @@ export default function PaymentModal({ table, orderId, orderIds, onClose, onPaym
                                                 />
                                             </div>
                                         ) : (
-                                            <div className="flex h-[140px] w-[140px] sm:h-[200px] sm:w-[200px] flex-col items-center justify-center gap-1 sm:gap-1.5 rounded-2xl border border-dashed border-[#d9c6b0] bg-white px-3 sm:px-4 text-center">
+                                            <div className="flex h-140px w-140px sm:h-200px sm:w-200px flex-col items-center justify-center gap-1 sm:gap-1.5 rounded-2xl border border-dashed border-[#d9c6b0] bg-white px-3 sm:px-4 text-center">
                                                 <QrCode className="h-8 w-8 sm:h-10 sm:w-10 text-[#d9c6b0]" aria-hidden="true" />
                                                 <p className="text-xs font-semibold text-[#2D241E]">สร้าง QR ไม่สำเร็จ</p>
                                                 <p className="text-[10px] sm:text-[11px] leading-relaxed text-stone-500">
@@ -335,7 +389,9 @@ export default function PaymentModal({ table, orderId, orderIds, onClose, onPaym
                                             {[
                                                 'เปิดแอปธนาคาร แล้วเลือกสแกน QR',
                                                 'สแกนภาพนี้ ตรวจชื่อบัญชีร้านและยอดให้ตรงกัน',
-                                                'กดยืนยันในแอป แล้วกลับมากด “ยืนยันรับเงิน”',
+                                                slipStatus?.enabled
+                                                    ? 'โอนแล้วตรวจสลิปด้านล่าง หรือกด “ยืนยันรับเงิน” เมื่อเห็นเงินเข้า'
+                                                    : 'กดยืนยันในแอป แล้วกลับมากด “ยืนยันรับเงิน”',
                                             ].map((text, index) => (
                                                 <li
                                                     key={text}
@@ -356,6 +412,16 @@ export default function PaymentModal({ table, orderId, orderIds, onClose, onPaym
                                             ยอดใน QR ถูกกำหนดจากเซิร์ฟเวอร์แล้ว ตรวจว่าเงินเข้าแอปธนาคารของร้านก่อนกดยืนยัน
                                         </p>
                                     </div>
+
+                                    {slipStatus?.enabled && attempt?.qrPayload && (
+                                        <SlipVerifyPanel
+                                            status={slipStatus}
+                                            busy={loading}
+                                            online={online}
+                                            onVerify={handleVerifySlip}
+                                            onLocalError={setError}
+                                        />
+                                    )}
                                 </div>
                             )}
                         </>
@@ -370,6 +436,25 @@ export default function PaymentModal({ table, orderId, orderIds, onClose, onPaym
                             <div className="text-sm text-stone-500">ยอด {baht(result.totalAmount)}</div>
                             {result.changeAmount !== null && (
                                 <div className="text-lg font-bold text-emerald-600">เงินทอน {baht(result.changeAmount)}</div>
+                            )}
+                            {verifiedSlip && (
+                                <div className="mx-auto mt-3 max-w-sm space-y-1 rounded-xl border border-[#E8DFD5] bg-[#FAF7F2] px-3 py-2 text-left text-xs text-stone-600">
+                                    <div className="flex items-center gap-1.5 font-semibold text-emerald-700">
+                                        <ShieldCheck className="h-4 w-4" aria-hidden="true" />
+                                        ตรวจสลิปแล้ว
+                                    </div>
+                                    {verifiedSlip.senderName && <div>ผู้โอน: {verifiedSlip.senderName}</div>}
+                                    <div className="break-all">เลขอ้างอิง: {verifiedSlip.transRef}</div>
+                                    {verifiedSlip.receiverMatch === 'unverifiable' && (
+                                        <div className="flex items-start gap-1.5 text-amber-800">
+                                            <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" aria-hidden="true" />
+                                            <span>
+                                                สลิปไม่แสดงเลขพร้อมเพย์ผู้รับ ตรวจชื่อผู้รับให้เป็นของร้าน
+                                                {verifiedSlip.receiverName ? `: ${verifiedSlip.receiverName}` : ''}
+                                            </span>
+                                        </div>
+                                    )}
+                                </div>
                             )}
                         </div>
                     )}
