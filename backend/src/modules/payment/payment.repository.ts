@@ -5,6 +5,41 @@ const paymentAttempt_cols = `payment_attempt_id, payment_method, amount, status,
           qr_reference, failure_reason, initiated_by, created_at, updated_at`;
 const payment_cols = `payment_id, payment_attempt_id, receipt_number, business_date::text AS business_date, subtotal, vat_amount, service_charge_amount, total_amount, vat_mode, vat_rate_snapshot, service_charge_rate_snapshot, rounding_adjustment, payment_method, cash_received,change_amount,paid_at`
 
+export interface SlipCheckRow {
+    paymentAttemptId: string;
+    result?: 'verified' | 'rejected' | 'error';
+    errorCode?: string | null;
+    source: 'image' | 'qr_data';
+    transRef?: string | null;
+    amount?: number | null;
+    sendingBank?: string | null;
+    receivingBank?: string | null;
+    receiverName?: string | null;
+    receiverProxy?: string | null;
+    receiverAccount?: string | null;
+    receiverMatch?: 'matched' | 'unverifiable' | null;
+    transAt?: Date | null;
+    rawResponse?: unknown;
+    checkedBy: string;
+}
+
+const SLIP_CHECK_INSERT = `
+    INSERT INTO payment_slip_checks(tenant_id, payment_attempt_id, result, error_code, source, trans_ref, amount,
+        sending_bank, receiving_bank, receiver_name, receiver_proxy, receiver_account, receiver_match,
+        trans_at, raw_response, checked_by)
+    VALUES (app_tenant_id(), $1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14::jsonb,$15)
+`;
+
+function slipCheckParams(r: SlipCheckRow) {
+    const cut = (v: string | null | undefined, n: number) => (v ? v.slice(0, n) : null);
+    return [
+        r.paymentAttemptId, r.result, cut(r.errorCode, 40), r.source, cut(r.transRef, 40), r.amount ?? null,
+        cut(r.sendingBank, 3), cut(r.receivingBank, 3), r.receiverName ?? null, cut(r.receiverProxy, 128),
+        cut(r.receiverAccount, 40), r.receiverMatch ?? null, r.transAt ?? null,
+        r.rawResponse == null ? null : JSON.stringify(r.rawResponse), r.checkedBy,
+    ];
+}
+
 @Injectable()
 export class PaymentRepository{
     constructor(private readonly db:DbContextService){}
@@ -47,6 +82,30 @@ export class PaymentRepository{
         `;
         const result = await this.db.query(sql)
         return result.rows[0]?.promptpay_id??null;
+    }
+
+    /**
+     * บันทึกสลิปที่ตรวจผ่าน (อยู่ใน transaction เดียวกับการชำระ)
+     * ครอบด้วย SAVEPOINT เพื่อให้ชนสลิปซ้ำ (23505) แล้ว transaction ยังใช้ต่อได้ — durableQuery ต้องอ่าน context จาก connection นี้
+     * คืน false เมื่อสลิปนี้เคยใช้ปิดบิลไปแล้ว (ทุกร้าน)
+     */
+    async insertVerifiedSlip(row: SlipCheckRow): Promise<boolean> {
+        await this.db.query('SAVEPOINT slip_check');
+        try {
+            await this.db.query(SLIP_CHECK_INSERT, slipCheckParams({ ...row, result: 'verified' }));
+            await this.db.query('RELEASE SAVEPOINT slip_check');
+            return true;
+        } catch (error: any) {
+            await this.db.query('ROLLBACK TO SAVEPOINT slip_check');
+            await this.db.query('RELEASE SAVEPOINT slip_check');
+            if (error.code === '23505') return false;
+            throw error;
+        }
+    }
+
+    /** บันทึกการตรวจที่ไม่ผ่านแบบคงทน — คำขอจะโยน error และ rollback แต่ประวัติ (และการใช้โควต้า) ต้องอยู่ */
+    async insertFailedSlipDurable(row: SlipCheckRow & { result: 'rejected' | 'error' }) {
+        await this.db.durableQuery(SLIP_CHECK_INSERT, slipCheckParams(row));
     }
 
     async createPaymentAttempt(paymentMethod:string,amount:number,userId:string){
@@ -102,12 +161,17 @@ export class PaymentRepository{
         }
     }
 
+    /**
+     * ล็อกแบบ FOR NO KEY UPDATE (ไม่ใช่ FOR UPDATE) — ยังกันจ่าย/ยกเลิก/ตรวจสลิปพร้อมกันได้เหมือนเดิม
+     * แต่ไม่บล็อก FK check (FOR KEY SHARE) ของ insertFailedSlipDurable ที่เขียนผ่านอีก connection
+     * ถ้าใช้ FOR UPDATE ทั้งสอง connection จะรอกันเองตลอดไป (Postgres จับ deadlock ข้าม connection ฝั่งแอปไม่ได้)
+     */
     async lockAttempt(id:string){
         const sql = `
             SELECT ${paymentAttempt_cols}
             FROM payment_attempts
             WHERE payment_attempt_id = $1
-            FOR UPDATE
+            FOR NO KEY UPDATE
         `;
         const result = await this.db.query(sql,[id]);
         return result.rows[0]??null;
